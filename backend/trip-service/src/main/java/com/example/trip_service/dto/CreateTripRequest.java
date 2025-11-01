@@ -1,9 +1,10 @@
 package com.example.trip_service.dto;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public class CreateTripRequest {
-    private Long passengerId;
+    private UUID passengerId;
     private String pickupLocation;
     private String destination;
     private BigDecimal pickupLatitude;
@@ -14,7 +15,7 @@ public class CreateTripRequest {
     // Constructors
     public CreateTripRequest() {}
 
-    public CreateTripRequest(Long passengerId, String pickupLocation, String destination, 
+    public CreateTripRequest(UUID passengerId, String pickupLocation, String destination, 
                            BigDecimal pickupLatitude, BigDecimal pickupLongitude,
                            BigDecimal destinationLatitude, BigDecimal destinationLongitude) {
         this.passengerId = passengerId;
@@ -27,8 +28,8 @@ public class CreateTripRequest {
     }
 
     // Getters and Setters
-    public Long getPassengerId() { return passengerId; }
-    public void setPassengerId(Long passengerId) { this.passengerId = passengerId; }
+    public UUID getPassengerId() { return passengerId; }
+    public void setPassengerId(UUID passengerId) { this.passengerId = passengerId; }
 
     public String getPickupLocation() { return pickupLocation; }
     public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }

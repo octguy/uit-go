@@ -1,16 +1,18 @@
 package com.example.trip_service.dto;
 
+import java.util.UUID;
+
 public class AssignDriverRequest {
-    private Long driverId;
+    private UUID driverId;
 
     // Constructors
     public AssignDriverRequest() {}
 
-    public AssignDriverRequest(Long driverId) {
+    public AssignDriverRequest(UUID driverId) {
         this.driverId = driverId;
     }
 
     // Getters and Setters
-    public Long getDriverId() { return driverId; }
-    public void setDriverId(Long driverId) { this.driverId = driverId; }
+    public UUID getDriverId() { return driverId; }
+    public void setDriverId(UUID driverId) { this.driverId = driverId; }
 }

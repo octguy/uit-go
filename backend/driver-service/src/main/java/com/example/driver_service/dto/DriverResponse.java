@@ -2,10 +2,11 @@ package com.example.driver_service.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class DriverResponse {
-    private Long id;
-    private Long userId;
+    private UUID id;
+    private UUID userId;
     private String vehiclePlate;
     private String vehicleModel;
     private String status;
@@ -17,7 +18,7 @@ public class DriverResponse {
     // Constructors
     public DriverResponse() {}
 
-    public DriverResponse(Long id, Long userId, String vehiclePlate, String vehicleModel, 
+    public DriverResponse(UUID id, UUID userId, String vehiclePlate, String vehicleModel, 
                          String status, BigDecimal currentLatitude, BigDecimal currentLongitude,
                          LocalDateTime createdAt, LocalDateTime lastUpdated) {
         this.id = id;
@@ -32,11 +33,11 @@ public class DriverResponse {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
 
     public String getVehiclePlate() { return vehiclePlate; }
     public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }

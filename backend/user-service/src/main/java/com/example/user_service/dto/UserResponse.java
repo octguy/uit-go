@@ -1,9 +1,10 @@
 package com.example.user_service.dto;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class UserResponse {
-    private Long id;
+    private UUID id;
     private String email;
     private String name;
     private String userType;
@@ -13,7 +14,7 @@ public class UserResponse {
     // Constructors
     public UserResponse() {}
 
-    public UserResponse(Long id, String email, String name, String userType, String phone, LocalDateTime createdAt) {
+    public UserResponse(UUID id, String email, String name, String userType, String phone, LocalDateTime createdAt) {
         this.id = id;
         this.email = email;
         this.name = name;
@@ -23,8 +24,8 @@ public class UserResponse {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

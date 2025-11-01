@@ -1,8 +1,11 @@
 -- Driver Service Database Schema
 
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE drivers (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER UNIQUE NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID UNIQUE NOT NULL,
     license_number VARCHAR(50) UNIQUE NOT NULL,
     vehicle_info VARCHAR(200) NOT NULL,
     status VARCHAR(20) DEFAULT 'OFFLINE' 

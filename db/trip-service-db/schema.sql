@@ -1,9 +1,12 @@
 -- Trip Service Database Schema
 
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE trips (
-    id SERIAL PRIMARY KEY,
-    passenger_id INTEGER NOT NULL,
-    driver_id INTEGER,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    passenger_id UUID NOT NULL,
+    driver_id UUID,
     origin VARCHAR(255) NOT NULL,
     destination VARCHAR(255) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'REQUESTED' 

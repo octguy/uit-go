@@ -3,17 +3,18 @@ package com.example.driver_service.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "drivers")
 public class Driver {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
     
     @Column(name = "user_id", unique = true, nullable = false)
-    private Long userId;
+    private UUID userId;
     
     @Column(name = "vehicle_plate", unique = true, nullable = false)
     private String vehiclePlate;
@@ -42,7 +43,7 @@ public class Driver {
         this.lastUpdated = LocalDateTime.now();
     }
 
-    public Driver(Long userId, String vehiclePlate, String vehicleModel, 
+    public Driver(UUID userId, String vehiclePlate, String vehicleModel, 
                   BigDecimal currentLatitude, BigDecimal currentLongitude) {
         this.userId = userId;
         this.vehiclePlate = vehiclePlate;
@@ -55,11 +56,11 @@ public class Driver {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
 
     public String getVehiclePlate() { return vehiclePlate; }
     public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }

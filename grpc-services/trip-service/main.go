@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 )
 
 // TODO: Replace with actual protobuf generated code
@@ -126,6 +127,15 @@ func main() {
 	// TODO: Implement actual gRPC server
 	log.Println("TODO: Implement gRPC server with protobuf")
 
-	// Keep server running for demo
-	select {}
+	// Keep server running for demo - create a blocking channel
+	done := make(chan bool)
+	go func() {
+		log.Println("Service running... Press Ctrl+C to stop")
+		// Simulate some work
+		for {
+			log.Println("Service heartbeat...")
+			time.Sleep(30 * time.Second)
+		}
+	}()
+	<-done // This will block forever until something sends to done channel
 }

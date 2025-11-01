@@ -3,20 +3,21 @@ package com.example.trip_service.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "trips")
 public class Trip {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
     
     @Column(name = "passenger_id", nullable = false)
-    private Long passengerId;
+    private UUID passengerId;
     
     @Column(name = "driver_id")
-    private Long driverId;
+    private UUID driverId;
     
     @Column(nullable = false)
     private String status; // "REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED"
@@ -53,7 +54,7 @@ public class Trip {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Trip(Long passengerId, String pickupLocation, String destination,
+    public Trip(UUID passengerId, String pickupLocation, String destination,
                 BigDecimal pickupLatitude, BigDecimal pickupLongitude,
                 BigDecimal destinationLatitude, BigDecimal destinationLongitude) {
         this.passengerId = passengerId;
@@ -69,14 +70,14 @@ public class Trip {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-    public Long getPassengerId() { return passengerId; }
-    public void setPassengerId(Long passengerId) { this.passengerId = passengerId; }
+    public UUID getPassengerId() { return passengerId; }
+    public void setPassengerId(UUID passengerId) { this.passengerId = passengerId; }
 
-    public Long getDriverId() { return driverId; }
-    public void setDriverId(Long driverId) { this.driverId = driverId; }
+    public UUID getDriverId() { return driverId; }
+    public void setDriverId(UUID driverId) { this.driverId = driverId; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

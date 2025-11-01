@@ -1,11 +1,12 @@
 @echo off
-REM Restart Docker containers without rebuilding Spring Boot
+REM Restart Docker containers without rebuilding (Pattern 2: Spring Boot + gRPC)
 
 echo "=== Stopping Docker containers ==="
 cd infra
 docker-compose down
 
-echo "=== Starting Docker containers ==="
+echo "=== Starting Docker containers (Spring Boot + gRPC services) ==="
 docker-compose up
 
-echo "=== Docker containers restarted! ==="
+echo "=== All containers restarted! ==="
+echo "=== Spring Boot APIs: 8080-8083 | gRPC Services: 50051-50053 ==="

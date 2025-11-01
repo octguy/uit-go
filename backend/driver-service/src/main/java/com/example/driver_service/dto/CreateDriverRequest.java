@@ -1,9 +1,10 @@
 package com.example.driver_service.dto;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public class CreateDriverRequest {
-    private Long userId;
+    private UUID userId;
     private String vehiclePlate;
     private String vehicleModel;
     private BigDecimal currentLatitude;
@@ -12,7 +13,7 @@ public class CreateDriverRequest {
     // Constructors
     public CreateDriverRequest() {}
 
-    public CreateDriverRequest(Long userId, String vehiclePlate, String vehicleModel, 
+    public CreateDriverRequest(UUID userId, String vehiclePlate, String vehicleModel, 
                              BigDecimal currentLatitude, BigDecimal currentLongitude) {
         this.userId = userId;
         this.vehiclePlate = vehiclePlate;
@@ -22,8 +23,8 @@ public class CreateDriverRequest {
     }
 
     // Getters and Setters
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
 
     public String getVehiclePlate() { return vehiclePlate; }
     public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }

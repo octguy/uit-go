@@ -2,11 +2,12 @@ package com.example.trip_service.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class TripResponse {
-    private Long id;
-    private Long passengerId;
-    private Long driverId;
+    private UUID id;
+    private UUID passengerId;
+    private UUID driverId;
     private String status;
     private String pickupLocation;
     private String destination;
@@ -21,7 +22,7 @@ public class TripResponse {
     // Constructors
     public TripResponse() {}
 
-    public TripResponse(Long id, Long passengerId, Long driverId, String status, 
+    public TripResponse(UUID id, UUID passengerId, UUID driverId, String status, 
                        String pickupLocation, String destination,
                        BigDecimal pickupLatitude, BigDecimal pickupLongitude,
                        BigDecimal destinationLatitude, BigDecimal destinationLongitude,
@@ -42,14 +43,14 @@ public class TripResponse {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-    public Long getPassengerId() { return passengerId; }
-    public void setPassengerId(Long passengerId) { this.passengerId = passengerId; }
+    public UUID getPassengerId() { return passengerId; }
+    public void setPassengerId(UUID passengerId) { this.passengerId = passengerId; }
 
-    public Long getDriverId() { return driverId; }
-    public void setDriverId(Long driverId) { this.driverId = driverId; }
+    public UUID getDriverId() { return driverId; }
+    public void setDriverId(UUID driverId) { this.driverId = driverId; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
