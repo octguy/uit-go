@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -28,6 +30,25 @@ public class UserService {
         // TODO: Handle not found case
         // TODO: Convert to response
         return null;
+    }
+
+    public UserResponse getUserById(UUID userId) {
+        System.out.println("🔍 UserService: Looking up user with UUID: " + userId);
+        
+        try {
+            Optional<User> userOptional = userRepository.findById(userId);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                System.out.println("✅ User found: " + user.getEmail());
+                return convertToResponse(user);
+            } else {
+                System.out.println("❌ User not found with UUID: " + userId);
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching user: " + e.getMessage());
+            return null;
+        }
     }
 
     public UserResponse getUserByEmail(String email) {
@@ -52,7 +73,17 @@ public class UserService {
     }
 
     private UserResponse convertToResponse(User user) {
-        // TODO: Map entity fields to DTO
-        return null;
+        if (user == null) {
+            return null;
+        }
+        
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setPhone(user.getPhone());
+        response.setUserType(user.getUserType());
+        response.setCreatedAt(user.getCreatedAt());
+        return response;
     }
 }

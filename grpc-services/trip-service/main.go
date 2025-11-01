@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // TODO: Replace with actual protobuf generated code
@@ -51,8 +56,33 @@ type UpdateTripStatusResponse struct {
 	Message string
 }
 
+// DTOs for HTTP endpoints
+type CreateTripRequest struct {
+	PassengerId    string `json:"passengerId"`
+	PickupLocation string `json:"pickupLocation"`
+	Destination    string `json:"destination"`
+}
+
+type CreateTripResponse struct {
+	Success bool   `json:"success"`
+	TripId  string `json:"tripId"`
+	Message string `json:"message"`
+}
+
+type ValidateUserRequest struct {
+	UserId string `json:"userId"`
+}
+
+type ValidateUserResponse struct {
+	Valid    bool   `json:"valid"`
+	UserType string `json:"userType"`
+	Message  string `json:"message"`
+}
+
 type TripServer struct {
-	springBootURL string
+	springBootURL  string
+	userServiceURL string
+	httpClient     *http.Client
 }
 
 func (s *TripServer) GetTrip(ctx context.Context, req *GetTripRequest) (*TripResponse, error) {
@@ -108,34 +138,121 @@ func (s *TripServer) UpdateTripStatus(ctx context.Context, req *UpdateTripStatus
 	}, nil
 }
 
-func main() {
-	// TODO: Load Spring Boot URL from environment
-	springBootURL := "http://localhost:8082" // trip-service port
+// HTTP endpoint handlers
+func (s *TripServer) createTripHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("🚗 Trip gRPC Service: Received createTrip request")
 
-	// TODO: Initialize TripServer
-	_ = &TripServer{
-		springBootURL: springBootURL,
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
-	// TODO: Setup gRPC server with protobuf
-	// TODO: Register TripServiceServer
-	// TODO: Listen on port 50052
+	var req CreateTripRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("❌ Failed to decode request: %v", err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
 
-	log.Println("gRPC Trip Service (Interface Only) - Port :50052")
-	log.Printf("Will proxy to Spring Boot at: %s", springBootURL)
+	log.Printf("📍 Trip request: %s → %s for user %s", req.PickupLocation, req.Destination, req.PassengerId)
 
-	// TODO: Implement actual gRPC server
-	log.Println("TODO: Implement gRPC server with protobuf")
+	// Step 1: Validate user via User Service
+	validation, err := s.validateUser(req.PassengerId)
+	if err != nil {
+		log.Printf("❌ User validation failed: %v", err)
+		response := CreateTripResponse{
+			Success: false,
+			Message: fmt.Sprintf("User validation failed: %v", err),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
-	// Keep server running for demo - create a blocking channel
-	done := make(chan bool)
+	if !validation.Valid {
+		log.Printf("❌ User validation rejected: %s", validation.Message)
+		response := CreateTripResponse{
+			Success: false,
+			Message: validation.Message,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	log.Printf("✅ User validated: %s", validation.UserType)
+
+	// Step 2: Create trip (mock implementation)
+	tripId := uuid.New().String()
+
+	log.Printf("✅ Trip created with ID: %s", tripId)
+
+	response := CreateTripResponse{
+		Success: true,
+		TripId:  tripId,
+		Message: "Trip created successfully",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (s *TripServer) validateUser(userId string) (*ValidateUserResponse, error) {
+	log.Printf("📞 Calling User Service to validate user: %s", userId)
+
+	validateReq := ValidateUserRequest{
+		UserId: userId,
+	}
+
+	jsonData, err := json.Marshal(validateReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	url := fmt.Sprintf("%s/api/users/validate", s.userServiceURL)
+	resp, err := s.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call user service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var validateResp ValidateUserResponse
+	if err := json.NewDecoder(resp.Body).Decode(&validateResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	log.Printf("✅ User Service response: valid=%t, type=%s", validateResp.Valid, validateResp.UserType)
+	return &validateResp, nil
+}
+
+func main() {
+	// Load URLs from environment or use defaults
+	springBootURL := "http://trip-service:8082"  // trip-service port
+	userServiceURL := "http://user-service:8081" // user-service port
+
+	// Initialize TripServer
+	server := &TripServer{
+		springBootURL:  springBootURL,
+		userServiceURL: userServiceURL,
+		httpClient:     &http.Client{Timeout: 10 * time.Second},
+	}
+
+	// Setup HTTP handlers
+	http.HandleFunc("/createTrip", server.createTripHandler)
+
+	log.Println("🚗 Trip gRPC Service starting on port :50052")
+	log.Printf("📡 Will call User Service at: %s", userServiceURL)
+	log.Printf("📡 Will proxy to Trip Service at: %s", springBootURL)
+
+	// Start HTTP server
 	go func() {
-		log.Println("Service running... Press Ctrl+C to stop")
-		// Simulate some work
-		for {
-			log.Println("Service heartbeat...")
-			time.Sleep(30 * time.Second)
+		if err := http.ListenAndServe(":50052", nil); err != nil {
+			log.Fatalf("Failed to start HTTP server: %v", err)
 		}
 	}()
-	<-done // This will block forever until something sends to done channel
+
+	log.Println("✅ Service running on port 50052...")
+
+	// Keep server running
+	select {}
 }
