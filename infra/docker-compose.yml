@@ -95,6 +95,7 @@ services:
       - "5435:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
+      - ../db/user-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
   trip-service-db:
     image: postgres:15-alpine
     container_name: trip-service-db
@@ -106,6 +107,7 @@ services:
       - "5433:5432"
     volumes:
       - trip_db_data:/var/lib/postgresql/data
+      - ../db/trip-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
   driver-service-db:
     image: postgres:15-alpine
     container_name: driver-service-db
@@ -117,6 +119,7 @@ services:
       - "5434:5432"
     volumes:
       - driver_db_data:/var/lib/postgresql/data
+      - ../db/driver-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
 
 volumes:
   user_db_data:
