@@ -7,9 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class TripService {
@@ -18,86 +16,58 @@ public class TripService {
     private TripRepository tripRepository;
 
     public TripResponse createTrip(CreateTripRequest request) {
-        Trip trip = new Trip(
-            request.getPassengerId(),
-            request.getPickupLocation(),
-            request.getDestination(),
-            request.getPickupLatitude(),
-            request.getPickupLongitude(),
-            request.getDestinationLatitude(),
-            request.getDestinationLongitude()
-        );
-
-        // Calculate basic fare (simplified calculation)
-        trip.setFare(calculateFare(trip));
-
-        Trip savedTrip = tripRepository.save(trip);
-        return convertToResponse(savedTrip);
+        // TODO: Validate trip data
+        // TODO: Create new trip entity
+        // TODO: Calculate fare based on distance
+        // TODO: Save to database
+        // TODO: Return trip response
+        return null;
     }
 
     public TripResponse getTripById(Long tripId) {
-        Trip trip = tripRepository.findById(tripId)
-            .orElseThrow(() -> new RuntimeException("Trip not found"));
-        return convertToResponse(trip);
+        // TODO: Find trip by ID
+        // TODO: Handle not found case
+        // TODO: Convert to response
+        return null;
     }
 
     public TripResponse updateTripStatus(Long tripId, UpdateTripStatusRequest request) {
-        Trip trip = tripRepository.findById(tripId)
-            .orElseThrow(() -> new RuntimeException("Trip not found"));
-
-        trip.setStatus(request.getStatus());
-        trip.setUpdatedAt(LocalDateTime.now());
-
-        Trip updatedTrip = tripRepository.save(trip);
-        return convertToResponse(updatedTrip);
+        // TODO: Find trip by ID
+        // TODO: Update status field
+        // TODO: Update timestamp
+        // TODO: Save changes
+        return null;
     }
 
     public TripResponse assignDriver(Long tripId, AssignDriverRequest request) {
-        Trip trip = tripRepository.findById(tripId)
-            .orElseThrow(() -> new RuntimeException("Trip not found"));
-
-        trip.setDriverId(request.getDriverId());
-        trip.setStatus("ACCEPTED");
-        trip.setUpdatedAt(LocalDateTime.now());
-
-        Trip updatedTrip = tripRepository.save(trip);
-        return convertToResponse(updatedTrip);
+        // TODO: Find trip by ID
+        // TODO: Assign driver ID
+        // TODO: Update status to ACCEPTED
+        // TODO: Save changes
+        return null;
     }
 
     public List<TripResponse> getTripsByPassenger(Long passengerId) {
-        List<Trip> trips = tripRepository.findByPassengerId(passengerId);
-        return trips.stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
+        // TODO: Query trips by passenger ID
+        // TODO: Convert to response DTOs
+        return null;
     }
 
     public List<TripResponse> getTripsByDriver(Long driverId) {
-        List<Trip> trips = tripRepository.findByDriverId(driverId);
-        return trips.stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
+        // TODO: Query trips by driver ID
+        // TODO: Convert to response DTOs
+        return null;
     }
 
     private BigDecimal calculateFare(Trip trip) {
-        // Simplified fare calculation - base fare of 50
-        return new BigDecimal("50.00");
+        // TODO: Calculate fare based on distance
+        // TODO: Apply surge pricing if applicable
+        // TODO: Consider time of day multipliers
+        return null;
     }
 
     private TripResponse convertToResponse(Trip trip) {
-        return new TripResponse(
-            trip.getId(),
-            trip.getPassengerId(),
-            trip.getDriverId(),
-            trip.getStatus(),
-            trip.getPickupLocation(),
-            trip.getDestination(),
-            trip.getPickupLatitude(),
-            trip.getPickupLongitude(),
-            trip.getDestinationLatitude(),
-            trip.getDestinationLongitude(),
-            trip.getFare(),
-            trip.getCreatedAt(),
-            trip.getUpdatedAt()
-        );
+        // TODO: Map entity fields to DTO
+        return null;
     }
 }

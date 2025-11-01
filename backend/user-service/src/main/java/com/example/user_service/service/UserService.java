@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -16,63 +15,44 @@ public class UserService {
     private UserRepository userRepository;
 
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
-
-        User user = new User(
-            request.getEmail(),
-            request.getName(),
-            request.getUserType(),
-            request.getPhone()
-        );
-
-        User savedUser = userRepository.save(user);
-        return convertToResponse(savedUser);
+        // TODO: Validate user data
+        // TODO: Check if email already exists
+        // TODO: Create new user entity
+        // TODO: Save to database
+        // TODO: Return user response
+        return null;
     }
 
     public UserResponse getUserById(Long userId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        return convertToResponse(user);
+        // TODO: Find user by ID
+        // TODO: Handle not found case
+        // TODO: Convert to response
+        return null;
     }
 
     public UserResponse getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        return convertToResponse(user);
+        // TODO: Find user by email
+        // TODO: Handle not found case
+        // TODO: Convert to response
+        return null;
     }
 
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (request.getName() != null) {
-            user.setName(request.getName());
-        }
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
-        }
-
-        User updatedUser = userRepository.save(user);
-        return convertToResponse(updatedUser);
+        // TODO: Find user by ID
+        // TODO: Update fields if provided
+        // TODO: Save changes
+        // TODO: Return updated user
+        return null;
     }
 
     public List<UserResponse> getUsersByType(String userType) {
-        List<User> users = userRepository.findByUserType(userType);
-        return users.stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
+        // TODO: Query users by type (PASSENGER or DRIVER)
+        // TODO: Convert to response DTOs
+        return null;
     }
 
     private UserResponse convertToResponse(User user) {
-        return new UserResponse(
-            user.getId(),
-            user.getEmail(),
-            user.getName(),
-            user.getUserType(),
-            user.getPhone(),
-            user.getCreatedAt()
-        );
+        // TODO: Map entity fields to DTO
+        return null;
     }
 }

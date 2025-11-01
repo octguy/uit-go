@@ -17,80 +17,53 @@ public class DriverService {
     private DriverRepository driverRepository;
 
     public DriverResponse createDriver(CreateDriverRequest request) {
-        if (driverRepository.existsByUserId(request.getUserId())) {
-            throw new RuntimeException("Driver already exists for this user");
-        }
-        
-        if (driverRepository.existsByVehiclePlate(request.getVehiclePlate())) {
-            throw new RuntimeException("Vehicle plate already registered");
-        }
-
-        Driver driver = new Driver(
-            request.getUserId(),
-            request.getVehiclePlate(),
-            request.getVehicleModel(),
-            request.getCurrentLatitude(),
-            request.getCurrentLongitude()
-        );
-
-        Driver savedDriver = driverRepository.save(driver);
-        return convertToResponse(savedDriver);
+        // TODO: Validate driver data
+        // TODO: Check if driver already exists
+        // TODO: Create new driver entity
+        // TODO: Save to database
+        // TODO: Return driver response
+        return null;
     }
 
     public DriverResponse getDriverById(Long driverId) {
-        Driver driver = driverRepository.findById(driverId)
-            .orElseThrow(() -> new RuntimeException("Driver not found"));
-        return convertToResponse(driver);
+        // TODO: Find driver by ID
+        // TODO: Handle not found case
+        // TODO: Convert to response
+        return null;
     }
 
     public DriverResponse updateDriverStatus(Long driverId, UpdateDriverStatusRequest request) {
-        Driver driver = driverRepository.findById(driverId)
-            .orElseThrow(() -> new RuntimeException("Driver not found"));
-
-        driver.setStatus(request.getStatus());
-        driver.setLastUpdated(LocalDateTime.now());
-
-        Driver updatedDriver = driverRepository.save(driver);
-        return convertToResponse(updatedDriver);
+        // TODO: Find driver by ID
+        // TODO: Update status field
+        // TODO: Save changes
+        // TODO: Return updated driver
+        return null;
     }
 
     public DriverResponse updateDriverLocation(Long driverId, UpdateLocationRequest request) {
-        Driver driver = driverRepository.findById(driverId)
-            .orElseThrow(() -> new RuntimeException("Driver not found"));
-
-        driver.setCurrentLatitude(request.getLatitude());
-        driver.setCurrentLongitude(request.getLongitude());
-        driver.setLastUpdated(LocalDateTime.now());
-
-        Driver updatedDriver = driverRepository.save(driver);
-        return convertToResponse(updatedDriver);
+        // TODO: Find driver by ID
+        // TODO: Update latitude and longitude
+        // TODO: Update timestamp
+        // TODO: Save changes
+        return null;
     }
 
     public List<DriverResponse> getAvailableDrivers() {
-        List<Driver> drivers = driverRepository.findByStatus("AVAILABLE");
-        return drivers.stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
+        // TODO: Query available drivers from database
+        // TODO: Convert to response DTOs
+        return null;
     }
 
     public List<DriverResponse> getNearbyDrivers(Double latitude, Double longitude, Double radiusKm) {
-        List<Driver> drivers = driverRepository.findNearbyAvailableDrivers(latitude, longitude, radiusKm);
-        return drivers.stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
+        // TODO: Calculate distance using Haversine formula
+        // TODO: Query drivers within radius
+        // TODO: Filter by availability
+        // TODO: Return sorted by distance
+        return null;
     }
 
     private DriverResponse convertToResponse(Driver driver) {
-        return new DriverResponse(
-            driver.getId(),
-            driver.getUserId(),
-            driver.getVehiclePlate(),
-            driver.getVehicleModel(),
-            driver.getStatus(),
-            driver.getCurrentLatitude(),
-            driver.getCurrentLongitude(),
-            driver.getCreatedAt(),
-            driver.getLastUpdated()
-        );
+        // TODO: Map entity fields to DTO
+        return null;
     }
 }

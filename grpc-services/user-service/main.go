@@ -2,14 +2,10 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"net"
-	"os"
 
-	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 
 	pb "github.com/uit-go/grpc-services/proto/user"
@@ -17,132 +13,75 @@ import (
 
 type UserServer struct {
 	pb.UnimplementedUserServiceServer
-	db *sql.DB
+	springBootURL string
 }
 
 func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.UserResponse, error) {
-	var user pb.UserResponse
+	// TODO: Call Spring Boot REST API
+	url := fmt.Sprintf("%s/api/users/%d", s.springBootURL, req.UserId)
 
-	query := `SELECT id, email, name, user_type, phone, created_at FROM users WHERE id = $1`
-	row := s.db.QueryRow(query, req.UserId)
+	// TODO: Make HTTP GET request to Spring Boot
+	// TODO: Parse JSON response
+	// TODO: Convert to gRPC response format
 
-	var createdAt sql.NullTime
-	var phone sql.NullString
+	log.Printf("TODO: Call %s", url)
 
-	err := row.Scan(&user.Id, &user.Email, &user.Name, &user.UserType, &phone, &createdAt)
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %v", err)
-	}
-
-	if phone.Valid {
-		user.Phone = phone.String
-	}
-	if createdAt.Valid {
-		user.CreatedAt = createdAt.Time.Format("2006-01-02T15:04:05Z")
-	}
-
-	return &user, nil
+	// Placeholder response
+	return &pb.UserResponse{
+		Id:       req.UserId,
+		Email:    "TODO",
+		Name:     "TODO",
+		UserType: "TODO",
+		Phone:    "TODO",
+	}, nil
 }
 
 func (s *UserServer) ValidateUser(ctx context.Context, req *pb.ValidateUserRequest) (*pb.ValidateUserResponse, error) {
-	var userID int64
-	var userType string
+	// TODO: Call Spring Boot REST API
+	url := fmt.Sprintf("%s/api/users/email/%s", s.springBootURL, req.Email)
 
-	query := `SELECT id, user_type FROM users WHERE email = $1`
-	row := s.db.QueryRow(query, req.Email)
+	log.Printf("TODO: Call %s", url)
 
-	err := row.Scan(&userID, &userType)
-	if err != nil {
-		return &pb.ValidateUserResponse{
-			Valid: false,
-		}, nil
-	}
-
+	// Placeholder response
 	return &pb.ValidateUserResponse{
 		Valid:    true,
-		UserId:   userID,
-		UserType: userType,
+		UserId:   0,
+		UserType: "TODO",
 	}, nil
 }
 
 func (s *UserServer) GetUsersByType(ctx context.Context, req *pb.GetUsersByTypeRequest) (*pb.GetUsersByTypeResponse, error) {
-	query := `SELECT id, email, name, user_type, phone, created_at FROM users WHERE user_type = $1`
-	rows, err := s.db.Query(query, req.UserType)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query users: %v", err)
-	}
-	defer rows.Close()
+	// TODO: Call Spring Boot REST API
+	url := fmt.Sprintf("%s/api/users/type/%s", s.springBootURL, req.UserType)
 
-	var users []*pb.UserResponse
+	log.Printf("TODO: Call %s", url)
 
-	for rows.Next() {
-		var user pb.UserResponse
-		var createdAt sql.NullTime
-		var phone sql.NullString
-
-		err := rows.Scan(&user.Id, &user.Email, &user.Name, &user.UserType, &phone, &createdAt)
-		if err != nil {
-			continue
-		}
-
-		if phone.Valid {
-			user.Phone = phone.String
-		}
-		if createdAt.Valid {
-			user.CreatedAt = createdAt.Time.Format("2006-01-02T15:04:05Z")
-		}
-
-		users = append(users, &user)
-	}
-
+	// Placeholder response
 	return &pb.GetUsersByTypeResponse{
-		Users: users,
+		Users: []*pb.UserResponse{},
 	}, nil
 }
 
 func main() {
-	// Load environment variables
-	godotenv.Load()
+	// TODO: Load Spring Boot URL from environment
+	springBootURL := "http://localhost:8081" // user-service port
 
-	// Database connection
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5435")
-	dbUser := getEnv("DB_USER", "postgres")
-	dbPassword := getEnv("DB_PASSWORD", "password")
-	dbName := getEnv("DB_NAME", "user_service")
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
-
-	// Test database connection
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	server := &UserServer{
+		springBootURL: springBootURL,
 	}
 
-	// Create gRPC server
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterUserServiceServer(s, &UserServer{db: db})
+	grpcServer := grpc.NewServer()
+	pb.RegisterUserServiceServer(grpcServer, server)
 
-	log.Println("User gRPC server starting on port 50051...")
-	if err := s.Serve(lis); err != nil {
+	log.Println("gRPC User Service running on :50051")
+	log.Printf("Will proxy to Spring Boot at: %s", springBootURL)
+
+	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }
