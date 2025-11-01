@@ -8,17 +8,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface DriverRepository extends JpaRepository<Driver, Long> {
+public interface DriverRepository extends JpaRepository<Driver, UUID> {
     
-    Optional<Driver> findByUserId(Long userId);
+    Optional<Driver> findByUserId(UUID userId);
     
     List<Driver> findByStatus(String status);
     
     boolean existsByVehiclePlate(String vehiclePlate);
     
-    boolean existsByUserId(Long userId);
+    boolean existsByUserId(UUID userId);
     
     // Find drivers within a radius using Haversine formula (simplified)
     @Query("SELECT d FROM Driver d WHERE d.status = 'AVAILABLE' " +

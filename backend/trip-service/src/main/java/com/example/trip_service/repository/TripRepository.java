@@ -5,17 +5,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface TripRepository extends JpaRepository<Trip, Long> {
+public interface TripRepository extends JpaRepository<Trip, UUID> {
     
-    List<Trip> findByPassengerId(Long passengerId);
+    List<Trip> findByPassengerId(UUID passengerId);
     
-    List<Trip> findByDriverId(Long driverId);
+    List<Trip> findByDriverId(UUID driverId);
     
     List<Trip> findByStatus(String status);
     
-    List<Trip> findByPassengerIdAndStatus(Long passengerId, String status);
+    List<Trip> findByPassengerIdAndStatus(UUID passengerId, String status);
     
-    List<Trip> findByDriverIdAndStatus(Long driverId, String status);
+    List<Trip> findByDriverIdAndStatus(UUID driverId, String status);
 }

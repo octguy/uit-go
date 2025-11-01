@@ -1,121 +1,100 @@
 package main
 
 import (
-	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
-	"time"
+	"net/http"
+	"os"
+
+	_ "github.com/lib/pq"
 )
 
-// TODO: Replace with actual protobuf generated code
-type UserRequest struct {
-	UserId int64
-}
-
-type UserResponse struct {
-	Id       int64
-	Email    string
-	Name     string
-	UserType string
-	Phone    string
-}
-
+// Simple structs for POC
 type ValidateUserRequest struct {
-	Email string
+	UserID string `json:"userId"`
 }
 
 type ValidateUserResponse struct {
-	Valid    bool
-	UserId   int64
-	UserType string
+	Valid    bool   `json:"valid"`
+	UserType string `json:"userType,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
-type GetUsersByTypeRequest struct {
-	UserType string
-}
-
-type GetUsersByTypeResponse struct {
-	Users []*UserResponse
-}
-
-type UserServer struct {
-	springBootURL string
-}
-
-func (s *UserServer) GetUser(ctx context.Context, req *UserRequest) (*UserResponse, error) {
-	// TODO: Call Spring Boot REST API
-	url := fmt.Sprintf("%s/api/users/%d", s.springBootURL, req.UserId)
-
-	// TODO: Make HTTP GET request to Spring Boot
-	// TODO: Parse JSON response
-	// TODO: Convert to gRPC response format
-
-	log.Printf("TODO: Call %s", url)
-
-	// Placeholder response
-	return &UserResponse{
-		Id:       req.UserId,
-		Email:    "TODO",
-		Name:     "TODO",
-		UserType: "TODO",
-		Phone:    "TODO",
-	}, nil
-}
-
-func (s *UserServer) ValidateUser(ctx context.Context, req *ValidateUserRequest) (*ValidateUserResponse, error) {
-	// TODO: Call Spring Boot REST API
-	url := fmt.Sprintf("%s/api/users/email/%s", s.springBootURL, req.Email)
-
-	log.Printf("TODO: Call %s", url)
-
-	// Placeholder response
-	return &ValidateUserResponse{
-		Valid:    true,
-		UserId:   0,
-		UserType: "TODO",
-	}, nil
-}
-
-func (s *UserServer) GetUsersByType(ctx context.Context, req *GetUsersByTypeRequest) (*GetUsersByTypeResponse, error) {
-	// TODO: Call Spring Boot REST API
-	url := fmt.Sprintf("%s/api/users/type/%s", s.springBootURL, req.UserType)
-
-	log.Printf("TODO: Call %s", url)
-
-	// Placeholder response
-	return &GetUsersByTypeResponse{
-		Users: []*UserResponse{},
-	}, nil
-}
+var db *sql.DB
 
 func main() {
-	// TODO: Load Spring Boot URL from environment
-	springBootURL := "http://localhost:8081" // user-service port
+	log.Println("🚀 User gRPC Service (Pattern 2 POC) - Port :50051")
 
-	// TODO: Initialize UserServer
-	_ = &UserServer{
-		springBootURL: springBootURL,
+	// Connect to database
+	initDB()
+
+	// gRPC-style HTTP handler for validateUser
+	http.HandleFunc("/validateUser", handleValidateUser)
+
+	log.Println("✅ Ready to handle gRPC calls from Trip Service")
+	log.Fatal(http.ListenAndServe(":50051", nil))
+}
+
+func initDB() {
+	dbHost := getEnv("DB_HOST", "user-service-db")
+	dbUser := getEnv("DB_USER", "user_service_user")
+	dbPassword := getEnv("DB_PASSWORD", "user_service_pass")
+	dbName := getEnv("DB_NAME", "user_service_db")
+
+	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbUser, dbPassword, dbName)
+
+	var err error
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatalf("❌ Failed to connect to database: %v", err)
 	}
 
-	// TODO: Setup gRPC server with protobuf
-	// TODO: Register UserServiceServer
-	// TODO: Listen on port 50051
+	log.Println("✅ Connected to User database")
+}
 
-	log.Println("gRPC User Service (Interface Only) - Port :50051")
-	log.Printf("Will proxy to Spring Boot at: %s", springBootURL)
+func handleValidateUser(w http.ResponseWriter, r *http.Request) {
+	var req ValidateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
 
-	// TODO: Implement actual gRPC server
-	log.Println("TODO: Implement gRPC server with protobuf")
+	log.Printf("📞 gRPC call: validateUser(userId=%s)", req.UserID)
 
-	// Keep server running for demo - create a blocking channel
-	done := make(chan bool)
-	go func() {
-		log.Println("Service running... Press Ctrl+C to stop")
-		// Simulate some work
-		for {
-			log.Println("Service heartbeat...")
-			time.Sleep(30 * time.Second)
+	// Query database
+	var userType string
+	err := db.QueryRow("SELECT user_type FROM users WHERE id = $1", req.UserID).Scan(&userType)
+
+	var response ValidateUserResponse
+	if err == sql.ErrNoRows {
+		response = ValidateUserResponse{
+			Valid:   false,
+			Message: "User not found",
 		}
-	}()
-	<-done // This will block forever until something sends to done channel
+		log.Printf("❌ User %s not found", req.UserID)
+	} else if err != nil {
+		log.Printf("❌ Database error: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	} else {
+		response = ValidateUserResponse{
+			Valid:    true,
+			UserType: userType,
+			Message:  "User validated successfully",
+		}
+		log.Printf("✅ User %s validated: %s", req.UserID, userType)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
