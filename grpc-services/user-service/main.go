@@ -4,19 +4,44 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
-
-	"google.golang.org/grpc"
-
-	pb "github.com/uit-go/grpc-services/proto/user"
 )
 
+// TODO: Replace with actual protobuf generated code
+type UserRequest struct {
+	UserId int64
+}
+
+type UserResponse struct {
+	Id       int64
+	Email    string
+	Name     string
+	UserType string
+	Phone    string
+}
+
+type ValidateUserRequest struct {
+	Email string
+}
+
+type ValidateUserResponse struct {
+	Valid    bool
+	UserId   int64
+	UserType string
+}
+
+type GetUsersByTypeRequest struct {
+	UserType string
+}
+
+type GetUsersByTypeResponse struct {
+	Users []*UserResponse
+}
+
 type UserServer struct {
-	pb.UnimplementedUserServiceServer
 	springBootURL string
 }
 
-func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.UserResponse, error) {
+func (s *UserServer) GetUser(ctx context.Context, req *UserRequest) (*UserResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/users/%d", s.springBootURL, req.UserId)
 
@@ -27,7 +52,7 @@ func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.U
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.UserResponse{
+	return &UserResponse{
 		Id:       req.UserId,
 		Email:    "TODO",
 		Name:     "TODO",
@@ -36,29 +61,29 @@ func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.U
 	}, nil
 }
 
-func (s *UserServer) ValidateUser(ctx context.Context, req *pb.ValidateUserRequest) (*pb.ValidateUserResponse, error) {
+func (s *UserServer) ValidateUser(ctx context.Context, req *ValidateUserRequest) (*ValidateUserResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/users/email/%s", s.springBootURL, req.Email)
 
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.ValidateUserResponse{
+	return &ValidateUserResponse{
 		Valid:    true,
 		UserId:   0,
 		UserType: "TODO",
 	}, nil
 }
 
-func (s *UserServer) GetUsersByType(ctx context.Context, req *pb.GetUsersByTypeRequest) (*pb.GetUsersByTypeResponse, error) {
+func (s *UserServer) GetUsersByType(ctx context.Context, req *GetUsersByTypeRequest) (*GetUsersByTypeResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/users/type/%s", s.springBootURL, req.UserType)
 
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.GetUsersByTypeResponse{
-		Users: []*pb.UserResponse{},
+	return &GetUsersByTypeResponse{
+		Users: []*UserResponse{},
 	}, nil
 }
 
@@ -66,22 +91,21 @@ func main() {
 	// TODO: Load Spring Boot URL from environment
 	springBootURL := "http://localhost:8081" // user-service port
 
-	server := &UserServer{
+	// TODO: Initialize UserServer
+	_ = &UserServer{
 		springBootURL: springBootURL,
 	}
 
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
+	// TODO: Setup gRPC server with protobuf
+	// TODO: Register UserServiceServer
+	// TODO: Listen on port 50051
 
-	grpcServer := grpc.NewServer()
-	pb.RegisterUserServiceServer(grpcServer, server)
-
-	log.Println("gRPC User Service running on :50051")
+	log.Println("gRPC User Service (Interface Only) - Port :50051")
 	log.Printf("Will proxy to Spring Boot at: %s", springBootURL)
 
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
+	// TODO: Implement actual gRPC server
+	log.Println("TODO: Implement gRPC server with protobuf")
+
+	// Keep server running for demo
+	select {}
 }

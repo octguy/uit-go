@@ -4,19 +4,56 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
-
-	"google.golang.org/grpc"
-
-	pb "github.com/uit-go/grpc-services/proto/driver"
 )
 
+// TODO: Replace with actual protobuf generated code
+type FindNearbyDriversRequest struct {
+	Latitude  float64
+	Longitude float64
+	RadiusKm  float64
+}
+
+type FindNearbyDriversResponse struct {
+	Drivers []*DriverInfo
+}
+
+type DriverInfo struct {
+	Id               int64
+	UserId           int64
+	VehiclePlate     string
+	VehicleModel     string
+	Status           string
+	CurrentLatitude  float64
+	CurrentLongitude float64
+}
+
+type GetDriverStatusRequest struct {
+	DriverId int64
+}
+
+type GetDriverStatusResponse struct {
+	DriverId         int64
+	Status           string
+	CurrentLatitude  float64
+	CurrentLongitude float64
+}
+
+type UpdateDriverLocationRequest struct {
+	DriverId  int64
+	Latitude  float64
+	Longitude float64
+}
+
+type UpdateDriverLocationResponse struct {
+	Success bool
+	Message string
+}
+
 type DriverServer struct {
-	pb.UnimplementedDriverServiceServer
 	springBootURL string
 }
 
-func (s *DriverServer) FindNearbyDrivers(ctx context.Context, req *pb.FindNearbyDriversRequest) (*pb.FindNearbyDriversResponse, error) {
+func (s *DriverServer) FindNearbyDrivers(ctx context.Context, req *FindNearbyDriversRequest) (*FindNearbyDriversResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/drivers/nearby?latitude=%f&longitude=%f&radiusKm=%f",
 		s.springBootURL, req.Latitude, req.Longitude, req.RadiusKm)
@@ -28,19 +65,19 @@ func (s *DriverServer) FindNearbyDrivers(ctx context.Context, req *pb.FindNearby
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.FindNearbyDriversResponse{
-		Drivers: []*pb.DriverInfo{},
+	return &FindNearbyDriversResponse{
+		Drivers: []*DriverInfo{},
 	}, nil
 }
 
-func (s *DriverServer) GetDriverStatus(ctx context.Context, req *pb.GetDriverStatusRequest) (*pb.GetDriverStatusResponse, error) {
+func (s *DriverServer) GetDriverStatus(ctx context.Context, req *GetDriverStatusRequest) (*GetDriverStatusResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/drivers/%d", s.springBootURL, req.DriverId)
 
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.GetDriverStatusResponse{
+	return &GetDriverStatusResponse{
 		DriverId:         req.DriverId,
 		Status:           "TODO",
 		CurrentLatitude:  0.0,
@@ -48,7 +85,7 @@ func (s *DriverServer) GetDriverStatus(ctx context.Context, req *pb.GetDriverSta
 	}, nil
 }
 
-func (s *DriverServer) UpdateDriverLocation(ctx context.Context, req *pb.UpdateDriverLocationRequest) (*pb.UpdateDriverLocationResponse, error) {
+func (s *DriverServer) UpdateDriverLocation(ctx context.Context, req *UpdateDriverLocationRequest) (*UpdateDriverLocationResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/drivers/%d/location", s.springBootURL, req.DriverId)
 
@@ -57,7 +94,7 @@ func (s *DriverServer) UpdateDriverLocation(ctx context.Context, req *pb.UpdateD
 
 	log.Printf("TODO: PUT to %s", url)
 
-	return &pb.UpdateDriverLocationResponse{
+	return &UpdateDriverLocationResponse{
 		Success: true,
 		Message: "TODO: Implement",
 	}, nil
@@ -67,22 +104,21 @@ func main() {
 	// TODO: Load Spring Boot URL from environment
 	springBootURL := "http://localhost:8083" // driver-service port
 
-	server := &DriverServer{
+	// TODO: Initialize DriverServer
+	_ = &DriverServer{
 		springBootURL: springBootURL,
 	}
 
-	lis, err := net.Listen("tcp", ":50053")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
+	// TODO: Setup gRPC server with protobuf
+	// TODO: Register DriverServiceServer
+	// TODO: Listen on port 50053
 
-	grpcServer := grpc.NewServer()
-	pb.RegisterDriverServiceServer(grpcServer, server)
-
-	log.Println("gRPC Driver Service running on :50053")
+	log.Println("gRPC Driver Service (Interface Only) - Port :50053")
 	log.Printf("Will proxy to Spring Boot at: %s", springBootURL)
 
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
+	// TODO: Implement actual gRPC server
+	log.Println("TODO: Implement gRPC server with protobuf")
+
+	// Keep server running for demo
+	select {}
 }

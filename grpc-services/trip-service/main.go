@@ -4,19 +4,57 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
-
-	"google.golang.org/grpc"
-
-	pb "github.com/uit-go/grpc-services/proto/trip"
 )
 
+// TODO: Replace with actual protobuf generated code
+type GetTripRequest struct {
+	TripId int64
+}
+
+type TripResponse struct {
+	Trip *TripInfo
+}
+
+type TripInfo struct {
+	Id                   int64
+	PassengerId          int64
+	DriverId             int64
+	Status               string
+	PickupLocation       string
+	Destination          string
+	PickupLatitude       float64
+	PickupLongitude      float64
+	DestinationLatitude  float64
+	DestinationLongitude float64
+	Fare                 float64
+	CreatedAt            string
+	UpdatedAt            string
+}
+
+type GetTripsByUserRequest struct {
+	UserId   int64
+	UserType string
+}
+
+type GetTripsByUserResponse struct {
+	Trips []*TripInfo
+}
+
+type UpdateTripStatusRequest struct {
+	TripId int64
+	Status string
+}
+
+type UpdateTripStatusResponse struct {
+	Success bool
+	Message string
+}
+
 type TripServer struct {
-	pb.UnimplementedTripServiceServer
 	springBootURL string
 }
 
-func (s *TripServer) GetTrip(ctx context.Context, req *pb.GetTripRequest) (*pb.TripResponse, error) {
+func (s *TripServer) GetTrip(ctx context.Context, req *GetTripRequest) (*TripResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/trips/%d", s.springBootURL, req.TripId)
 
@@ -27,8 +65,8 @@ func (s *TripServer) GetTrip(ctx context.Context, req *pb.GetTripRequest) (*pb.T
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.TripResponse{
-		Trip: &pb.TripInfo{
+	return &TripResponse{
+		Trip: &TripInfo{
 			Id:          req.TripId,
 			PassengerId: 0,
 			DriverId:    0,
@@ -37,7 +75,7 @@ func (s *TripServer) GetTrip(ctx context.Context, req *pb.GetTripRequest) (*pb.T
 	}, nil
 }
 
-func (s *TripServer) GetTripsByUser(ctx context.Context, req *pb.GetTripsByUserRequest) (*pb.GetTripsByUserResponse, error) {
+func (s *TripServer) GetTripsByUser(ctx context.Context, req *GetTripsByUserRequest) (*GetTripsByUserResponse, error) {
 	// TODO: Call Spring Boot REST API
 	var url string
 	if req.UserType == "PASSENGER" {
@@ -49,12 +87,12 @@ func (s *TripServer) GetTripsByUser(ctx context.Context, req *pb.GetTripsByUserR
 	log.Printf("TODO: Call %s", url)
 
 	// Placeholder response
-	return &pb.GetTripsByUserResponse{
-		Trips: []*pb.TripInfo{},
+	return &GetTripsByUserResponse{
+		Trips: []*TripInfo{},
 	}, nil
 }
 
-func (s *TripServer) UpdateTripStatus(ctx context.Context, req *pb.UpdateTripStatusRequest) (*pb.UpdateTripStatusResponse, error) {
+func (s *TripServer) UpdateTripStatus(ctx context.Context, req *UpdateTripStatusRequest) (*UpdateTripStatusResponse, error) {
 	// TODO: Call Spring Boot REST API
 	url := fmt.Sprintf("%s/api/trips/%d/status", s.springBootURL, req.TripId)
 
@@ -63,7 +101,7 @@ func (s *TripServer) UpdateTripStatus(ctx context.Context, req *pb.UpdateTripSta
 
 	log.Printf("TODO: PUT to %s", url)
 
-	return &pb.UpdateTripStatusResponse{
+	return &UpdateTripStatusResponse{
 		Success: true,
 		Message: "TODO: Implement",
 	}, nil
@@ -73,22 +111,21 @@ func main() {
 	// TODO: Load Spring Boot URL from environment
 	springBootURL := "http://localhost:8082" // trip-service port
 
-	server := &TripServer{
+	// TODO: Initialize TripServer
+	_ = &TripServer{
 		springBootURL: springBootURL,
 	}
 
-	lis, err := net.Listen("tcp", ":50052")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
+	// TODO: Setup gRPC server with protobuf
+	// TODO: Register TripServiceServer
+	// TODO: Listen on port 50052
 
-	grpcServer := grpc.NewServer()
-	pb.RegisterTripServiceServer(grpcServer, server)
-
-	log.Println("gRPC Trip Service running on :50052")
+	log.Println("gRPC Trip Service (Interface Only) - Port :50052")
 	log.Printf("Will proxy to Spring Boot at: %s", springBootURL)
 
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
+	// TODO: Implement actual gRPC server
+	log.Println("TODO: Implement gRPC server with protobuf")
+
+	// Keep server running for demo
+	select {}
 }
