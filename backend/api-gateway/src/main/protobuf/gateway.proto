@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package gateway;
+
+service ApiGateway {
+  rpc RouteRequest (GatewayRequest) returns (GatewayResponse);
+}
+
+message GatewayRequest {
+  string service = 1;
+  string payload = 2;
+}
+
+message GatewayResponse {
+  string status = 1;
+  string data = 2;
+}

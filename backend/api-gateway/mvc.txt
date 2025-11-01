@@ -1,0 +1,18 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.example:api-gateway >-----------------------
+[INFO] Building api-gateway 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.8.1:tree (default-cli) @ api-gateway ---
+[INFO] com.example:api-gateway:jar:0.0.1-SNAPSHOT
+[INFO] \- org.springframework.grpc:spring-grpc-server-web-spring-boot-starter:jar:0.12.0:compile
+[INFO]    \- org.springframework.boot:spring-boot-starter-web:jar:3.5.7:compile
+[INFO]       \- org.springframework:spring-webmvc:jar:6.2.12:compile
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.305 s
+[INFO] Finished at: 2025-11-01T11:15:45+07:00
+[INFO] ------------------------------------------------------------------------

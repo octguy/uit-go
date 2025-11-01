@@ -1,0 +1,73 @@
+version: '3.8'
+services:
+  api-gateway:
+    build: ../backend/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+  user-service:
+    build: ../backend/user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      - user-service-db
+  trip-service:
+    build: ../backend/trip-service
+    container_name: trip-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      - trip-service-db
+  driver-service:
+    build: ../backend/driver-service
+    container_name: driver-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      - driver-service-db
+  user-service-db:
+    image: postgres:15-alpine
+    container_name: user-service-db
+    environment:
+      POSTGRES_DB: user_service_db
+      POSTGRES_USER: user_service_user
+      POSTGRES_PASSWORD: user_service_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+  trip-service-db:
+    image: postgres:15-alpine
+    container_name: trip-service-db
+    environment:
+      POSTGRES_DB: trip_service_db
+      POSTGRES_USER: trip_service_user
+      POSTGRES_PASSWORD: trip_service_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - trip_db_data:/var/lib/postgresql/data
+  driver-service-db:
+    image: postgres:15-alpine
+    container_name: driver-service-db
+    environment:
+      POSTGRES_DB: driver_service_db
+      POSTGRES_USER: driver_service_user
+      POSTGRES_PASSWORD: driver_service_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - driver_db_data:/var/lib/postgresql/data
+volumes:
+  user_db_data:
+  trip_db_data:
+  driver_db_data:

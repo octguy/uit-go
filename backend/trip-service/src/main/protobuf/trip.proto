@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package trip;
+
+service TripService {
+  rpc CreateTrip (TripRequest) returns (TripResponse);
+  rpc GetTripStatus (TripStatusRequest) returns (TripStatusResponse);
+}
+
+message TripRequest {
+  string user_id = 1;
+  string origin = 2;
+  string destination = 3;
+}
+
+message TripResponse {
+  string trip_id = 1;
+  string status = 2;
+}
+
+message TripStatusRequest {
+  string trip_id = 1;
+}
+
+message TripStatusResponse {
+  string trip_id = 1;
+  string status = 2;
+  string driver_id = 3;
+}

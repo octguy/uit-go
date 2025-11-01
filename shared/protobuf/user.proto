@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/uit-go/grpc/user";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+  rpc ValidateUser(ValidateUserRequest) returns (ValidateUserResponse);
+  rpc GetUsersByType(GetUsersByTypeRequest) returns (GetUsersByTypeResponse);
+}
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message UserResponse {
+  int64 id = 1;
+  string email = 2;
+  string name = 3;
+  string user_type = 4;
+  string phone = 5;
+  string created_at = 6;
+}
+
+message ValidateUserRequest {
+  string email = 1;
+}
+
+message ValidateUserResponse {
+  bool valid = 1;
+  int64 user_id = 2;
+  string user_type = 3;
+}
+
+message GetUsersByTypeRequest {
+  string user_type = 1;
+}
+
+message GetUsersByTypeResponse {
+  repeated UserResponse users = 1;
+}
