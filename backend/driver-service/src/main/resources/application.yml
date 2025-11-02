@@ -99,3 +99,16 @@ driver:
   monitoring:
     health-check-interval-minutes: 5
     metrics-log-interval-minutes: 15
+
+# gRPC User Service Configuration
+user:
+  grpc:
+    service:
+      host: user-grpc-service
+      port: 50051
+
+# Logging configuration for gRPC debugging
+logging:
+  level:
+    com.example.trip_service.service.impl.TripServiceImpl: DEBUG
+    io.grpc: DEBUG
