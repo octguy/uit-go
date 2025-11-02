@@ -1,14 +1,12 @@
 package main
 
 import (
-	"database/sql"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-
-	_ "github.com/lib/pq"
 )
 
 // Simple structs for POC
@@ -22,37 +20,14 @@ type ValidateUserResponse struct {
 	Message  string `json:"message,omitempty"`
 }
 
-var db *sql.DB
-
 func main() {
-	log.Println("🚀 User gRPC Service (Pattern 2 POC) - Port :50051")
-
-	// Connect to database
-	initDB()
+	log.Println("🚀 User gRPC Service (Intermediary) - Port :50051")
 
 	// gRPC-style HTTP handler for validateUser
 	http.HandleFunc("/validateUser", handleValidateUser)
 
-	log.Println("✅ Ready to handle gRPC calls from Trip Service")
+	log.Println("✅ Ready to handle gRPC calls and forward to Spring User Service")
 	log.Fatal(http.ListenAndServe(":50051", nil))
-}
-
-func initDB() {
-	dbHost := getEnv("DB_HOST", "user-service-db")
-	dbUser := getEnv("DB_USER", "user_service_user")
-	dbPassword := getEnv("DB_PASSWORD", "user_service_pass")
-	dbName := getEnv("DB_NAME", "user_service_db")
-
-	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbUser, dbPassword, dbName)
-
-	var err error
-	db, err = sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatalf("❌ Failed to connect to database: %v", err)
-	}
-
-	log.Println("✅ Connected to User database")
 }
 
 func handleValidateUser(w http.ResponseWriter, r *http.Request) {
@@ -62,31 +37,33 @@ func handleValidateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("📞 gRPC call: validateUser(userId=%s)", req.UserID)
+	log.Printf("📞 gRPC call received: validateUser(userId=%s)", req.UserID)
+	log.Printf("🔄 Forwarding to Spring User Service...")
 
-	// Query database
-	var userType string
-	err := db.QueryRow("SELECT user_type FROM users WHERE id = $1", req.UserID).Scan(&userType)
+	// Forward request to Spring User Service
+	springUserServiceURL := getEnv("SPRING_USER_SERVICE_URL", "http://user-service-tf:8081")
 
-	var response ValidateUserResponse
-	if err == sql.ErrNoRows {
-		response = ValidateUserResponse{
-			Valid:   false,
-			Message: "User not found",
-		}
-		log.Printf("❌ User %s not found", req.UserID)
-	} else if err != nil {
-		log.Printf("❌ Database error: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+	// Create request to Spring service
+	reqBody, _ := json.Marshal(req)
+	resp, err := http.Post(fmt.Sprintf("%s/api/users/validate", springUserServiceURL),
+		"application/json", bytes.NewBuffer(reqBody))
+
+	if err != nil {
+		log.Printf("❌ Failed to call Spring User Service: %v", err)
+		http.Error(w, "Failed to validate user", http.StatusInternalServerError)
 		return
-	} else {
-		response = ValidateUserResponse{
-			Valid:    true,
-			UserType: userType,
-			Message:  "User validated successfully",
-		}
-		log.Printf("✅ User %s validated: %s", req.UserID, userType)
 	}
+	defer resp.Body.Close()
+
+	// Forward the response back
+	var response ValidateUserResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		log.Printf("❌ Failed to decode Spring service response: %v", err)
+		http.Error(w, "Invalid response from user service", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("✅ Response from Spring User Service: valid=%v, userType=%s", response.Valid, response.UserType)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
