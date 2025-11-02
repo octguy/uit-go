@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "./proto";
-
 package trip;
+
+option go_package = "github.com/uit-go/grpc-services/trip-service/proto";
 
 // Trip Service Definition
 service TripService {

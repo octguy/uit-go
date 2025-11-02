@@ -26,6 +26,17 @@ type TripServer struct {
 	httpClient     *http.Client
 }
 
+// NewTripServer creates a new trip server instance
+func NewTripServer(springBootURL, userServiceURL string) *TripServer {
+	return &TripServer{
+		springBootURL:  springBootURL,
+		userServiceURL: userServiceURL,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
 // CreateTrip creates a new trip
 func (s *TripServer) CreateTrip(ctx context.Context, req *pb.CreateTripRequest) (*pb.CreateTripResponse, error) {
 	log.Printf("gRPC CreateTrip called: user_id=%s, origin=%s, destination=%s", req.UserId, req.Origin, req.Destination)
@@ -213,33 +224,39 @@ func (s *TripServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest
 func main() {
 	// Configuration
 	port := ":50052"
-	springBootURL := "http://trip-service:8082" // Use correct context path
+	springBootURL := "http://trip-service:8082/api/trip-service" // Use correct context path
 	userServiceURL := "http://user-service:8081"
 
 	log.Printf("🚀 Starting gRPC Trip Service on port %s", port)
 	log.Printf("🔗 Spring Boot backend: %s", springBootURL)
 	log.Printf("🔗 User Service: %s", userServiceURL)
 
-	// Create listener
+	// Create TCP listener
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf("❌ Failed to listen on port %s: %v", port, err)
 	}
 
 	// Create gRPC server
-	grpcServer := grpc.NewServer()
+	s := grpc.NewServer()
 
-	// Initialize and register service
-	tripServer := &TripServer{
-		springBootURL:  springBootURL,
-		userServiceURL: userServiceURL,
-		httpClient:     &http.Client{Timeout: 10 * time.Second},
+	// Register the trip service
+	tripServer := NewTripServer(springBootURL, userServiceURL)
+	pb.RegisterTripServiceServer(s, tripServer)
+
+	// Enable reflection for debugging
+	reflection.Register(s)
+
+	log.Printf("✅ gRPC Trip Service registered")
+	log.Printf("🔍 gRPC reflection enabled")
+	log.Printf("📡 Listening on %s", port)
+	log.Printf("🧪 Test with: grpcurl -plaintext localhost%s list", port)
+
+	// Start the server
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("❌ Failed to serve gRPC server: %v", err)
 	}
-
-	pb.RegisterTripServiceServer(grpcServer, tripServer)
-
-	// Enable reflection for easier debugging with grpcurl
-	reflection.Register(grpcServer)
+}
 
 	log.Printf("✅ gRPC Trip Service registered")
 	log.Printf("🔍 gRPC reflection enabled")

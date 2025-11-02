@@ -1,28 +1,27 @@
 -- Trip Service Database Schema
 
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE trip (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY NOT NULL,
     passenger_id UUID NOT NULL,
     driver_id UUID,
-
-    pickup_location VARCHAR(255),
+    status VARCHAR(255) NOT NULL,
+    pickup_location VARCHAR(255) NOT NULL,
     destination VARCHAR(255) NOT NULL,
-
-    pickup_latitude DECIMAL(10, 8),
-    pickup_longitude DECIMAL(11, 8),
-    destination_latitude DECIMAL(10, 8),
-    destination_longitude DECIMAL(11, 8),
-
-    status VARCHAR(20) NOT NULL DEFAULT 'SEARCHING_DRIVER'
-        CHECK (status IN ('SEARCHING_DRIVER', 'ACCEPTED', 'ONGOING', 'COMPLETED', 'CANCELLED')),
-
-    fare DECIMAL(10, 2),
-    created_at TIMESTAMP(6) not null,
-    updated_at TIMESTAMP(6),
-    deleted_at TIMESTAMP(6)
+    pickup_latitude DOUBLE PRECISION NOT NULL,
+    pickup_longitude DOUBLE PRECISION NOT NULL,
+    destination_latitude DOUBLE PRECISION NOT NULL,
+    destination_longitude DOUBLE PRECISION NOT NULL,
+    fare DECIMAL(19, 2),
+    requested_at TIMESTAMP NOT NULL,
+    accepted_at TIMESTAMP,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    cancelled_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE rating

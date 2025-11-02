@@ -2,182 +2,203 @@ package com.example.trip_service.service.impl;
 
 import com.example.trip_service.dto.*;
 import com.example.trip_service.entity.Trip;
+import com.example.trip_service.enums.TripStatus;
 import com.example.trip_service.repository.TripRepository;
 import com.example.trip_service.service.ITripService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
+import com.example.trip_service.utility.PricingUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
 public class TripServiceImpl implements ITripService {
 
-    @Autowired
-    private TripRepository tripRepository;
-    
-    @Autowired
-    private RestTemplate restTemplate;
-    
-    @Value("${trip.grpc.service.url:http://trip-grpc-service:50052}")
-    private String tripGrpcServiceUrl;
+    private final TripRepository tripRepository;
+
+    public TripServiceImpl(TripRepository tripRepository) {
+        this.tripRepository = tripRepository;
+    }
 
     @Override
+    @Transactional
     public TripResponse createTrip(CreateTripRequest request) {
-        System.out.println("🚀 Pattern 2 POC: Create Trip Request - " + request.getPickupLocation() + " → " + request.getDestination());
-        
-        // Step 1: Call Trip gRPC Service to create trip (which will validate user via User Service)
-        CreateTripGrpcRequest grpcRequest = new CreateTripGrpcRequest();
-        grpcRequest.setPassengerId(request.getPassengerId().toString());
-        grpcRequest.setPickupLocation(request.getPickupLocation());
-        grpcRequest.setDestination(request.getDestination());
-        
-        CreateTripGrpcResponse grpcResponse = createTripViaGrpc(grpcRequest);
-        
-        if (!grpcResponse.isSuccess()) {
-            throw new RuntimeException("❌ Trip creation failed: " + grpcResponse.getMessage());
-        }
-        
-        System.out.println("✅ Trip created via gRPC: " + grpcResponse.getTripId());
-        
-        // Step 2: Return response
-        TripResponse response = new TripResponse();
-        response.setId(UUID.fromString(grpcResponse.getTripId()));
-        response.setPassengerId(request.getPassengerId());
-        response.setPickupLocation(request.getPickupLocation());
-        response.setDestination(request.getDestination());
-        response.setStatus("REQUESTED");
-        response.setCreatedAt(LocalDateTime.now());
-        response.setUpdatedAt(LocalDateTime.now());
-        
-        return response;
+        // Validate coordinates
+        validateCoordinates(request);
+
+        // Calculate estimated fare
+        BigDecimal fareCents = PricingUtils.calculateFareCents(
+                request.getPickupLatitude().doubleValue(),
+                request.getPickupLongitude().doubleValue(),
+                request.getDestinationLatitude().doubleValue(),
+                request.getDestinationLongitude().doubleValue()
+        );
+
+        // Convert cents to dollars
+        BigDecimal fareInDollars = fareCents.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        // Create trip entity
+        Trip trip = new Trip();
+        trip.setPassengerId(request.getPassengerId());
+        trip.setStatus(TripStatus.SEARCHING_DRIVER);
+        trip.setPickupLocation(request.getPickupLocation());
+        trip.setDestination(request.getDestination());
+        trip.setPickupLatitude(request.getPickupLatitude().doubleValue());
+        trip.setPickupLongitude(request.getPickupLongitude().doubleValue());
+        trip.setDestinationLatitude(request.getDestinationLatitude().doubleValue());
+        trip.setDestinationLongitude(request.getDestinationLongitude().doubleValue());
+        trip.setFare(fareInDollars);
+
+        // Save trip
+        Trip savedTrip = tripRepository.save(trip);
+
+        return toTripResponse(savedTrip);
     }
-    
-    private CreateTripGrpcResponse createTripViaGrpc(CreateTripGrpcRequest request) {
-        System.out.println("📞 Making gRPC call to Trip Service for trip creation");
-        
-        try {
-            String grpcUrl = tripGrpcServiceUrl + "/createTrip";
-            ResponseEntity<CreateTripGrpcResponse> response = restTemplate.postForEntity(
-                grpcUrl, request, CreateTripGrpcResponse.class);
-                
-            System.out.println("✅ gRPC response received from Trip Service");
-            return response.getBody();
-            
-        } catch (Exception e) {
-            System.err.println("❌ gRPC call failed: " + e.getMessage());
-            CreateTripGrpcResponse errorResponse = new CreateTripGrpcResponse();
-            errorResponse.setSuccess(false);
-            errorResponse.setMessage("gRPC call failed: " + e.getMessage());
-            return errorResponse;
+
+    @Override
+    public EstimatedFareResponse getEstimatedFare(CreateTripRequest request) {
+        // Validate coordinates
+        validateCoordinates(request);
+
+        // Calculate distance
+        double distanceKm = PricingUtils.distanceKm(
+                request.getPickupLatitude().doubleValue(),
+                request.getPickupLongitude().doubleValue(),
+                request.getDestinationLatitude().doubleValue(),
+                request.getDestinationLongitude().doubleValue()
+        );
+
+        // Calculate fare in cents
+        BigDecimal fareCents = PricingUtils.calculateFareCents(
+                request.getPickupLatitude().doubleValue(),
+                request.getPickupLongitude().doubleValue(),
+                request.getDestinationLatitude().doubleValue(),
+                request.getDestinationLongitude().doubleValue()
+        );
+
+        // Convert cents to dollars
+        BigDecimal fareInDollars = fareCents.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        return EstimatedFareResponse.builder()
+                .estimatedFare(fareInDollars)
+                .distanceKm(distanceKm)
+                .currency("USD")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public TripResponse cancelTrip(UUID tripId, CancelTripRequest request) {
+        // Find trip
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + tripId));
+
+        // Check if trip can be cancelled
+        if (trip.getStatus() == TripStatus.COMPLETED) {
+            throw new IllegalStateException("Cannot cancel a completed trip");
         }
+
+        if (trip.getStatus() == TripStatus.CANCELLED) {
+            throw new IllegalStateException("Trip is already cancelled");
+        }
+
+        // Update trip status
+        trip.setStatus(TripStatus.CANCELLED);
+        trip.setCancelledAt(LocalDateTime.now());
+
+        // Save updated trip
+        Trip updatedTrip = tripRepository.save(trip);
+
+        return toTripResponse(updatedTrip);
     }
 
     @Override
     public TripResponse getTripById(UUID tripId) {
-        System.out.println("🔍 Getting trip by ID: " + tripId);
-        
-        // For demo purposes, return a mock trip response with proper status
-        TripResponse response = new TripResponse();
-        response.setId(tripId);
-        response.setPassengerId(UUID.randomUUID()); // Mock passenger ID
-        response.setPickupLocation("Ben Thanh Market, Ho Chi Minh City");
-        response.setDestination("Notre Dame Cathedral, Ho Chi Minh City");
-        response.setStatus("REQUESTED"); // This is the key field that was missing!
-        response.setFare(new BigDecimal("75000")); // 75,000 VND
-        response.setCreatedAt(LocalDateTime.now().minusMinutes(5));
-        response.setUpdatedAt(LocalDateTime.now());
-        
-        System.out.println("✅ Returning trip with status: " + response.getStatus());
-        return response;
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + tripId));
+
+        return toTripResponse(trip);
     }
 
-    @Override
-    public TripResponse updateTripStatus(UUID tripId, UpdateTripStatusRequest request) {
-        // TODO: Find trip by ID
-        // TODO: Update status field
-        // TODO: Update timestamp
-        // TODO: Save changes
-        return null;
-    }
+//    @Override
+//    public List<TripResponse> getTripsByPassenger(UUID passengerId) {
+//        List<Trip> trips = tripRepository.findByPassengerId(passengerId);
+//        return trips.stream()
+//                .map(this::toTripResponse)
+//                .collect(Collectors.toList());
+//    }
+//
+//    @Override
+//    public List<TripResponse> getTripsByDriver(UUID driverId) {
+//        List<Trip> trips = tripRepository.findByDriverId(driverId);
+//        return trips.stream()
+//                .map(this::toTripResponse)
+//                .collect(Collectors.toList());
+//    }
 
     @Override
+    @Transactional
     public TripResponse assignDriver(UUID tripId, AssignDriverRequest request) {
-        // TODO: Find trip by ID
-        // TODO: Assign driver ID
-        // TODO: Update status to ACCEPTED
-        // TODO: Save changes
-        return null;
+        // Find trip
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + tripId));
+
+        // Check if trip is in valid state for driver assignment
+        if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
+            throw new IllegalStateException("Trip is not in SEARCHING_DRIVER status");
+        }
+
+        // Assign driver
+        trip.setDriverId(request.getDriverId());
+        trip.setStatus(TripStatus.ACCEPTED);
+        trip.setAcceptedAt(LocalDateTime.now());
+
+        // Save updated trip
+        Trip updatedTrip = tripRepository.save(trip);
+
+        return toTripResponse(updatedTrip);
     }
 
-    @Override
-    public List<TripResponse> getTripsByPassenger(UUID passengerId) {
-        // TODO: Query trips by passenger ID
-        // TODO: Convert to response DTOs
-        return null;
+    private void validateCoordinates(CreateTripRequest request) {
+        if (request.getPickupLatitude() == null || request.getPickupLongitude() == null) {
+            throw new IllegalArgumentException("Pickup coordinates are required");
+        }
+
+        if (request.getDestinationLatitude() == null || request.getDestinationLongitude() == null) {
+            throw new IllegalArgumentException("Destination coordinates are required");
+        }
+
+        // Validate latitude range (-90 to 90)
+        if (request.getPickupLatitude().abs().compareTo(BigDecimal.valueOf(90)) > 0 ||
+                request.getDestinationLatitude().abs().compareTo(BigDecimal.valueOf(90)) > 0) {
+            throw new IllegalArgumentException("Latitude must be between -90 and 90");
+        }
+
+        // Validate longitude range (-180 to 180)
+        if (request.getPickupLongitude().abs().compareTo(BigDecimal.valueOf(180)) > 0 ||
+                request.getDestinationLongitude().abs().compareTo(BigDecimal.valueOf(180)) > 0) {
+            throw new IllegalArgumentException("Longitude must be between -180 and 180");
+        }
     }
 
-    @Override
-    public List<TripResponse> getTripsByDriver(UUID driverId) {
-        // TODO: Query trips by driver ID
-        // TODO: Convert to response DTOs
-        return null;
+    private TripResponse toTripResponse(Trip trip) {
+        return TripResponse.builder()
+                .id(trip.getId())
+                .passengerId(trip.getPassengerId())
+                .driverId(trip.getDriverId())
+                .status(trip.getStatus().name())
+                .pickupLocation(trip.getPickupLocation())
+                .destination(trip.getDestination())
+                .pickupLatitude(BigDecimal.valueOf(trip.getPickupLatitude()))
+                .pickupLongitude(BigDecimal.valueOf(trip.getPickupLongitude()))
+                .destinationLatitude(BigDecimal.valueOf(trip.getDestinationLatitude()))
+                .destinationLongitude(BigDecimal.valueOf(trip.getDestinationLongitude()))
+                .fare(trip.getFare())
+                .createdAt(trip.getCreatedAt())
+                .updatedAt(trip.getUpdatedAt())
+                .build();
     }
-
-    private BigDecimal calculateFare(Trip trip) {
-        // TODO: Calculate fare based on distance
-        // TODO: Apply surge pricing if applicable
-        // TODO: Consider time of day multipliers
-        return null;
-    }
-
-    private TripResponse convertToResponse(Trip trip) {
-        TripResponse response = new TripResponse();
-        response.setId(trip.getId());
-        response.setPassengerId(trip.getPassengerId());
-        response.setDriverId(trip.getDriverId());
-        response.setPickupLocation(trip.getPickupLocation());
-        response.setDestination(trip.getDestination());
-        response.setStatus(trip.getStatus());
-        response.setFare(trip.getFare());
-        response.setCreatedAt(trip.getCreatedAt());
-        response.setUpdatedAt(trip.getUpdatedAt());
-        return response;
-    }
-}
-
-// Inner classes for gRPC communication
-class CreateTripGrpcRequest {
-    private String passengerId;
-    private String pickupLocation;
-    private String destination;
-    
-    public String getPassengerId() { return passengerId; }
-    public void setPassengerId(String passengerId) { this.passengerId = passengerId; }
-    
-    public String getPickupLocation() { return pickupLocation; }
-    public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }
-    
-    public String getDestination() { return destination; }
-    public void setDestination(String destination) { this.destination = destination; }
-}
-
-class CreateTripGrpcResponse {
-    private boolean success;
-    private String tripId;
-    private String message;
-    
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
-    
-    public String getTripId() { return tripId; }
-    public void setTripId(String tripId) { this.tripId = tripId; }
-    
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
 }
