@@ -13,8 +13,11 @@ import java.util.UUID;
 @RequestMapping("/api/trips")
 public class TripController {
 
-    @Autowired
-    private ITripService tripService;
+    private final ITripService tripService;
+
+    public TripController(ITripService tripService) {
+        this.tripService = tripService;
+    }
 
     @PostMapping("/request")
     public ResponseEntity<TripResponse> requestTrip(@RequestBody CreateTripRequest request) {
@@ -28,27 +31,15 @@ public class TripController {
         return ResponseEntity.ok(trip);
     }
 
-    @PutMapping("/{tripId}/status")
-    public ResponseEntity<TripResponse> updateTripStatus(@PathVariable UUID tripId, @RequestBody UpdateTripStatusRequest request) {
-        TripResponse trip = tripService.updateTripStatus(tripId, request);
-        return ResponseEntity.ok(trip);
-    }
+//    @PutMapping("/{tripId}/status")
+//    public ResponseEntity<TripResponse> updateTripStatus(@PathVariable UUID tripId, @RequestBody UpdateTripStatusRequest request) {
+//        TripResponse trip = tripService.updateTripStatus(tripId, request);
+//        return ResponseEntity.ok(trip);
+//    }
 
     @PutMapping("/{tripId}/assign-driver")
     public ResponseEntity<TripResponse> assignDriver(@PathVariable UUID tripId, @RequestBody AssignDriverRequest request) {
         TripResponse trip = tripService.assignDriver(tripId, request);
         return ResponseEntity.ok(trip);
-    }
-
-    @GetMapping("/passenger/{passengerId}")
-    public ResponseEntity<List<TripResponse>> getTripsByPassenger(@PathVariable UUID passengerId) {
-        List<TripResponse> trips = tripService.getTripsByPassenger(passengerId);
-        return ResponseEntity.ok(trips);
-    }
-
-    @GetMapping("/driver/{driverId}")
-    public ResponseEntity<List<TripResponse>> getTripsByDriver(@PathVariable UUID driverId) {
-        List<TripResponse> trips = tripService.getTripsByDriver(driverId);
-        return ResponseEntity.ok(trips);
     }
 }

@@ -1,111 +1,95 @@
 package com.example.trip_service.entity;
 
+import com.example.trip_service.enums.TripStatus;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "trips")
+@Table(name="trip")
+@Getter
+@Setter
 public class Trip {
-    
+
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
-    
-    @Column(name = "passenger_id", nullable = false)
+
+    @Column(name="passenger_id", columnDefinition = "uuid", nullable = false)
     private UUID passengerId;
-    
-    @Column(name = "driver_id")
+
+    @Column(name="driver_id", columnDefinition = "uuid")
     private UUID driverId;
-    
-    @Column(nullable = false)
-    private String status; // "REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED"
-    
-    @Column(name = "pickup_location")
+
+    @Enumerated(EnumType.STRING)
+    @Column(name="status", nullable = false)
+    private TripStatus status;
+
+    @Column(name="pickup_location", nullable = false)
     private String pickupLocation;
-    
+
+    @Column(name="destination", nullable = false)
     private String destination;
-    
-    @Column(name = "pickup_latitude", precision = 10, scale = 8)
-    private BigDecimal pickupLatitude;
-    
-    @Column(name = "pickup_longitude", precision = 11, scale = 8)
-    private BigDecimal pickupLongitude;
-    
-    @Column(name = "destination_latitude", precision = 10, scale = 8)
-    private BigDecimal destinationLatitude;
-    
-    @Column(name = "destination_longitude", precision = 11, scale = 8)
-    private BigDecimal destinationLongitude;
-    
-    @Column(precision = 10, scale = 2)
+
+    @Column(name="pickup_latitude", nullable = false)
+    private Double pickupLatitude;
+
+    @Column(name="pickup_longitude", nullable = false)
+    private Double pickupLongitude;
+
+    @Column(name="destination_latitude", nullable = false)
+    private Double destinationLatitude;
+
+    @Column(name="destination_longitude", nullable = false)
+    private Double destinationLongitude;
+
+    @Column(name="fare")
     private BigDecimal fare;
-    
-    @Column(name = "created_at")
+
+    @Column(name="requested_at", nullable = false)
+    private LocalDateTime requestedAt;
+
+    @Column(name="accepted_at")
+    private LocalDateTime acceptedAt;
+
+    @Column(name="started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name="completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name="cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name="created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at")
+
+    @Column(name="updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // Constructors
-    public Trip() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+    @Column(name="deleted_at")
+    private LocalDateTime deletedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+
+        this.setRequestedAt(now);
+        this.setCreatedAt(now);
+        this.setUpdatedAt(now);
     }
 
-    public Trip(UUID passengerId, String pickupLocation, String destination,
-                BigDecimal pickupLatitude, BigDecimal pickupLongitude,
-                BigDecimal destinationLatitude, BigDecimal destinationLongitude) {
-        this.passengerId = passengerId;
-        this.pickupLocation = pickupLocation;
-        this.destination = destination;
-        this.pickupLatitude = pickupLatitude;
-        this.pickupLongitude = pickupLongitude;
-        this.destinationLatitude = destinationLatitude;
-        this.destinationLongitude = destinationLongitude;
-        this.status = "REQUESTED";
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+    @PreUpdate
+    protected void onUpdate() {
+        LocalDateTime now = LocalDateTime.now();
+        this.setUpdatedAt(now);
     }
-
-    // Getters and Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-
-    public UUID getPassengerId() { return passengerId; }
-    public void setPassengerId(UUID passengerId) { this.passengerId = passengerId; }
-
-    public UUID getDriverId() { return driverId; }
-    public void setDriverId(UUID driverId) { this.driverId = driverId; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public String getPickupLocation() { return pickupLocation; }
-    public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }
-
-    public String getDestination() { return destination; }
-    public void setDestination(String destination) { this.destination = destination; }
-
-    public BigDecimal getPickupLatitude() { return pickupLatitude; }
-    public void setPickupLatitude(BigDecimal pickupLatitude) { this.pickupLatitude = pickupLatitude; }
-
-    public BigDecimal getPickupLongitude() { return pickupLongitude; }
-    public void setPickupLongitude(BigDecimal pickupLongitude) { this.pickupLongitude = pickupLongitude; }
-
-    public BigDecimal getDestinationLatitude() { return destinationLatitude; }
-    public void setDestinationLatitude(BigDecimal destinationLatitude) { this.destinationLatitude = destinationLatitude; }
-
-    public BigDecimal getDestinationLongitude() { return destinationLongitude; }
-    public void setDestinationLongitude(BigDecimal destinationLongitude) { this.destinationLongitude = destinationLongitude; }
-
-    public BigDecimal getFare() { return fare; }
-    public void setFare(BigDecimal fare) { this.fare = fare; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
