@@ -1,21 +1,21 @@
 package com.example.user_service.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UpdateUserRequest {
+
+    private String email;
+
     private String name;
-    private String phone;
 
-    // Constructors
-    public UpdateUserRequest() {}
+    private String password;
 
-    public UpdateUserRequest(String name, String phone) {
-        this.name = name;
-        this.phone = phone;
-    }
-
-    // Getters and Setters
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
+    private String userType;
 }
