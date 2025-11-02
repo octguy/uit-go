@@ -11,17 +11,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// Simple structs for POC
-type ValidateUserRequest struct {
-	UserID string `json:"userId"`
-}
-
-type ValidateUserResponse struct {
-	Valid    bool   `json:"valid"`
-	UserType string `json:"userType,omitempty"`
-	Message  string `json:"message,omitempty"`
-}
-
 var db *sql.DB
 
 func main() {

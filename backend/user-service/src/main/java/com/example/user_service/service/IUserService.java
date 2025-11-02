@@ -6,6 +6,7 @@ import com.example.user_service.dto.UserResponse;
 import com.example.user_service.dto.LoginRequest;
 
 import java.util.UUID;
+import java.util.List;
 
 public interface IUserService {
 
@@ -22,4 +23,7 @@ public interface IUserService {
 
     // Modified: login now returns UserResponse (raw email/password comparison)
     UserResponse login(LoginRequest request);
+
+    // New: get users by userType
+    List<UserResponse> getUsersByType(String userType);
 }

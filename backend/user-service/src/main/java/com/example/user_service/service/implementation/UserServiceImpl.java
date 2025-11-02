@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements IUserService {
@@ -120,5 +122,20 @@ public class UserServiceImpl implements IUserService {
                 .userType(user.getUserType())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    // New: return list of UserResponse for a given userType
+    @Override
+    public List<UserResponse> getUsersByType(String userType) {
+        List<User> users = userRepository.findByUserType(userType);
+        return users.stream()
+                .map(user -> UserResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .name(user.getName())
+                        .userType(user.getUserType())
+                        .createdAt(user.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

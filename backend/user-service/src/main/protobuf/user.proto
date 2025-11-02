@@ -1,29 +1,22 @@
 syntax = "proto3";
 
 package user;
+option java_multiple_files = true;
+option java_package = "com.example.user_service.grpc";
+option java_outer_classname = "UserProto";
 
 service UserService {
-  rpc GetUserInfo (UserRequest) returns (UserResponse);
-  rpc RegisterUser (RegisterRequest) returns (RegisterResponse);
+  rpc GetUserById (GetUserRequest) returns (GetUserResponse);
 }
 
-message UserRequest {
-  string user_id = 1;
+message GetUserRequest {
+  string id = 1;
 }
 
-message UserResponse {
-  string user_id = 1;
+message GetUserResponse {
+  string id = 1;
   string name = 2;
   string email = 3;
-}
-
-message RegisterRequest {
-  string name = 1;
-  string email = 2;
-  string password = 3;
-}
-
-message RegisterResponse {
-  string user_id = 1;
-  string status = 2;
+  string user_type = 4;
+  string created_at = 5;
 }
