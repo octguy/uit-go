@@ -224,7 +224,7 @@ func (s *TripServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest
 func main() {
 	// Configuration
 	port := ":50052"
-	springBootURL := "http://trip-service:8082/api/trip-service" // Use correct context path
+	springBootURL := "http://trip-service:8082" // Use correct URL without duplicate path
 	userServiceURL := "http://user-service:8081"
 
 	log.Printf("🚀 Starting gRPC Trip Service on port %s", port)
@@ -255,16 +255,5 @@ func main() {
 	// Start the server
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("❌ Failed to serve gRPC server: %v", err)
-	}
-}
-
-	log.Printf("✅ gRPC Trip Service registered")
-	log.Printf("🔍 gRPC reflection enabled")
-	log.Printf("📡 Listening on %s", port)
-	log.Printf("🧪 Test with: grpcurl -plaintext localhost%s list", port)
-
-	// Start serving
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
 	}
 }

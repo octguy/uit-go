@@ -110,68 +110,6 @@ func (s *UserServer) ValidateUser(ctx context.Context, req *pb.ValidateUserReque
 
 	return response, nil
 }
-	log.Printf("gRPC ValidateUser called: user_id=%s", req.UserId)
-
-	// Construct URL for Spring Boot REST API
-	url := fmt.Sprintf("%s/api/user-service/users/%s/validate", s.springBootURL, req.UserId)
-
-	// Make HTTP GET request to Spring Boot service
-	resp, err := s.httpClient.Get(url)
-	if err != nil {
-		log.Printf("Error calling Spring Boot API: %v", err)
-		return &pb.ValidateUserResponse{
-			Valid:   false,
-			UserId:  req.UserId,
-			Success: false,
-			Message: fmt.Sprintf("Error calling user service: %v", err),
-		}, nil
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error reading response: %v", err)
-		return &pb.ValidateUserResponse{
-			Valid:   false,
-			UserId:  req.UserId,
-			Success: false,
-			Message: fmt.Sprintf("Error reading response: %v", err),
-		}, nil
-	}
-
-	// Parse JSON response
-	var springBootResponse map[string]interface{}
-	if err := json.Unmarshal(body, &springBootResponse); err != nil {
-		log.Printf("Error parsing JSON: %v", err)
-		return &pb.ValidateUserResponse{
-			Valid:   false,
-			UserId:  req.UserId,
-			Success: false,
-			Message: fmt.Sprintf("Error parsing response: %v", err),
-		}, nil
-	}
-
-	// Convert to gRPC response
-	response := &pb.ValidateUserResponse{
-		UserId: req.UserId,
-	}
-
-	if valid, ok := springBootResponse["valid"].(bool); ok {
-		response.Valid = valid
-	}
-	if status, ok := springBootResponse["status"].(string); ok {
-		response.Status = status
-	}
-	if success, ok := springBootResponse["success"].(bool); ok {
-		response.Success = success
-	}
-	if message, ok := springBootResponse["message"].(string); ok {
-		response.Message = message
-	}
-
-	return response, nil
-}
 
 // GetUserProfile gets user profile information
 func (s *UserServer) GetUserProfile(ctx context.Context, req *pb.GetUserProfileRequest) (*pb.GetUserProfileResponse, error) {

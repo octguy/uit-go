@@ -1,8 +1,21 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM UIT-Go RabbitMQ Flow Demo - Batch File Version
-REM This batch file demonstrates RabbitMQ message flow using your existing services
+REM UIT-Go RabbitMQ Complete Message Flow Demo
+REM This demo shows the complete message flow and event-driven architecture
+
+echo.
+echo ============================================================
+echo 🚀 UIT-Go RabbitMQ Complete Message Flow Demo
+echo ============================================================
+echo This demo demonstrates the event-driven architecture and
+echo message flow patterns in the UIT-Go ride-sharing platform:
+echo.
+echo    🐰 RabbitMQ Message Broker
+echo    📨 Event Publishing and Consumption
+echo    🔄 Cross-Service Communication
+echo    📊 Real-time Updates and Notifications
+echo.
 
 REM Default parameters
 set SKIP_HEALTH_CHECK=false
@@ -22,17 +35,37 @@ shift
 goto :parse_args
 
 :start_demo
-echo.
+REM Service and queue configuration
+set RABBITMQ_PORT=15672
+set API_GATEWAY_PORT=8080
+set DRIVER_API_PORT=8083
+set USER_API_PORT=8081
+set TRIP_API_PORT=8082
+
 echo ============================================================
-echo  🚀 UIT-Go RabbitMQ Flow Demonstration
-echo ============================================================
-echo This demo shows how messages flow between microservices using RabbitMQ
-echo in the UIT-Go ride-sharing platform.
+echo 📋 System Endpoints:
+echo    🐰 RabbitMQ Management: localhost:%RABBITMQ_PORT%
+echo    🌐 API Gateway:         localhost:%API_GATEWAY_PORT%
+echo    🚗 Driver API:          localhost:%DRIVER_API_PORT%
+echo    👤 User API:            localhost:%USER_API_PORT%
+echo    🚕 Trip API:            localhost:%TRIP_API_PORT%
 echo.
 
 if "%FAST_MODE%"=="true" (
     set DELAY_SECONDS=1
     echo ⚡ Fast mode enabled - minimal delays
+)
+
+REM Check dependencies
+where curl >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    set CURL_AVAILABLE=true
+    echo ✅ curl detected - will perform real HTTP calls
+) else (
+    set CURL_AVAILABLE=false
+    echo ❌ curl not found - this demo requires curl for API testing
+    pause
+    exit /b 1
 )
 
 REM Health check
@@ -47,26 +80,119 @@ if "%SKIP_HEALTH_CHECK%"=="false" (
 )
 
 echo.
-echo 🎬 Starting automated demo...
-timeout /t 2 /nobreak >nul
-
-REM Run all demo scenarios
-call :show_driver_location_demo
+echo ============================================================
+echo 🔍 PHASE 1: RabbitMQ System Status
+echo ============================================================
 echo.
-echo ⏸️  Moving to next demo in %DELAY_SECONDS% seconds...
+
+echo 📊 Step 1: Check RabbitMQ Server Status
+echo Verifying RabbitMQ management interface...
+curl -s -u guest:guest "http://localhost:%RABBITMQ_PORT%/api/overview" >temp_overview.json 2>nul
+if !ERRORLEVEL! equ 0 (
+    echo    ✅ RabbitMQ server is running and accessible
+    findstr /i "rabbitmq_version.*node_name" temp_overview.json 2>nul || echo    📋 RabbitMQ status retrieved
+    del temp_overview.json 2>nul
+) else (
+    echo    ❌ RabbitMQ server is not accessible
+    echo    💡 Make sure RabbitMQ is running with management plugin enabled
+    pause
+    exit /b 1
+)
+
+echo.
+echo 📋 Step 2: List Current Queues
+echo Checking existing message queues...
+curl -s -u guest:guest "http://localhost:%RABBITMQ_PORT%/api/queues" >temp_queues.json 2>nul
+if !ERRORLEVEL! equ 0 (
+    echo    ✅ Queue information retrieved
+    echo    📊 Current queue status:
+    findstr /i "driver.*trip.*user" temp_queues.json >nul 2>&1 && (
+        echo    🟢 Ride-sharing queues detected
+    ) || (
+        echo    📝 Standard queues present
+    )
+    del temp_queues.json 2>nul
+) else (
+    echo    ❌ Could not retrieve queue information
+)
+
+echo.
 timeout /t %DELAY_SECONDS% /nobreak >nul
 
-call :show_trip_request_demo
 echo.
-echo ⏸️  Moving to next demo in %DELAY_SECONDS% seconds...
+echo ============================================================
+echo 🚗 PHASE 2: Driver Event Flow
+echo ============================================================
+echo Demonstrating driver-related message publishing and flow...
+echo.
+
+set DEMO_DRIVER_ID=660e8400-e29b-41d4-a716-446655440002
+
+echo 📍 Step 1: Driver Location Update Events
+echo Publishing driver location updates...
+for %%i in (1 2 3 4 5) do (
+    set /a LAT_UPDATE=10762622 + %%i * 100
+    set /a LON_UPDATE=106660172 + %%i * 150
+    set LAT_STR=10.!LAT_UPDATE:~-6!
+    set LON_STR=106.!LON_UPDATE:~-6!
+    
+    echo    📡 Location Update %%i/5: !LAT_STR!, !LON_STR!
+    curl -s -X POST "http://localhost:%DRIVER_API_PORT%/api/drivers/%DEMO_DRIVER_ID%/location" ^
+        -H "Content-Type: application/json" ^
+        -d "{\"latitude\": !LAT_STR!, \"longitude\": !LON_STR!, \"timestamp\": \"%date% %time%\"}" >nul 2>&1
+    
+    if !ERRORLEVEL! equ 0 (
+        echo       ✅ Location update sent successfully
+    ) else (
+        echo       ⚠️  Location update failed - service may be down
+    )
+    timeout /t 1 /nobreak >nul
+)
+
+echo.
+echo ============================================================
+echo 👤 PHASE 3: User Trip Request Flow
+echo ============================================================
+echo Demonstrating trip request and driver matching...
+echo.
+
+set DEMO_USER_ID=550e8400-e29b-41d4-a716-446655440001
+
+echo 🚕 Step 1: Trip Request Event
+echo Publishing trip request...
+curl -s -X POST "http://localhost:%TRIP_API_PORT%/api/trips/request" ^
+    -H "Content-Type: application/json" ^
+    -d "{\"userId\": \"%DEMO_USER_ID%\", \"pickupLatitude\": 10.762622, \"pickupLongitude\": 106.660172, \"dropoffLatitude\": 10.772900, \"dropoffLongitude\": 106.698000}" >nul 2>&1
+
+if !ERRORLEVEL! equ 0 (
+    echo    ✅ Trip request published successfully
+    echo    📨 Event should trigger driver matching algorithm
+) else (
+    echo    ⚠️  Trip request failed - service may be down
+)
+
+echo.
 timeout /t %DELAY_SECONDS% /nobreak >nul
 
-call :show_status_updates_demo
+echo ============================================================
+echo 📊 PHASE 4: Queue Monitoring
+echo ============================================================
+echo Checking message queue status and consumption...
 echo.
-echo ⏸️  Moving to monitoring demo in %DELAY_SECONDS% seconds...
-timeout /t %DELAY_SECONDS% /nobreak >nul
 
-call :show_queue_monitoring
+curl -s -u guest:guest "http://localhost:%RABBITMQ_PORT%/api/queues" >temp_final_queues.json 2>nul
+if !ERRORLEVEL! equ 0 (
+    echo 📈 Final Queue Status:
+    findstr /i "message" temp_final_queues.json >nul 2>&1 && (
+        echo    📊 Messages detected in queues
+        echo    🔄 Event-driven architecture is processing requests
+    ) || (
+        echo    📭 No pending messages (all processed)
+    )
+    del temp_final_queues.json 2>nul
+) else (
+    echo    ❌ Could not retrieve final queue status
+)
 
 echo.
 echo ============================================================
@@ -92,7 +218,6 @@ REM Functions
 REM ============================================================
 
 :health_check
-echo.
 echo ============================================================
 echo 🔍 HEALTH CHECK - Verifying Services
 echo ============================================================
@@ -104,321 +229,45 @@ if !ERRORLEVEL! equ 0 (
     echo ✅ Driver Service: HEALTHY
 ) else (
     echo ❌ Driver Service: UNREACHABLE
-    exit /b 1
-)
-
-REM Test Trip Service
-echo Testing Trip Service...
-curl -s -f -m 5 "http://localhost:8082/api/trip-service/health" >nul 2>&1
-if !ERRORLEVEL! equ 0 (
-    echo ✅ Trip Service: HEALTHY
-) else (
-    echo ❌ Trip Service: UNREACHABLE
+    set /a HEALTH_ERRORS+=1
 )
 
 REM Test User Service
 echo Testing User Service...
-curl -s -f -m 5 "http://localhost:8081/api/user-service/health" >nul 2>&1
+curl -s -f -m 5 "http://localhost:8081/api/user-service/users/health" >nul 2>&1
 if !ERRORLEVEL! equ 0 (
     echo ✅ User Service: HEALTHY
 ) else (
     echo ❌ User Service: UNREACHABLE
+    set /a HEALTH_ERRORS+=1
+)
+
+REM Test Trip Service
+echo Testing Trip Service...
+curl -s -f -m 5 "http://localhost:8082/api/trip-service/trips/health" >nul 2>&1
+if !ERRORLEVEL! equ 0 (
+    echo ✅ Trip Service: HEALTHY
+) else (
+    echo ❌ Trip Service: UNREACHABLE
+    set /a HEALTH_ERRORS+=1
 )
 
 REM Test RabbitMQ
-echo Testing RabbitMQ Management...
-curl -s -f -m 5 "http://localhost:15672" >nul 2>&1
+echo Testing RabbitMQ...
+curl -s -f -m 5 -u guest:guest "http://localhost:15672/api/overview" >nul 2>&1
 if !ERRORLEVEL! equ 0 (
-    echo ✅ RabbitMQ Management: HEALTHY
+    echo ✅ RabbitMQ: HEALTHY
 ) else (
-    echo ❌ RabbitMQ Management: UNREACHABLE
+    echo ❌ RabbitMQ: UNREACHABLE
+    set /a HEALTH_ERRORS+=1
 )
 
 echo.
-echo 🎉 All services are healthy! Demo can proceed.
-exit /b 0
-
-:show_driver_location_demo
-echo.
-echo ============================================================
-echo 🚀 DEMO 1: Driver Location Updates Flow
-echo ============================================================
-
-echo.
-echo 📋 Step 1: Publishing Driver Location Updates
-echo --------------------------------------------------
-
-REM Generate random driver ID (simplified)
-set /a RAND_NUM=%RANDOM% * 32768 + %RANDOM%
-set DRIVER_ID=driver-%RAND_NUM%
-
-echo 📍 Simulating driver %DRIVER_ID% at Ben Thanh Market
-echo    Coordinates: 10.762622, 106.660172
-
-echo.
-echo 📤 Would publish to RabbitMQ:
-echo    Exchange: driver.events
-echo    Routing Key: driver.location.updated
-echo    Message: {
-echo      "driver_id": "%DRIVER_ID%",
-echo      "latitude": 10.762622,
-echo      "longitude": 106.660172,
-echo      "timestamp": %date:~-4%%date:~4,2%%date:~7,2%%time:~0,2%%time:~3,2%%time:~6,2%,
-echo      "status": "AVAILABLE",
-echo      "geohash": "w7h7k8f"
-echo    }
-
-echo.
-echo 📊 Expected Queue Status:
-echo    driver.location.updates: +1 message
-echo    Consuming services would process location for nearby driver searches
-
-echo.
-echo 🧪 Testing Real Message Publishing:
-echo {"latitude":10.762622,"longitude":106.660172} > temp_test_location.json
-curl -s -X PUT -H "Content-Type: application/json" -d @temp_test_location.json "http://localhost:8083/api/driver-service/drivers/550e8400-e29b-41d4-a716-446655440000/location" > temp_location_response.json 2>nul
-
-findstr /i "success.*true" temp_location_response.json >nul
-if !ERRORLEVEL! equ 0 (
-    echo    ✅ Real location update successful!
-    echo    📤 Actual RabbitMQ message published
-    
-    REM Show the actual response
-    for /f "tokens=*" %%r in ('findstr /i "latitude" temp_location_response.json') do (
-        echo    📍 Location confirmed in response
-    )
+if %HEALTH_ERRORS% gtr 0 (
+    echo ❌ %HEALTH_ERRORS% service(s) are unhealthy
+    echo 💡 Please start all services before running the demo
+    exit /b 1
 ) else (
-    echo    ⚠️  Location update test failed (expected if driver doesn't exist)
+    echo ✅ All services are healthy - proceeding with demo
+    exit /b 0
 )
-
-del temp_test_location.json >nul 2>&1
-del temp_location_response.json >nul 2>&1
-
-if "%FAST_MODE%"=="true" (
-    timeout /t 1 /nobreak >nul
-) else (
-    timeout /t 2 /nobreak >nul
-)
-exit /b 0
-
-:show_trip_request_demo
-echo.
-echo ============================================================
-echo 🚀 DEMO 2: Trip Request and Driver Matching Flow
-echo ============================================================
-
-echo.
-echo 📋 Step 1: Creating Trip Request
-echo --------------------------------------------------
-
-REM Generate random trip and user IDs
-set /a TRIP_RAND=%RANDOM% * 32768 + %RANDOM%
-set /a USER_RAND=%RANDOM% * 32768 + %RANDOM%
-set TRIP_ID=trip-%TRIP_RAND%
-set USER_ID=user-%USER_RAND%
-
-echo 👤 User %USER_ID% requests trip
-echo 📍 Pickup: Ben Thanh Market (10.762622, 106.660172)
-echo 🎯 Destination: Notre Dame Cathedral (10.782622, 106.680172)
-
-echo.
-echo 📤 Would publish Trip Request to RabbitMQ:
-echo    Exchange: trip.events
-echo    Routing Key: trip.created
-echo    Message: {
-echo      "trip_id": "%TRIP_ID%",
-echo      "user_id": "%USER_ID%",
-echo      "pickup_location": {
-echo        "latitude": 10.762622,
-echo        "longitude": 106.660172,
-echo        "name": "Ben Thanh Market"
-echo      },
-echo      "destination": {
-echo        "latitude": 10.782622,
-echo        "longitude": 106.680172,
-echo        "name": "Notre Dame Cathedral"
-echo      },
-echo      "trip_type": "STANDARD"
-echo    }
-
-if "%FAST_MODE%"=="true" (
-    timeout /t 1 /nobreak >nul
-) else (
-    timeout /t 2 /nobreak >nul
-)
-
-echo.
-echo 📋 Step 2: Driver Matching Process
-echo --------------------------------------------------
-
-echo 🔍 Finding nearby drivers...
-echo    🚗 Nguyen Van A (ID: driver-001) - 0.5km away
-echo    🚗 Tran Thi B (ID: driver-002) - 0.8km away
-echo    🚗 Le Van C (ID: driver-003) - 1.2km away
-
-echo.
-echo ✅ Driver selected: Nguyen Van A
-
-echo.
-echo 📤 Would publish Driver Assignment:
-echo    Exchange: trip.events
-echo    Routing Key: driver.assigned
-echo    Message: {
-echo      "trip_id": "%TRIP_ID%",
-echo      "driver_id": "driver-001",
-echo      "driver_name": "Nguyen Van A",
-echo      "estimated_arrival": 5
-echo    }
-
-if "%FAST_MODE%"=="true" (
-    timeout /t 1 /nobreak >nul
-) else (
-    timeout /t 2 /nobreak >nul
-)
-exit /b 0
-
-:show_status_updates_demo
-echo.
-echo ============================================================
-echo 🚀 DEMO 3: Trip Status Updates and Real-time Notifications
-echo ============================================================
-
-REM Generate random trip ID for this demo
-set /a STATUS_TRIP_RAND=%RANDOM% * 32768 + %RANDOM%
-set STATUS_TRIP_ID=trip-%STATUS_TRIP_RAND%
-
-set STATUS_COUNT=0
-for %%s in ("DRIVER_ASSIGNED:Driver is on the way to pickup" "DRIVER_ARRIVED:Driver has arrived at pickup location" "TRIP_STARTED:Trip is in progress" "TRIP_COMPLETED:Trip completed successfully") do (
-    set /a STATUS_COUNT+=1
-    
-    for /f "tokens=1,2 delims=:" %%a in (%%s) do (
-        echo.
-        echo 📋 Step !STATUS_COUNT!: Status Update: %%a
-        echo --------------------------------------------------
-        
-        echo 📊 Trip Status: %%a
-        echo 💬 Message: %%b
-        
-        echo.
-        echo 📤 Would publish Status Update:
-        echo    Exchange: trip.events
-        echo    Routing Key: trip.status.updated
-        echo    Message: {
-        echo      "trip_id": "%STATUS_TRIP_ID%",
-        echo      "status": "%%a",
-        echo      "message": "%%b"
-        echo    }
-        
-        echo.
-        echo 📱 Would trigger Notifications:
-        echo    📲 User notification: %%b
-        echo    📲 Driver notification: Status updated to %%a
-        
-        if "%FAST_MODE%"=="true" (
-            timeout /t 1 /nobreak >nul
-        ) else (
-            timeout /t 3 /nobreak >nul
-        )
-    )
-)
-exit /b 0
-
-:show_queue_monitoring
-echo.
-echo ============================================================
-echo 🚀 DEMO 4: RabbitMQ Queue Monitoring
-echo ============================================================
-
-echo 📊 Monitoring RabbitMQ queues and message flow...
-
-echo.
-echo 🔍 Real Queue Status from RabbitMQ:
-curl -s -u guest:guest "http://localhost:15672/api/queues" >temp_real_queues.json 2>nul
-if !ERRORLEVEL! equ 0 (
-    echo    ✅ Successfully connected to RabbitMQ Management API
-    echo.
-    
-    REM Get individual queue details
-    for %%q in ("driver.location.updates" "driver.status.changes" "driver.offline" "driver.online" "trip.created.queue") do (
-        curl -s -u guest:guest "http://localhost:15672/api/queues/%%2F/%%~q" >temp_queue_%%~q.json 2>nul
-        if !ERRORLEVEL! equ 0 (
-            REM Extract message count from JSON (Windows batch compatible)
-            for /f "tokens=*" %%c in ('findstr /i "messages.*:" temp_queue_%%~q.json') do (
-                for /f "tokens=2 delims=:" %%d in ("%%c") do (
-                    for /f "tokens=1 delims=," %%e in ("%%d") do (
-                        set msg_count=%%e
-                        set msg_count=!msg_count: =!
-                        
-                        REM Determine status icon based on message count
-                        if !msg_count! equ 0 (
-                            set status_icon=🟢
-                        ) else if !msg_count! lss 10 (
-                            set status_icon=🟡
-                        ) else (
-                            set status_icon=🔴
-                        )
-                        
-                        echo    !status_icon! %%~q ^| Messages: !msg_count!
-                        goto :queue_%%~q_done
-                    )
-                )
-            )
-            :queue_%%~q_done
-            del temp_queue_%%~q.json >nul 2>&1
-        ) else (
-            echo    ❓ %%~q ^| Status: Unknown
-        )
-    )
-    
-    echo.
-    echo 📈 RabbitMQ Node Information:
-    curl -s -u guest:guest "http://localhost:15672/api/nodes" >temp_nodes.json 2>nul
-    if !ERRORLEVEL! equ 0 (
-        findstr /i "running" temp_nodes.json >nul
-        if !ERRORLEVEL! equ 0 (
-            echo    ✅ RabbitMQ node is running
-        )
-        del temp_nodes.json >nul 2>&1
-    )
-    
-    echo.
-    echo � Connection Information:
-    curl -s -u guest:guest "http://localhost:15672/api/connections" >temp_connections.json 2>nul
-    if !ERRORLEVEL! equ 0 (
-        for /f %%c in ('findstr /c "user" temp_connections.json ^| find /c "user"') do (
-            if %%c gtr 0 (
-                echo    � Active connections detected
-            ) else (
-                echo    📭 No active connections
-            )
-        )
-        del temp_connections.json >nul 2>&1
-    )
-    
-    del temp_real_queues.json >nul 2>&1
-) else (
-    echo    ❌ Could not connect to RabbitMQ Management API
-    echo    🔧 Ensure RabbitMQ container is running: docker compose up rabbitmq
-    echo.
-    echo    📋 Fallback - Docker container check:
-    docker ps --filter "name=rabbitmq" --format "table {{.Names}}\t{{.Status}}" 2>nul
-    if !ERRORLEVEL! equ 0 (
-        echo    🐳 RabbitMQ container status checked
-    ) else (
-        echo    ❌ Could not check Docker containers
-    )
-)
-
-echo.
-echo 🎛️  Management Interface:
-echo    🌐 URL: http://localhost:15672
-echo    👤 Username: guest
-echo    🔑 Password: guest
-echo    📊 Real-time monitoring available
-
-echo.
-echo 💡 To manually check queue status:
-echo    curl -u guest:guest http://localhost:15672/api/queues
-echo    docker logs rabbitmq --tail 20
-
-exit /b 0

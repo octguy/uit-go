@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: proto/trip.proto
+// source: trip-service/proto/trip.proto
 
 package proto
 
@@ -33,7 +33,7 @@ type CreateTripRequest struct {
 
 func (x *CreateTripRequest) Reset() {
 	*x = CreateTripRequest{}
-	mi := &file_proto_trip_proto_msgTypes[0]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +45,7 @@ func (x *CreateTripRequest) String() string {
 func (*CreateTripRequest) ProtoMessage() {}
 
 func (x *CreateTripRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_trip_proto_msgTypes[0]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +58,7 @@ func (x *CreateTripRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTripRequest.ProtoReflect.Descriptor instead.
 func (*CreateTripRequest) Descriptor() ([]byte, []int) {
-	return file_proto_trip_proto_rawDescGZIP(), []int{0}
+	return file_trip_service_proto_trip_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CreateTripRequest) GetUserId() string {
@@ -95,7 +95,7 @@ type CreateTripResponse struct {
 
 func (x *CreateTripResponse) Reset() {
 	*x = CreateTripResponse{}
-	mi := &file_proto_trip_proto_msgTypes[1]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -107,7 +107,7 @@ func (x *CreateTripResponse) String() string {
 func (*CreateTripResponse) ProtoMessage() {}
 
 func (x *CreateTripResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_trip_proto_msgTypes[1]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -120,7 +120,7 @@ func (x *CreateTripResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTripResponse.ProtoReflect.Descriptor instead.
 func (*CreateTripResponse) Descriptor() ([]byte, []int) {
-	return file_proto_trip_proto_rawDescGZIP(), []int{1}
+	return file_trip_service_proto_trip_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CreateTripResponse) GetTripId() string {
@@ -161,7 +161,7 @@ type GetTripStatusRequest struct {
 
 func (x *GetTripStatusRequest) Reset() {
 	*x = GetTripStatusRequest{}
-	mi := &file_proto_trip_proto_msgTypes[2]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -173,7 +173,7 @@ func (x *GetTripStatusRequest) String() string {
 func (*GetTripStatusRequest) ProtoMessage() {}
 
 func (x *GetTripStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_trip_proto_msgTypes[2]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -186,7 +186,7 @@ func (x *GetTripStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTripStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetTripStatusRequest) Descriptor() ([]byte, []int) {
-	return file_proto_trip_proto_rawDescGZIP(), []int{2}
+	return file_trip_service_proto_trip_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetTripStatusRequest) GetTripId() string {
@@ -216,7 +216,7 @@ type GetTripStatusResponse struct {
 
 func (x *GetTripStatusResponse) Reset() {
 	*x = GetTripStatusResponse{}
-	mi := &file_proto_trip_proto_msgTypes[3]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -228,7 +228,7 @@ func (x *GetTripStatusResponse) String() string {
 func (*GetTripStatusResponse) ProtoMessage() {}
 
 func (x *GetTripStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_trip_proto_msgTypes[3]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -241,7 +241,7 @@ func (x *GetTripStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTripStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetTripStatusResponse) Descriptor() ([]byte, []int) {
-	return file_proto_trip_proto_rawDescGZIP(), []int{3}
+	return file_trip_service_proto_trip_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetTripStatusResponse) GetTripId() string {
@@ -330,7 +330,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_proto_trip_proto_msgTypes[4]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -342,7 +342,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_trip_proto_msgTypes[4]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,7 +355,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_proto_trip_proto_rawDescGZIP(), []int{4}
+	return file_trip_service_proto_trip_proto_rawDescGZIP(), []int{4}
 }
 
 // Health check response
@@ -371,7 +371,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_proto_trip_proto_msgTypes[5]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -383,7 +383,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_trip_proto_msgTypes[5]
+	mi := &file_trip_service_proto_trip_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +396,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_proto_trip_proto_rawDescGZIP(), []int{5}
+	return file_trip_service_proto_trip_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *HealthCheckResponse) GetService() string {
@@ -427,11 +427,11 @@ func (x *HealthCheckResponse) GetMessage() string {
 	return ""
 }
 
-var File_proto_trip_proto protoreflect.FileDescriptor
+var File_trip_service_proto_trip_proto protoreflect.FileDescriptor
 
-const file_proto_trip_proto_rawDesc = "" +
+const file_trip_service_proto_trip_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/trip.proto\x12\x04trip\"f\n" +
+	"\x1dtrip-service/proto/trip.proto\x12\x04trip\"f\n" +
 	"\x11CreateTripRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06origin\x18\x02 \x01(\tR\x06origin\x12 \n" +
@@ -468,22 +468,22 @@ const file_proto_trip_proto_rawDesc = "" +
 	"\n" +
 	"CreateTrip\x12\x17.trip.CreateTripRequest\x1a\x18.trip.CreateTripResponse\x12H\n" +
 	"\rGetTripStatus\x12\x1a.trip.GetTripStatusRequest\x1a\x1b.trip.GetTripStatusResponse\x12B\n" +
-	"\vHealthCheck\x12\x18.trip.HealthCheckRequest\x1a\x19.trip.HealthCheckResponseB\tZ\a./protob\x06proto3"
+	"\vHealthCheck\x12\x18.trip.HealthCheckRequest\x1a\x19.trip.HealthCheckResponseB4Z2github.com/uit-go/grpc-services/trip-service/protob\x06proto3"
 
 var (
-	file_proto_trip_proto_rawDescOnce sync.Once
-	file_proto_trip_proto_rawDescData []byte
+	file_trip_service_proto_trip_proto_rawDescOnce sync.Once
+	file_trip_service_proto_trip_proto_rawDescData []byte
 )
 
-func file_proto_trip_proto_rawDescGZIP() []byte {
-	file_proto_trip_proto_rawDescOnce.Do(func() {
-		file_proto_trip_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_trip_proto_rawDesc), len(file_proto_trip_proto_rawDesc)))
+func file_trip_service_proto_trip_proto_rawDescGZIP() []byte {
+	file_trip_service_proto_trip_proto_rawDescOnce.Do(func() {
+		file_trip_service_proto_trip_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_trip_service_proto_trip_proto_rawDesc), len(file_trip_service_proto_trip_proto_rawDesc)))
 	})
-	return file_proto_trip_proto_rawDescData
+	return file_trip_service_proto_trip_proto_rawDescData
 }
 
-var file_proto_trip_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_proto_trip_proto_goTypes = []any{
+var file_trip_service_proto_trip_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_trip_service_proto_trip_proto_goTypes = []any{
 	(*CreateTripRequest)(nil),     // 0: trip.CreateTripRequest
 	(*CreateTripResponse)(nil),    // 1: trip.CreateTripResponse
 	(*GetTripStatusRequest)(nil),  // 2: trip.GetTripStatusRequest
@@ -491,7 +491,7 @@ var file_proto_trip_proto_goTypes = []any{
 	(*HealthCheckRequest)(nil),    // 4: trip.HealthCheckRequest
 	(*HealthCheckResponse)(nil),   // 5: trip.HealthCheckResponse
 }
-var file_proto_trip_proto_depIdxs = []int32{
+var file_trip_service_proto_trip_proto_depIdxs = []int32{
 	0, // 0: trip.TripService.CreateTrip:input_type -> trip.CreateTripRequest
 	2, // 1: trip.TripService.GetTripStatus:input_type -> trip.GetTripStatusRequest
 	4, // 2: trip.TripService.HealthCheck:input_type -> trip.HealthCheckRequest
@@ -505,26 +505,26 @@ var file_proto_trip_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto_trip_proto_init() }
-func file_proto_trip_proto_init() {
-	if File_proto_trip_proto != nil {
+func init() { file_trip_service_proto_trip_proto_init() }
+func file_trip_service_proto_trip_proto_init() {
+	if File_trip_service_proto_trip_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_trip_proto_rawDesc), len(file_proto_trip_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_trip_service_proto_trip_proto_rawDesc), len(file_trip_service_proto_trip_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_trip_proto_goTypes,
-		DependencyIndexes: file_proto_trip_proto_depIdxs,
-		MessageInfos:      file_proto_trip_proto_msgTypes,
+		GoTypes:           file_trip_service_proto_trip_proto_goTypes,
+		DependencyIndexes: file_trip_service_proto_trip_proto_depIdxs,
+		MessageInfos:      file_trip_service_proto_trip_proto_msgTypes,
 	}.Build()
-	File_proto_trip_proto = out.File
-	file_proto_trip_proto_goTypes = nil
-	file_proto_trip_proto_depIdxs = nil
+	File_trip_service_proto_trip_proto = out.File
+	file_trip_service_proto_trip_proto_goTypes = nil
+	file_trip_service_proto_trip_proto_depIdxs = nil
 }

@@ -17,7 +17,6 @@ import java.util.UUID;
 public class RatingServiceImpl implements IRatingService {
 
     private final RatingRepository ratingRepository;
-
     private final TripRepository tripRepository;
 
     public RatingServiceImpl(RatingRepository ratingRepository, TripRepository tripRepository) {
@@ -28,9 +27,9 @@ public class RatingServiceImpl implements IRatingService {
     @Override
     @Transactional
     public RatingResponse createRating(CreateRatingRequest request) {
-        // Validate score range
-        if (request.getScore() < 1 || request.getScore() > 5) {
-            throw new IllegalArgumentException("Rating score must be between 1 and 5");
+        // Validate rating range
+        if (request.getRating() < 1 || request.getRating() > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
 
         // Check if trip exists
@@ -50,7 +49,7 @@ public class RatingServiceImpl implements IRatingService {
         // Create rating entity
         Rating rating = new Rating();
         rating.setTrip(trip);
-        rating.setScore(request.getScore());
+        rating.setScore(request.getRating());
         rating.setComment(request.getComment());
 
         // Save rating
@@ -69,12 +68,15 @@ public class RatingServiceImpl implements IRatingService {
     }
 
     private RatingResponse toRatingResponse(Rating rating) {
-        return RatingResponse.builder()
-                .id(rating.getId())
-                .tripId(rating.getTrip().getId())
-                .score(rating.getScore())
-                .comment(rating.getComment())
-                .createdAt(rating.getCreatedAt())
-                .build();
+        RatingResponse response = new RatingResponse();
+        response.setId(rating.getId());
+        response.setTripId(rating.getTrip().getId());
+        response.setRaterId(null); // Not available in current entity
+        response.setRatedEntityId(null); // Not available in current entity
+        response.setRatingType("trip"); // Default value
+        response.setRating(rating.getScore());
+        response.setComment(rating.getComment());
+        response.setCreatedAt(rating.getCreatedAt());
+        return response;
     }
 }

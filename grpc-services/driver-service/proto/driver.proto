@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "./proto";
+option go_package = "github.com/uit-go/grpc-services/driver-service/proto";
 
 package driver;
 
@@ -123,6 +123,6 @@ message HealthCheckRequest {
 message HealthCheckResponse {
   string service = 1;
   string status = 2;
-  int64 timestamp = 3;
+  string timestamp = 3;
   string message = 4;
 }

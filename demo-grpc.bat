@@ -1,26 +1,30 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM UIT-Go gRPC Services Demo
-REM This batch file demonstrates gRPC functionality for trip and driver services
+REM UIT-Go gRPC Services Integration Demo
+REM This demo focuses specifically on gRPC communication patterns and service integration
 
 echo.
 echo ============================================================
-echo 🚀 UIT-Go gRPC Services Demonstration
+echo 🚀 UIT-Go gRPC Services Integration Demo
 echo ============================================================
-echo This demo shows gRPC communication between microservices
-echo in the UIT-Go ride-sharing platform.
+echo This demo demonstrates gRPC communication patterns between
+echo microservices in the UIT-Go ride-sharing platform:
+echo.
+echo    👤 User Service gRPC (port 50051)
+echo    🚗 Driver Service gRPC (port 50053)
+echo    🚕 Trip Service gRPC (port 50052)
 echo.
 
 REM Service endpoints
+set USER_GRPC_PORT=50051
 set DRIVER_GRPC_PORT=50053
 set TRIP_GRPC_PORT=50052
-set USER_GRPC_PORT=50051
 
 echo 📋 gRPC Service Endpoints:
-echo    🚗 Driver Service gRPC: localhost:%DRIVER_GRPC_PORT%
-echo    🚕 Trip Service gRPC:   localhost:%TRIP_GRPC_PORT%
-echo    👤 User Service gRPC:   localhost:%USER_GRPC_PORT%
+echo    � User Service:   localhost:%USER_GRPC_PORT%
+echo    � Driver Service: localhost:%DRIVER_GRPC_PORT%
+echo    � Trip Service:   localhost:%TRIP_GRPC_PORT%
 echo.
 
 REM Check if grpcurl is available
@@ -30,24 +34,274 @@ if %ERRORLEVEL% equ 0 (
     echo ✅ grpcurl detected - will perform real gRPC calls
 ) else (
     set GRPCURL_AVAILABLE=false
-    echo ⚠️  grpcurl not found - will demonstrate conceptually
-    echo 💡 Install grpcurl for real gRPC testing: https://github.com/fullstorydev/grpcurl
-    echo 📥 Quick install: go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+    echo ❌ grpcurl not found
+    echo 💡 Install with: go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+    echo 📖 This demo requires grpcurl for gRPC testing
+    pause
+    exit /b 1
 )
 
 echo.
 echo ============================================================
-echo 🔍 STEP 1: Service Health Check
+echo 🔍 PHASE 1: Service Discovery and Health Checks
 echo ============================================================
+echo.
+
+echo 📡 Step 1: List Available gRPC Services
+echo.
+for %%s in (USER:%USER_GRPC_PORT% DRIVER:%DRIVER_GRPC_PORT% TRIP:%TRIP_GRPC_PORT%) do (
+    for /f "tokens=1,2 delims=:" %%a in ("%%s") do (
+        echo 🔍 %%a Service - Listing available services:
+        grpcurl -plaintext localhost:%%b list
+        echo.
+    )
+)
 
 echo.
-echo 📊 Checking gRPC service connectivity...
+echo 🏥 Step 2: Health Check All Services
+echo.
+echo � User Service Health Check:
+grpcurl -plaintext localhost:%USER_GRPC_PORT% user.UserService/HealthCheck
+echo.
 
-REM Test connectivity to gRPC ports
-for %%p in (%DRIVER_GRPC_PORT% %TRIP_GRPC_PORT% %USER_GRPC_PORT%) do (
-    echo Testing port %%p...
-    powershell -Command "try { Test-NetConnection -ComputerName localhost -Port %%p -InformationLevel Quiet -WarningAction SilentlyContinue | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
-    if %ERRORLEVEL% equ 0 (
+echo 🚗 Driver Service Health Check:
+grpcurl -plaintext localhost:%DRIVER_GRPC_PORT% driver.DriverService/HealthCheck
+echo.
+
+echo 🚕 Trip Service Health Check:
+grpcurl -plaintext localhost:%TRIP_GRPC_PORT% trip.TripService/HealthCheck
+echo.
+
+pause
+
+echo.
+echo ============================================================
+echo 👤 PHASE 2: User Service gRPC Operations
+echo ============================================================
+echo.
+
+set DEMO_USER_ID=550e8400-e29b-41d4-a716-446655440001
+
+echo 🔍 Step 1: User Validation
+echo Testing user validation with ID: %DEMO_USER_ID%
+grpcurl -plaintext -d "{\"user_id\":\"%DEMO_USER_ID%\"}" localhost:%USER_GRPC_PORT% user.UserService/ValidateUser
+echo.
+
+echo 👤 Step 2: Get User Profile
+echo Retrieving user profile...
+grpcurl -plaintext -d "{\"user_id\":\"%DEMO_USER_ID%\"}" localhost:%USER_GRPC_PORT% user.UserService/GetUserProfile
+echo.
+
+echo ✏️ Step 3: Update User Profile
+echo Updating user profile information...
+grpcurl -plaintext -d "{\"user_id\":\"%DEMO_USER_ID%\",\"name\":\"Updated Demo User\",\"phone\":\"+1234567890\",\"email\":\"updated@demo.com\"}" localhost:%USER_GRPC_PORT% user.UserService/UpdateUserProfile
+echo.
+
+pause
+
+echo.
+echo ============================================================
+echo 🚗 PHASE 3: Driver Service gRPC Operations
+echo ============================================================
+echo.
+
+set DEMO_DRIVER_ID=660e8400-e29b-41d4-a716-446655440002
+set DRIVER_LAT=10.762622
+set DRIVER_LON=106.660172
+
+echo 📍 Step 1: Update Driver Location
+echo Setting driver location to Ho Chi Minh City center...
+grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\",\"latitude\":\"%DRIVER_LAT%\",\"longitude\":\"%DRIVER_LON%\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/UpdateDriverLocation
+echo.
+
+echo 🟢 Step 2: Update Driver Status
+echo Setting driver status to AVAILABLE...
+grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\",\"status\":\"AVAILABLE\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/UpdateDriverStatus
+echo.
+
+echo 🔍 Step 3: Get Driver Status
+echo Checking current driver status...
+grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/GetDriverStatus
+echo.
+
+echo 📡 Step 4: Find Nearby Drivers
+echo Searching for drivers within 5km radius...
+grpcurl -plaintext -d "{\"latitude\":\"%DRIVER_LAT%\",\"longitude\":\"%DRIVER_LON%\",\"radius_km\":\"5.0\",\"limit\":\"10\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/FindNearbyDrivers
+echo.
+
+pause
+
+echo.
+echo ============================================================
+echo � PHASE 4: Trip Service gRPC Operations
+echo ============================================================
+echo.
+
+set PICKUP_LAT=10.762622
+set PICKUP_LON=106.660172
+set DEST_LAT=10.775622
+set DEST_LON=106.670172
+
+echo 🚕 Step 1: Create Trip Request
+echo Creating a trip from District 1 to Ben Thanh Market...
+grpcurl -plaintext -d "{\"passenger_id\":\"%DEMO_USER_ID%\",\"pickup_latitude\":\"%PICKUP_LAT%\",\"pickup_longitude\":\"%PICKUP_LON%\",\"destination_latitude\":\"%DEST_LAT%\",\"destination_longitude\":\"%DEST_LON%\",\"pickup_location\":\"District 1 Center\",\"destination\":\"Ben Thanh Market\"}" localhost:%TRIP_GRPC_PORT% trip.TripService/CreateTrip
+echo.
+
+set DEMO_TRIP_ID=770e8400-e29b-41d4-a716-446655440003
+
+echo 📊 Step 2: Get Trip Status
+echo Checking trip status...
+grpcurl -plaintext -d "{\"trip_id\":\"%DEMO_TRIP_ID%\"}" localhost:%TRIP_GRPC_PORT% trip.TripService/GetTripStatus
+echo.
+
+pause
+
+echo.
+echo ============================================================
+echo 🔄 PHASE 5: Cross-Service Integration Patterns
+echo ============================================================
+echo Demonstrating how services interact in real scenarios...
+echo.
+
+echo 🎭 Scenario: Driver Assignment Workflow
+echo.
+
+echo � Step 1: Find Available Drivers (Driver Service)
+echo Passenger requests ride, system finds nearby drivers...
+grpcurl -plaintext -d "{\"latitude\":\"%PICKUP_LAT%\",\"longitude\":\"%PICKUP_LON%\",\"radius_km\":\"3.0\",\"limit\":\"5\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/FindNearbyDrivers
+echo.
+
+echo 👤 Step 2: Validate Passenger (User Service)
+echo System validates passenger before creating trip...
+grpcurl -plaintext -d "{\"user_id\":\"%DEMO_USER_ID%\"}" localhost:%USER_GRPC_PORT% user.UserService/ValidateUser
+echo.
+
+echo 🚕 Step 3: Create Trip (Trip Service)
+echo Valid passenger found, creating trip request...
+grpcurl -plaintext -d "{\"passenger_id\":\"%DEMO_USER_ID%\",\"pickup_latitude\":\"%PICKUP_LAT%\",\"pickup_longitude\":\"%PICKUP_LON%\",\"destination_latitude\":\"%DEST_LAT%\",\"destination_longitude\":\"%DEST_LON%\",\"pickup_location\":\"Nguyen Hue Street\",\"destination\":\"Saigon Opera House\"}" localhost:%TRIP_GRPC_PORT% trip.TripService/CreateTrip
+echo.
+
+echo 🚗 Step 4: Assign Driver (Driver Service)
+echo Assigning nearest available driver to trip...
+grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\",\"status\":\"BUSY\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/UpdateDriverStatus
+echo.
+
+echo 📱 Step 5: Real-time Updates Simulation
+echo Simulating real-time location updates during trip...
+for %%i in (1 2 3 4 5) do (
+    echo    📍 Location Update %%i/5...
+    set /a UPDATE_LAT=10762622 + %%i * 250
+    set /a UPDATE_LON=106660172 + %%i * 200
+    set UPDATE_LAT_STR=10.!UPDATE_LAT:~-6!
+    set UPDATE_LON_STR=106.!UPDATE_LON:~-6!
+    grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\",\"latitude\":\"!UPDATE_LAT_STR!\",\"longitude\":\"!UPDATE_LON_STR!\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/UpdateDriverLocation
+    timeout /t 1 >nul
+)
+echo.
+
+echo 🏁 Step 6: Trip Completion
+echo Driver has reached destination, completing trip...
+grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\",\"status\":\"AVAILABLE\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/UpdateDriverStatus
+echo.
+
+pause
+
+echo.
+echo ============================================================
+echo 🛠️ PHASE 6: Advanced gRPC Features Demo
+echo ============================================================
+echo.
+
+echo 🔍 Step 1: Service Reflection
+echo Demonstrating gRPC reflection capabilities...
+echo.
+echo 📋 User Service Methods:
+grpcurl -plaintext localhost:%USER_GRPC_PORT% describe user.UserService
+echo.
+
+echo 📋 Driver Service Methods:
+grpcurl -plaintext localhost:%DRIVER_GRPC_PORT% describe driver.DriverService
+echo.
+
+echo 📋 Trip Service Methods:
+grpcurl -plaintext localhost:%TRIP_GRPC_PORT% describe trip.TripService
+echo.
+
+echo 🔧 Step 2: Message Structure Inspection
+echo Examining protobuf message structures...
+echo.
+echo 📝 FindNearbyDriversRequest structure:
+grpcurl -plaintext localhost:%DRIVER_GRPC_PORT% describe driver.FindNearbyDriversRequest
+echo.
+
+echo 📝 CreateTripRequest structure:
+grpcurl -plaintext localhost:%TRIP_GRPC_PORT% describe trip.CreateTripRequest
+echo.
+
+echo 📝 ValidateUserRequest structure:
+grpcurl -plaintext localhost:%USER_GRPC_PORT% describe user.ValidateUserRequest
+echo.
+
+pause
+
+echo.
+echo ============================================================
+echo 📊 PHASE 7: Performance and Error Handling Demo
+echo ============================================================
+echo.
+
+echo ⚡ Step 1: Concurrent Requests Test
+echo Testing concurrent gRPC calls across services...
+echo.
+echo Sending 3 concurrent health checks...
+start /B grpcurl -plaintext localhost:%USER_GRPC_PORT% user.UserService/HealthCheck
+start /B grpcurl -plaintext localhost:%DRIVER_GRPC_PORT% driver.DriverService/HealthCheck
+start /B grpcurl -plaintext localhost:%TRIP_GRPC_PORT% trip.TripService/HealthCheck
+timeout /t 2 >nul
+echo.
+
+echo 🚫 Step 2: Error Handling Demo
+echo Testing error responses for invalid requests...
+echo.
+echo Testing invalid user ID:
+grpcurl -plaintext -d "{\"user_id\":\"invalid-uuid\"}" localhost:%USER_GRPC_PORT% user.UserService/ValidateUser
+echo.
+
+echo Testing invalid driver coordinates:
+grpcurl -plaintext -d "{\"driver_id\":\"%DEMO_DRIVER_ID%\",\"latitude\":\"999\",\"longitude\":\"999\"}" localhost:%DRIVER_GRPC_PORT% driver.DriverService/UpdateDriverLocation
+echo.
+
+echo Testing non-existent trip:
+grpcurl -plaintext -d "{\"trip_id\":\"00000000-0000-0000-0000-000000000000\"}" localhost:%TRIP_GRPC_PORT% trip.TripService/GetTripStatus
+echo.
+
+echo.
+echo ============================================================
+echo 🎉 gRPC INTEGRATION DEMO COMPLETE
+echo ============================================================
+echo.
+echo 📊 Demonstrated gRPC Features:
+echo    ✅ Service discovery and reflection
+echo    ✅ Health check patterns
+echo    ✅ CRUD operations across all services
+echo    ✅ Cross-service communication patterns
+echo    ✅ Real-time updates simulation
+echo    ✅ Error handling and validation
+echo    ✅ Concurrent request handling
+echo    ✅ Message structure inspection
+echo.
+echo 🏗️ Services Integration Patterns:
+echo    👤 User validation and profile management
+echo    🚗 Driver location tracking and status updates
+echo    🚕 Trip creation and status monitoring
+echo    🔄 Cross-service workflow orchestration
+echo.
+echo 💡 This demo showcased the gRPC communication layer
+echo    that enables seamless integration between all
+echo    microservices in the UIT-Go platform.
+echo.
+echo Thank you for exploring the gRPC integration patterns!
+pause
         echo    ✅ Port %%p is accessible
     ) else (
         echo    ❌ Port %%p is not accessible

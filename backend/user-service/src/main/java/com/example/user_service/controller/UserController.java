@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -45,9 +46,23 @@ public class UserController {
 //    }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid CreateUserRequest request) {
-        UserResponse user = userService.createUser(request);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> registerUser(@RequestBody @Valid CreateUserRequest request) {
+        try {
+            UserResponse user = userService.createUser(request);
+            return ResponseEntity.ok(user);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Invalid registration data: " + e.getMessage(),
+                "error", "INVALID_REQUEST"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "message", "Error creating user account: " + e.getMessage(),
+                "error", "INTERNAL_ERROR"
+            ));
+        }
     }
 
     @PostMapping("/login")

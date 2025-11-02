@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"google.golang.org/grpc"
@@ -36,12 +37,12 @@ func NewDriverServer(springBootURL string) *DriverServer {
 
 // HealthCheck implements the health check endpoint
 func (s *DriverServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
-	log.Println("gRPC HealthCheck called")
+	log.Printf("gRPC HealthCheck called")
 	
 	return &pb.HealthCheckResponse{
 		Service:   "driver-service-grpc",
 		Status:    "UP",
-		Timestamp: time.Now().Unix(),
+		Timestamp: strconv.FormatInt(time.Now().Unix(), 10),
 		Message:   "Driver gRPC Service is running and healthy",
 	}, nil
 }
@@ -430,7 +431,7 @@ func convertToDriverInfo(driverMap map[string]interface{}) *pb.DriverInfo {
 func main() {
 	// Configuration
 	port := ":50053"
-	springBootURL := "http://driver-service:8083/api/driver-service" // Use correct context path
+	springBootURL := "http://driver-service:8083/api/driver-service" // Use correct context path and port
 
 	log.Printf("🚀 Starting gRPC Driver Service on port %s", port)
 	log.Printf("🔗 Spring Boot backend: %s", springBootURL)

@@ -35,19 +35,27 @@ public interface ITripService {
      */
     TripResponse getTripById(UUID tripId);
 
-//    /**
-//     * Get all trips for a passenger
-//     * @param passengerId the UUID of the passenger
-//     * @return list of trip responses
-//     */
-//    List<TripResponse> getTripsByPassenger(UUID passengerId);
-//
-//    /**
-//     * Get all trips for a driver
-//     * @param driverId the UUID of the driver
-//     * @return list of trip responses
-//     */
-//    List<TripResponse> getTripsByDriver(UUID driverId);
+    /**
+     * Update trip status
+     * @param tripId the UUID of the trip
+     * @param request the status update request
+     * @return the updated trip response
+     */
+    TripResponse updateTripStatus(UUID tripId, UpdateTripStatusRequest request);
+
+    /**
+     * Get all trips for a passenger
+     * @param passengerId the UUID of the passenger
+     * @return list of trip responses
+     */
+    List<TripResponse> getTripsByPassenger(UUID passengerId);
+
+    /**
+     * Get all trips for a driver
+     * @param driverId the UUID of the driver
+     * @return list of trip responses
+     */
+    List<TripResponse> getTripsByDriver(UUID driverId);
 
     /**
      * Assign a driver to a trip

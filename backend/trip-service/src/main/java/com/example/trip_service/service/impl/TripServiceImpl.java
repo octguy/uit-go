@@ -12,7 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class TripServiceImpl implements ITripService {
@@ -84,8 +86,10 @@ public class TripServiceImpl implements ITripService {
 
         return EstimatedFareResponse.builder()
                 .estimatedFare(fareInDollars)
-                .distanceKm(distanceKm)
                 .currency("USD")
+                .estimatedDistance(distanceKm)
+                .estimatedDuration((int) Math.round(distanceKm * 60 / 40)) // Rough estimate: 40 km/h average speed
+                .routeSummary("Direct route via main roads")
                 .build();
     }
 
@@ -123,21 +127,92 @@ public class TripServiceImpl implements ITripService {
         return toTripResponse(trip);
     }
 
-//    @Override
-//    public List<TripResponse> getTripsByPassenger(UUID passengerId) {
-//        List<Trip> trips = tripRepository.findByPassengerId(passengerId);
-//        return trips.stream()
-//                .map(this::toTripResponse)
-//                .collect(Collectors.toList());
-//    }
-//
-//    @Override
-//    public List<TripResponse> getTripsByDriver(UUID driverId) {
-//        List<Trip> trips = tripRepository.findByDriverId(driverId);
-//        return trips.stream()
-//                .map(this::toTripResponse)
-//                .collect(Collectors.toList());
-//    }
+    @Override
+    public List<TripResponse> getTripsByPassenger(UUID passengerId) {
+        List<Trip> trips = tripRepository.findByPassengerIdOrderByCreatedAtDesc(passengerId);
+        return trips.stream()
+                .map(this::toTripResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TripResponse> getTripsByDriver(UUID driverId) {
+        List<Trip> trips = tripRepository.findByDriverIdOrderByCreatedAtDesc(driverId);
+        return trips.stream()
+                .map(this::toTripResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TripResponse updateTripStatus(UUID tripId, UpdateTripStatusRequest request) {
+        // Find trip
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + tripId));
+
+        // Validate status transition
+        TripStatus currentStatus = trip.getStatus();
+        TripStatus newStatus = request.getStatus();
+        
+        validateStatusTransition(currentStatus, newStatus);
+
+        // Update status and corresponding timestamp
+        trip.setStatus(newStatus);
+        
+        LocalDateTime now = LocalDateTime.now();
+        switch (newStatus) {
+            case SEARCHING_DRIVER:
+                // No specific timestamp for searching
+                break;
+            case ACCEPTED:
+                trip.setAcceptedAt(now);
+                break;
+            case IN_PROGRESS:
+                trip.setStartedAt(now);
+                break;
+            case COMPLETED:
+                trip.setCompletedAt(now);
+                break;
+            case CANCELLED:
+                trip.setCancelledAt(now);
+                break;
+        }
+
+        // Save updated trip
+        Trip updatedTrip = tripRepository.save(trip);
+
+        return toTripResponse(updatedTrip);
+    }
+
+    private void validateStatusTransition(TripStatus currentStatus, TripStatus newStatus) {
+        // Define valid status transitions
+        boolean isValidTransition = false;
+        
+        switch (currentStatus) {
+            case SEARCHING_DRIVER:
+                isValidTransition = newStatus == TripStatus.ACCEPTED || 
+                                  newStatus == TripStatus.CANCELLED;
+                break;
+            case ACCEPTED:
+                isValidTransition = newStatus == TripStatus.IN_PROGRESS || 
+                                  newStatus == TripStatus.CANCELLED;
+                break;
+            case IN_PROGRESS:
+                isValidTransition = newStatus == TripStatus.COMPLETED || 
+                                  newStatus == TripStatus.CANCELLED;
+                break;
+            case COMPLETED:
+            case CANCELLED:
+                // Final states - no transitions allowed
+                isValidTransition = false;
+                break;
+        }
+        
+        if (!isValidTransition) {
+            throw new IllegalStateException(
+                String.format("Invalid status transition from %s to %s", currentStatus, newStatus));
+        }
+    }
 
     @Override
     @Transactional

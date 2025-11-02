@@ -857,7 +857,7 @@ type HealthCheckResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Service       string                 `protobuf:"bytes,1,opt,name=service,proto3" json:"service,omitempty"`
 	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp     string                 `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -907,11 +907,11 @@ func (x *HealthCheckResponse) GetStatus() string {
 	return ""
 }
 
-func (x *HealthCheckResponse) GetTimestamp() int64 {
+func (x *HealthCheckResponse) GetTimestamp() string {
 	if x != nil {
 		return x.Timestamp
 	}
-	return 0
+	return ""
 }
 
 func (x *HealthCheckResponse) GetMessage() string {
@@ -997,14 +997,14 @@ const file_driver_service_proto_driver_proto_rawDesc = "" +
 	"\x13HealthCheckResponse\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12\x18\n" +
+	"\ttimestamp\x18\x03 \x01(\tR\ttimestamp\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage2\xc5\x03\n" +
 	"\rDriverService\x12X\n" +
 	"\x11FindNearbyDrivers\x12 .driver.FindNearbyDriversRequest\x1a!.driver.FindNearbyDriversResponse\x12R\n" +
 	"\x0fGetDriverStatus\x12\x1e.driver.GetDriverStatusRequest\x1a\x1f.driver.GetDriverStatusResponse\x12a\n" +
 	"\x14UpdateDriverLocation\x12#.driver.UpdateDriverLocationRequest\x1a$.driver.UpdateDriverLocationResponse\x12[\n" +
 	"\x12UpdateDriverStatus\x12!.driver.UpdateDriverStatusRequest\x1a\".driver.UpdateDriverStatusResponse\x12F\n" +
-	"\vHealthCheck\x12\x1a.driver.HealthCheckRequest\x1a\x1b.driver.HealthCheckResponseB\tZ\a./protob\x06proto3"
+	"\vHealthCheck\x12\x1a.driver.HealthCheckRequest\x1a\x1b.driver.HealthCheckResponseB6Z4github.com/uit-go/grpc-services/driver-service/protob\x06proto3"
 
 var (
 	file_driver_service_proto_driver_proto_rawDescOnce sync.Once
