@@ -1,4 +1,36 @@
+version: '3.8'
+
 services:
+  # ==================== INFRASTRUCTURE ====================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - microservices-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - microservices-network
+
+  # ==================== MICROSERVICES ====================
+
   api-gateway:
     build: ../backend/api-gateway
     container_name: api-gateway
@@ -6,6 +38,9 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=default
+    networks:
+      - microservices-network
+
   user-service:
     build: ../backend/user-service
     container_name: user-service
@@ -15,6 +50,9 @@ services:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       - user-service-db
+    networks:
+      - microservices-network
+
   trip-service:
     build: ../backend/trip-service
     container_name: trip-service
@@ -25,6 +63,9 @@ services:
     depends_on:
       - trip-service-db
       - user-grpc-service  # Add dependency on gRPC service
+    networks:
+      - microservices-network
+
   driver-service:
     build: ../backend/driver-service
     container_name: driver-service
@@ -34,6 +75,8 @@ services:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       - driver-service-db
+    networks:
+      - microservices-network
   
   # Add gRPC Services
   user-grpc-service:
@@ -51,6 +94,8 @@ services:
       - DB_NAME=user_service_db
     depends_on:
       - user-service-db
+    networks:
+      - microservices-network
   
   trip-grpc-service:
     build: 
@@ -67,6 +112,8 @@ services:
       - DB_NAME=trip_service_db
     depends_on:
       - trip-service-db
+    networks:
+      - microservices-network
   
   driver-grpc-service:
     build: 
@@ -83,6 +130,8 @@ services:
       - DB_NAME=driver_service_db
     depends_on:
       - driver-service-db
+    networks:
+      - microservices-network
 
   user-service-db:
     image: postgres:15-alpine
@@ -96,6 +145,9 @@ services:
     volumes:
       - user_db_data:/var/lib/postgresql/data
       - ../db/user-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - microservices-network
+
   trip-service-db:
     image: postgres:15-alpine
     container_name: trip-service-db
@@ -108,6 +160,9 @@ services:
     volumes:
       - trip_db_data:/var/lib/postgresql/data
       - ../db/trip-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - microservices-network
+
   driver-service-db:
     image: postgres:15-alpine
     container_name: driver-service-db
@@ -120,12 +175,16 @@ services:
     volumes:
       - driver_db_data:/var/lib/postgresql/data
       - ../db/driver-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - microservices-network
 
 volumes:
   user_db_data:
   trip_db_data:
   driver_db_data:
+  redis-data:
+  rabbitmq-data:
 
 networks:
-  default:
-    name: microservices-network
+  microservices-network:
+    driver: bridge

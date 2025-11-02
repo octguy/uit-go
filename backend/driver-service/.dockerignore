@@ -1,0 +1,13 @@
+target/
+src/test
+.git
+.gitignore
+README.md
+*.md
+.mvn
+mvnw
+mvnw.cmd
+.DS_Store
+*.log
+.env
+.env.local
