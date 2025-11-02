@@ -10,7 +10,7 @@ Deploy your UIT-Go microservices using Terraform to manage local Kubernetes infr
 - **Features**: Full Kubernetes API, addons, dashboard
 - **Best For**: Learning Kubernetes concepts
 
-### Option 2: Docker Desktop Kubernetes
+### Option 2: Docker Desktop Kubernetes (I choose this)
 - **Resource Usage**: Medium (4-6GB RAM)
 - **Features**: Built into Docker Desktop, easy setup
 - **Best For**: Windows/Mac users with Docker Desktop
