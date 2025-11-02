@@ -1,8 +1,8 @@
 package com.example.user_service.controller;
 
 import com.example.user_service.dto.*;
-import com.example.user_service.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.user_service.service.IUserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,18 +13,58 @@ import java.util.UUID;
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final IUserService userService;
+
+//    // gRPC client fields
+//    @Value("${trip.service.host:localhost}")
+//    private String tripServiceHost;
+//
+//    @Value("${trip.service.port:6565}")
+//    private int tripServicePort;
+//
+//    private ManagedChannel channel;
+//    private TripServiceGrpc.TripServiceBlockingStub tripStub;
+//
+    public UserController(IUserService userService) {
+        this.userService = userService;
+    }
+
+//    @PostConstruct
+//    public void initGrpc() {
+//        this.channel = ManagedChannelBuilder.forAddress(tripServiceHost, tripServicePort)
+//                .usePlaintext()
+//                .build();
+//        this.tripStub = TripServiceGrpc.newBlockingStub(channel);
+//    }
+//
+//    @PreDestroy
+//    public void shutdownGrpc() {
+//        if (this.channel != null && !this.channel.isShutdown()) {
+//            this.channel.shutdownNow();
+//        }
+//    }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid CreateUserRequest request) {
         UserResponse user = userService.createUser(request);
         return ResponseEntity.ok(user);
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<UserResponse> login(@RequestBody @Valid LoginRequest request) {
+        try {
+            UserResponse user = userService.login(request);
+            return ResponseEntity.ok(user);
+        } catch (IllegalArgumentException e) {
+            // invalid credentials
+            return ResponseEntity.status(401).build();
+        }
+    }
+
     @GetMapping("/{userId}")
-    public ResponseEntity<UserResponse> getUser(@PathVariable Long userId) {
-        UserResponse user = userService.getUserById(userId);
+    public ResponseEntity<UserResponse> getUser(@PathVariable String userId) {
+        UUID uid = UUID.fromString(userId);
+        UserResponse user = userService.getUserById(uid);
         return ResponseEntity.ok(user);
     }
 
@@ -35,8 +75,9 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable Long userId, @RequestBody UpdateUserRequest request) {
-        UserResponse user = userService.updateUser(userId, request);
+    public ResponseEntity<UserResponse> updateUser(@PathVariable String userId, @RequestBody UpdateUserRequest request) {
+        UUID uid = UUID.fromString(userId);
+        UserResponse user = userService.updateUser(uid, request);
         return ResponseEntity.ok(user);
     }
 
@@ -46,27 +87,28 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @PostMapping("/validate")
-    public ResponseEntity<ValidateUserResponse> validateUser(@RequestBody ValidateUserRequest request) {
-        System.out.println("👤 User Service: Received validation request for userId: " + request.getUserId());
-        
-        try {
-            UUID userId = request.getUserIdAsUUID();
-            UserResponse user = userService.getUserById(userId);
-            
-            if (user != null) {
-                System.out.println("✅ User found: " + user.getEmail() + " (Type: " + user.getUserType() + ")");
-                ValidateUserResponse response = new ValidateUserResponse(true, user.getUserType(), "User is valid");
-                return ResponseEntity.ok(response);
-            } else {
-                System.out.println("❌ User not found");
-                ValidateUserResponse response = new ValidateUserResponse(false, null, "User not found");
-                return ResponseEntity.ok(response);
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Validation error: " + e.getMessage());
-            ValidateUserResponse response = new ValidateUserResponse(false, null, "Validation error: " + e.getMessage());
-            return ResponseEntity.ok(response);
-        }
+    // New: call trip-service via gRPC to list trips for a user
+    @GetMapping("/{userId}/trips")
+    public ResponseEntity<?> getTripsForUser(@PathVariable String userId) {
+//        try {
+//            UUID uid = UUID.fromString(userId);
+//
+//            // Build and send gRPC request - adjust field names to match your proto
+//            TripRequest req = TripRequest.newBuilder()
+//                    .setUserId(uid.toString())
+//                    .build();
+//
+//            TripListResponse resp = tripStub.getTripsForUser(req); // adjust method name to match proto
+//
+//            // Return the raw trip list response (or map to DTOs as needed)
+//            return ResponseEntity.ok(resp);
+//        } catch (IllegalArgumentException ie) {
+//            return ResponseEntity.badRequest().body("Invalid userId format");
+//        } catch (Exception e) {
+//            // log and return a 502-ish response indicating upstream failure
+//            System.err.println("Error calling trip-service: " + e.getMessage());
+//            return ResponseEntity.status(502).body("Failed to fetch trips from trip-service: " + e.getMessage());
+//        }
+        return null;
     }
 }

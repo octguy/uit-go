@@ -43,6 +43,7 @@ services:
 
   user-service:
     build: ../backend/user-service
+    platform: linux/amd64
     container_name: user-service
     ports:
       - "8081:8081"
@@ -55,6 +56,7 @@ services:
 
   trip-service:
     build: ../backend/trip-service
+    platform: linux/amd64
     container_name: trip-service
     ports:
       - "8082:8082"
@@ -68,6 +70,7 @@ services:
 
   driver-service:
     build: ../backend/driver-service
+    platform: linux/amd64
     container_name: driver-service
     ports:
       - "8083:8083"

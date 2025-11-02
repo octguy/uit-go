@@ -6,10 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class CreateUserRequest {
+@NoArgsConstructor
+@Data
+public class LoginRequest {
 
     @NotBlank(message = "Email is mandatory")
     @Email(message = "Email should be valid")
@@ -17,10 +17,5 @@ public class CreateUserRequest {
 
     @NotBlank(message = "Password is mandatory")
     private String password;
-
-    @NotBlank(message = "Name is mandatory")
-    private String name;
-
-    @NotBlank(message = "User type is mandatory")
-    private String userType; // "PASSENGER" or "DRIVER"
 }
+

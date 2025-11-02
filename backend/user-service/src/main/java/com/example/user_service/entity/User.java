@@ -1,60 +1,45 @@
 package com.example.user_service.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "\"user\"")
+@Getter
+@Setter
 public class User {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
     
     @Column(unique = true, nullable = false)
     private String email;
-    
-    @Column(nullable = false)
-    private String name;
-    
-    @Column(name = "user_type", nullable = false)
+
+    @Column(name="password", nullable = false)
+    private String password; // not hashed for simplicity
+
+    @Column(name="user_type", nullable = false)
     private String userType; // "PASSENGER" or "DRIVER"
     
+    @Column(name="name", nullable = false)
+    private String name;
+
+    @Column(name="phone")
     private String phone;
     
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    // Constructors
-    public User() {
-        this.createdAt = LocalDateTime.now();
+    @Column(name="deleted_at")
+    private LocalDateTime deletedAt;
+
+    @PrePersist
+    public void onCreate() {
+        this.setCreatedAt(LocalDateTime.now());
     }
-
-    public User(String email, String name, String userType, String phone) {
-        this.email = email;
-        this.name = name;
-        this.userType = userType;
-        this.phone = phone;
-        this.createdAt = LocalDateTime.now();
-    }
-
-    // Getters and Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getUserType() { return userType; }
-    public void setUserType(String userType) { this.userType = userType; }
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
