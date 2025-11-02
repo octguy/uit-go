@@ -77,7 +77,16 @@ public class DriverController {
         driverMap.put("driverId", driver.getDriverId().toString());
         driverMap.put("latitude", driver.getLatitude());
         driverMap.put("longitude", driver.getLongitude());
-        driverMap.put("distance", Math.round(driver.getDistance() * 100.0) / 100.0); // Round to 2 decimals
+        
+        // Handle distance - ensure it's always present, even if 0.0
+        Double distance = driver.getDistance();
+        if (distance != null) {
+            double roundedDistance = Math.round(distance * 100.0) / 100.0; // Round to 2 decimals
+            driverMap.put("distance", roundedDistance);
+        } else {
+            driverMap.put("distance", 0.0); // Default to 0.0 if null
+        }
+        
         driverMap.put("timestamp", driver.getTimestamp());
         driverMap.put("geohash", driver.getGeohash());
         

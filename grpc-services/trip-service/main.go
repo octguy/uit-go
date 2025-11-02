@@ -5,254 +5,249 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/google/uuid"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
+	pb "github.com/uit-go/grpc-services/trip-service/proto"
 )
 
-// TODO: Replace with actual protobuf generated code
-type GetTripRequest struct {
-	TripId int64
-}
-
-type TripResponse struct {
-	Trip *TripInfo
-}
-
-type TripInfo struct {
-	Id                   int64
-	PassengerId          int64
-	DriverId             int64
-	Status               string
-	PickupLocation       string
-	Destination          string
-	PickupLatitude       float64
-	PickupLongitude      float64
-	DestinationLatitude  float64
-	DestinationLongitude float64
-	Fare                 float64
-	CreatedAt            string
-	UpdatedAt            string
-}
-
-type GetTripsByUserRequest struct {
-	UserId   int64
-	UserType string
-}
-
-type GetTripsByUserResponse struct {
-	Trips []*TripInfo
-}
-
-type UpdateTripStatusRequest struct {
-	TripId int64
-	Status string
-}
-
-type UpdateTripStatusResponse struct {
-	Success bool
-	Message string
-}
-
-// DTOs for HTTP endpoints
-type CreateTripRequest struct {
-	PassengerId    string `json:"passengerId"`
-	PickupLocation string `json:"pickupLocation"`
-	Destination    string `json:"destination"`
-}
-
-type CreateTripResponse struct {
-	Success bool   `json:"success"`
-	TripId  string `json:"tripId"`
-	Message string `json:"message"`
-}
-
-type ValidateUserRequest struct {
-	UserId string `json:"userId"`
-}
-
-type ValidateUserResponse struct {
-	Valid    bool   `json:"valid"`
-	UserType string `json:"userType"`
-	Message  string `json:"message"`
-}
-
+// TripServer implements the gRPC TripService
 type TripServer struct {
+	pb.UnimplementedTripServiceServer
 	springBootURL  string
 	userServiceURL string
 	httpClient     *http.Client
 }
 
-func (s *TripServer) GetTrip(ctx context.Context, req *GetTripRequest) (*TripResponse, error) {
-	// TODO: Call Spring Boot REST API
-	url := fmt.Sprintf("%s/api/trips/%d", s.springBootURL, req.TripId)
+// CreateTrip creates a new trip
+func (s *TripServer) CreateTrip(ctx context.Context, req *pb.CreateTripRequest) (*pb.CreateTripResponse, error) {
+	log.Printf("gRPC CreateTrip called: user_id=%s, origin=%s, destination=%s", req.UserId, req.Origin, req.Destination)
 
-	// TODO: Make HTTP GET request to Spring Boot
-	// TODO: Parse JSON response
-	// TODO: Convert to gRPC response format
-
-	log.Printf("TODO: Call %s", url)
-
-	// Placeholder response
-	return &TripResponse{
-		Trip: &TripInfo{
-			Id:          req.TripId,
-			PassengerId: 0,
-			DriverId:    0,
-			Status:      "TODO",
-		},
-	}, nil
-}
-
-func (s *TripServer) GetTripsByUser(ctx context.Context, req *GetTripsByUserRequest) (*GetTripsByUserResponse, error) {
-	// TODO: Call Spring Boot REST API
-	var url string
-	if req.UserType == "PASSENGER" {
-		url = fmt.Sprintf("%s/api/trips/passenger/%d", s.springBootURL, req.UserId)
-	} else if req.UserType == "DRIVER" {
-		url = fmt.Sprintf("%s/api/trips/driver/%d", s.springBootURL, req.UserId)
+	// Prepare request to Spring Boot service
+	requestData := map[string]interface{}{
+		"user_id":     req.UserId,
+		"origin":      req.Origin,
+		"destination": req.Destination,
 	}
 
-	log.Printf("TODO: Call %s", url)
-
-	// Placeholder response
-	return &GetTripsByUserResponse{
-		Trips: []*TripInfo{},
-	}, nil
-}
-
-func (s *TripServer) UpdateTripStatus(ctx context.Context, req *UpdateTripStatusRequest) (*UpdateTripStatusResponse, error) {
-	// TODO: Call Spring Boot REST API
-	url := fmt.Sprintf("%s/api/trips/%d/status", s.springBootURL, req.TripId)
-
-	// TODO: Create HTTP PUT request with JSON body
-	// TODO: Handle response
-
-	log.Printf("TODO: PUT to %s", url)
-
-	return &UpdateTripStatusResponse{
-		Success: true,
-		Message: "TODO: Implement",
-	}, nil
-}
-
-// HTTP endpoint handlers
-func (s *TripServer) createTripHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("🚗 Trip gRPC Service: Received createTrip request")
-
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req CreateTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("❌ Failed to decode request: %v", err)
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	log.Printf("📍 Trip request: %s → %s for user %s", req.PickupLocation, req.Destination, req.PassengerId)
-
-	// Step 1: Validate user via User Service
-	validation, err := s.validateUser(req.PassengerId)
+	jsonData, err := json.Marshal(requestData)
 	if err != nil {
-		log.Printf("❌ User validation failed: %v", err)
-		response := CreateTripResponse{
+		log.Printf("Error marshaling request: %v", err)
+		return &pb.CreateTripResponse{
+			TripId:  "",
+			Status:  "ERROR",
 			Success: false,
-			Message: fmt.Sprintf("User validation failed: %v", err),
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-		return
+			Message: fmt.Sprintf("Error preparing request: %v", err),
+		}, nil
 	}
 
-	if !validation.Valid {
-		log.Printf("❌ User validation rejected: %s", validation.Message)
-		response := CreateTripResponse{
-			Success: false,
-			Message: validation.Message,
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	log.Printf("✅ User validated: %s", validation.UserType)
-
-	// Step 2: Create trip (mock implementation)
-	tripId := uuid.New().String()
-
-	log.Printf("✅ Trip created with ID: %s", tripId)
-
-	response := CreateTripResponse{
-		Success: true,
-		TripId:  tripId,
-		Message: "Trip created successfully",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-func (s *TripServer) validateUser(userId string) (*ValidateUserResponse, error) {
-	log.Printf("📞 Calling User Service to validate user: %s", userId)
-
-	validateReq := ValidateUserRequest{
-		UserId: userId,
-	}
-
-	jsonData, err := json.Marshal(validateReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	url := fmt.Sprintf("%s/api/users/validate", s.userServiceURL)
+	// Call Spring Boot REST API
+	url := fmt.Sprintf("%s/api/trip-service/trips", s.springBootURL)
 	resp, err := s.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to call user service: %v", err)
+		log.Printf("Error calling Spring Boot service: %v", err)
+		return &pb.CreateTripResponse{
+			TripId:  "",
+			Status:  "ERROR", 
+			Success: false,
+			Message: fmt.Sprintf("Error calling backend service: %v", err),
+		}, nil
 	}
 	defer resp.Body.Close()
 
-	var validateResp ValidateUserResponse
-	if err := json.NewDecoder(resp.Body).Decode(&validateResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %v", err)
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response: %v", err)
+		return &pb.CreateTripResponse{
+			TripId:  "",
+			Status:  "ERROR",
+			Success: false,
+			Message: fmt.Sprintf("Error reading response: %v", err),
+		}, nil
 	}
 
-	log.Printf("✅ User Service response: valid=%t, type=%s", validateResp.Valid, validateResp.UserType)
-	return &validateResp, nil
+	// Parse JSON response
+	var springBootResponse map[string]interface{}
+	if err := json.Unmarshal(body, &springBootResponse); err != nil {
+		log.Printf("Error parsing JSON: %v", err)
+		return &pb.CreateTripResponse{
+			TripId:  "",
+			Status:  "ERROR",
+			Success: false,
+			Message: fmt.Sprintf("Error parsing response: %v", err),
+		}, nil
+	}
+
+	// Convert response to gRPC format
+	response := &pb.CreateTripResponse{
+		Success: true,
+		Message: "Trip created successfully",
+		Status:  "REQUESTED",
+	}
+
+	if tripId, ok := springBootResponse["tripId"].(string); ok {
+		response.TripId = tripId
+	}
+	if status, ok := springBootResponse["status"].(string); ok {
+		response.Status = status
+	}
+	if success, ok := springBootResponse["success"].(bool); ok {
+		response.Success = success
+	}
+	if message, ok := springBootResponse["message"].(string); ok {
+		response.Message = message
+	}
+
+	return response, nil
+}
+
+// GetTripStatus gets the status of a trip
+func (s *TripServer) GetTripStatus(ctx context.Context, req *pb.GetTripStatusRequest) (*pb.GetTripStatusResponse, error) {
+	log.Printf("gRPC GetTripStatus called: trip_id=%s", req.TripId)
+
+	// Call Spring Boot REST API
+	url := fmt.Sprintf("%s/api/trip-service/trips/%s", s.springBootURL, req.TripId)
+	log.Printf("Calling Spring Boot URL: %s", url)
+	resp, err := s.httpClient.Get(url)
+	if err != nil {
+		log.Printf("Error calling Spring Boot service: %v", err)
+		return &pb.GetTripStatusResponse{
+			TripId:  req.TripId,
+			Success: false,
+			Message: fmt.Sprintf("Error calling backend service: %v", err),
+		}, nil
+	}
+	defer resp.Body.Close()
+
+	log.Printf("Spring Boot HTTP status: %d", resp.StatusCode)
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response: %v", err)
+		return &pb.GetTripStatusResponse{
+			TripId:  req.TripId,
+			Success: false,
+			Message: fmt.Sprintf("Error reading response: %v", err),
+		}, nil
+	}
+
+	log.Printf("Spring Boot raw response: %s", string(body))
+
+	// Parse JSON response
+	var springBootResponse map[string]interface{}
+	if err := json.Unmarshal(body, &springBootResponse); err != nil {
+		log.Printf("Error parsing JSON: %v", err)
+		return &pb.GetTripStatusResponse{
+			TripId:  req.TripId,
+			Success: false,
+			Message: fmt.Sprintf("Error parsing response: %v", err),
+		}, nil
+	}
+
+	// Log the actual response for debugging
+	log.Printf("Spring Boot response: %+v", springBootResponse)
+
+	// Convert response to gRPC format
+	response := &pb.GetTripStatusResponse{
+		TripId:  req.TripId,
+		Success: true,
+		Message: "Trip status retrieved successfully",
+		Status:  "REQUESTED", // Default status
+	}
+
+	if status, ok := springBootResponse["status"].(string); ok {
+		response.Status = status
+	}
+	if driverId, ok := springBootResponse["driverId"].(string); ok {
+		response.DriverId = driverId
+	}
+	if passengerId, ok := springBootResponse["passengerId"].(string); ok {
+		response.PassengerId = passengerId
+	}
+	if origin, ok := springBootResponse["origin"].(string); ok {
+		response.Origin = origin
+	}
+	if destination, ok := springBootResponse["destination"].(string); ok {
+		response.Destination = destination
+	}
+	if fare, ok := springBootResponse["fare"].(float64); ok {
+		response.Fare = fare
+	}
+	if createdAt, ok := springBootResponse["createdAt"].(string); ok {
+		response.CreatedAt = createdAt
+	}
+	if updatedAt, ok := springBootResponse["updatedAt"].(string); ok {
+		response.UpdatedAt = updatedAt
+	}
+	if success, ok := springBootResponse["success"].(bool); ok {
+		response.Success = success
+	}
+	if message, ok := springBootResponse["message"].(string); ok {
+		response.Message = message
+	}
+
+	return response, nil
+}
+
+// HealthCheck provides a health check endpoint
+func (s *TripServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
+	log.Printf("gRPC HealthCheck called")
+	
+	return &pb.HealthCheckResponse{
+		Service:   "trip-service-grpc",
+		Status:    "UP",
+		Timestamp: strconv.FormatInt(time.Now().Unix(), 10),
+		Message:   "Trip gRPC Service is running and healthy",
+	}, nil
 }
 
 func main() {
-	// Load URLs from environment or use defaults
-	springBootURL := "http://trip-service:8082"  // trip-service port
-	userServiceURL := "http://user-service:8081" // user-service port
+	// Configuration
+	port := ":50052"
+	springBootURL := "http://trip-service:8082" // Use correct context path
+	userServiceURL := "http://user-service:8081"
 
-	// Initialize TripServer
-	server := &TripServer{
+	log.Printf("🚀 Starting gRPC Trip Service on port %s", port)
+	log.Printf("🔗 Spring Boot backend: %s", springBootURL)
+	log.Printf("🔗 User Service: %s", userServiceURL)
+
+	// Create listener
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+
+	// Create gRPC server
+	grpcServer := grpc.NewServer()
+
+	// Initialize and register service
+	tripServer := &TripServer{
 		springBootURL:  springBootURL,
 		userServiceURL: userServiceURL,
 		httpClient:     &http.Client{Timeout: 10 * time.Second},
 	}
 
-	// Setup HTTP handlers
-	http.HandleFunc("/createTrip", server.createTripHandler)
+	pb.RegisterTripServiceServer(grpcServer, tripServer)
 
-	log.Println("🚗 Trip gRPC Service starting on port :50052")
-	log.Printf("📡 Will call User Service at: %s", userServiceURL)
-	log.Printf("📡 Will proxy to Trip Service at: %s", springBootURL)
+	// Enable reflection for easier debugging with grpcurl
+	reflection.Register(grpcServer)
 
-	// Start HTTP server
-	go func() {
-		if err := http.ListenAndServe(":50052", nil); err != nil {
-			log.Fatalf("Failed to start HTTP server: %v", err)
-		}
-	}()
+	log.Printf("✅ gRPC Trip Service registered")
+	log.Printf("🔍 gRPC reflection enabled")
+	log.Printf("📡 Listening on %s", port)
+	log.Printf("🧪 Test with: grpcurl -plaintext localhost%s list", port)
 
-	log.Println("✅ Service running on port 50052...")
-
-	// Keep server running
-	select {}
+	// Start serving
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }

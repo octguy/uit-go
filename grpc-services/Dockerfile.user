@@ -1,20 +1,18 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod ./
-# Note: go.sum may not exist for simple prototypes
-COPY go.su[m] ./
+# Copy the entire grpc-services directory structure
+COPY go.mod go.sum ./
+COPY driver-service/ ./driver-service/
+COPY trip-service/ ./trip-service/
+COPY user-service/ ./user-service/
 
-# Download dependencies (if any)
+# Download dependencies
 RUN go mod download
 
-# Copy source code
-COPY . .
-
-# Build the application
+# Build the user service from the main module
 RUN CGO_ENABLED=0 GOOS=linux go build -o user-service ./user-service
 
 # Final stage

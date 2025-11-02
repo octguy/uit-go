@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+package trip;
+
+// Trip Service Definition
+service TripService {
+  // Create a new trip
+  rpc CreateTrip (CreateTripRequest) returns (CreateTripResponse);
+  
+  // Get trip status and details
+  rpc GetTripStatus (GetTripStatusRequest) returns (GetTripStatusResponse);
+  
+  // Health check for the service
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Request to create a new trip
+message CreateTripRequest {
+  string user_id = 1;
+  string origin = 2;
+  string destination = 3;
+}
+
+// Response for trip creation
+message CreateTripResponse {
+  string trip_id = 1;
+  string status = 2;
+  bool success = 3;
+  string message = 4;
+}
+
+// Request to get trip status
+message GetTripStatusRequest {
+  string trip_id = 1;
+}
+
+// Response with trip status
+message GetTripStatusResponse {
+  string trip_id = 1;
+  string status = 2;
+  string driver_id = 3;
+  string passenger_id = 4;
+  string origin = 5;
+  string destination = 6;
+  double fare = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  bool success = 10;
+  string message = 11;
+}
+
+// Health check request
+message HealthCheckRequest {
+}
+
+// Health check response
+message HealthCheckResponse {
+  string service = 1;
+  string status = 2;
+  string timestamp = 3;
+  string message = 4;
+}

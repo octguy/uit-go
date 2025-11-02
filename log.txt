@@ -1,0 +1,276 @@
+PS D:\ride-sharing-platform\uit-go> .\demo-grpc.bat        
+
+============================================================                                             �� UIT-Go gRPC Services Demonstration                                                                    ============================================================                                             This demo shows gRPC communication between microservices                                                 in the UIT-Go ride-sharing platform.                                                                                                                                                                              �� gRPC Service Endpoints:                                                                                  �� Driver Service gRPC: localhost:50053                                                                  �� Trip Service gRPC:   localhost:50052                                                                  �� User Service gRPC:   localhost:50051                                                               
+
+✅ grpcurl detected - will perform real gRPC calls
+
+============================================================
+🔍 STEP 1: Service Health Check
+============================================================
+
+📊 Checking gRPC service connectivity...
+Testing port 50053...
+   ✅ Port 50053 is accessible
+Testing port 50052...
+   ✅ Port 50052 is accessible
+Testing port 50051...
+   ✅ Port 50051 is accessible
+
+🐳 Docker Container Status:
+NAMES                 STATUS              PORTS
+trip-grpc-service     Up About a minute   0.0.0.0:50052->50052/tcp, [::]:50052->50052/tcp
+driver-grpc-service   Up About a minute   0.0.0.0:50053->50053/tcp, [::]:50053->50053/tcp
+user-grpc-service     Up About a minute   0.0.0.0:50051->50051/tcp, [::]:50051->50051/tcp
+
+============================================================
+🚗 STEP 2: Driver Service gRPC Demo
+============================================================
+
+📍 Demonstrating Driver Service gRPC calls...
+
+🔍 Attempting to list gRPC services on driver service...
+driver.DriverService
+grpc.reflection.v1.ServerReflection
+grpc.reflection.v1alpha.ServerReflection
+   ✅ Successfully connected to driver gRPC service
+
+🏥 Testing Driver Service HealthCheck...
+{
+  "service": "driver-service-grpc",
+  "status": "UP",
+  "timestamp": "1762067042",
+  "message": "Driver gRPC Service is running and healthy"
+}
+   ✅ HealthCheck call successful
+
+🚗 Testing FindNearbyDrivers call...
+{
+  "drivers": [
+    {
+      "driverId": "550e8400-e29b-41d4-a716-446655440001",
+      "latitude": 10.765,
+      "longitude": 106.665,
+      "distance": 0.59,
+      "status": "AVAILABLE",
+      "vehiclePlate": "51A-2771",
+      "vehicleModel": "Toyota Vios",
+      "rating": 4.316224803491182,
+      "timestamp": "1762065195466",
+      "geohash": "w3gv5pxn"
+    },
+    {
+      "driverId": "550e8400-e29b-41d4-a716-446655440002",
+      "latitude": 10.765,
+      "longitude": 106.665,
+      "distance": 0.59,
+      "status": "AVAILABLE",
+      "vehiclePlate": "51A-2768",
+      "vehicleModel": "Toyota Vios",
+      "rating": 4.446027312780324,
+      "timestamp": "1762062003600",
+      "geohash": "w3gvk2abc"
+    },
+    {
+      "driverId": "550e8400-e29b-41d4-a716-446655440003",
+      "latitude": 10.77,
+      "longitude": 106.67,
+      "distance": 1.35,
+      "status": "AVAILABLE",
+      "vehiclePlate": "51A-2769",
+      "vehicleModel": "Toyota Vios",
+      "rating": 4.184907200834655,
+      "timestamp": "1762062003600",
+      "geohash": "w3gvk3def"
+    }
+  ],
+  "count": 3,
+  "searchRadius": 5,
+  "searchLocation": {
+    "latitude": 10.762622,
+    "longitude": 106.660172
+  },
+  "success": true,
+  "message": "Nearby drivers found"
+}
+   ✅ FindNearbyDrivers call successful
+
+🔍 Testing GetDriverStatus call...
+{
+  "driverId": "550e8400-e29b-41d4-a716-446655440001",
+  "userId": "user-2e949921-7811-4191-830d-7962a14baf7c",
+  "status": "AVAILABLE",
+  "licenseNumber": "LICENSE-123456",
+  "vehicleModel": "Toyota Vios",
+  "vehiclePlate": "51A-12345",
+  "rating": 4.5,
+  "totalTrips": 150,
+  "success": true,
+  "message": "Driver retrieved successfully (Mock)"
+}
+   ✅ GetDriverStatus call successful
+
+📍 Testing UpdateDriverLocation call...
+{
+  "driverId": "550e8400-e29b-41d4-a716-446655440001",
+  "latitude": 10.775,
+  "longitude": 106.665,
+  "timestamp": "1762067043071",
+  "success": true,
+  "message": "Driver location updated successfully"
+}
+   ✅ UpdateDriverLocation call successful
+
+🔄 Testing UpdateDriverStatus call...
+{
+  "driverId": "550e8400-e29b-41d4-a716-446655440001",
+  "status": "BUSY",
+  "timestamp": "1762067043294",
+  "success": true,
+  "message": "Driver status updated successfully (Mock)"
+}
+   ✅ UpdateDriverStatus call successful
+
+============================================================
+🚕 STEP 3: Trip Service gRPC Demo
+============================================================
+
+🎯 Demonstrating Trip Service gRPC calls...
+
+🔍 Attempting to list gRPC services on trip service...
+grpc.reflection.v1.ServerReflection
+grpc.reflection.v1alpha.ServerReflection
+trip.TripService
+   ✅ Successfully connected to trip gRPC service
+
+🏥 Testing Trip Service HealthCheck...
+{
+  "service": "trip-service-grpc",
+  "status": "UP",
+  "timestamp": "1762067043",
+  "message": "Trip gRPC Service is running and healthy"
+}
+   ✅ HealthCheck call successful
+
+🚕 Testing CreateTrip call...
+{
+  "status": "REQUESTED",
+  "success": true,
+  "message": "Trip created successfully"
+}
+   ✅ CreateTrip call successful
+
+📊 Testing GetTripStatus call...
+{
+  "tripId": "trip-12345",
+  "status": "REQUESTED",
+  "success": true,
+  "message": "Trip status retrieved successfully"
+}
+   ✅ GetTripStatus call successful
+
+============================================================
+🔄 STEP 4: Service Integration Flow Demo
+============================================================
+
+🎬 Demonstrating typical gRPC workflow...
+
+📋 Scenario: User requests a trip from Ben Thanh Market to Notre Dame Cathedral
+
+1️⃣  Trip Service gRPC: Create new trip request
+   Executing: grpcurl -d "{\"user_id\":\"user-workflow-123\",\"origin\":\"Ben Thanh Market\",\"destination\":\"Notre Dame Cathedral\"}" localhost:50052 trip.TripService/CreateTrip
+   Response:
+{
+  "status": "REQUESTED",
+  "success": true,
+  "message": "Trip created successfully"
+}
+   ✅ Trip created successfully
+
+2️⃣  Driver Service gRPC: Find nearby available drivers
+   Executing: grpcurl -d "{\"latitude\":\"10.762622\",\"longitude\":\"106.660172\",\"radius_km\":\"5.0\",\"limit\":\"3\"}" localhost:50053 driver.DriverService/FindNearbyDrivers
+   Response:
+{
+  "drivers": [
+    {
+      "driverId": "550e8400-e29b-41d4-a716-446655440001",
+      "latitude": 10.765,
+      "longitude": 106.665,
+      "distance": 0.59,
+      "status": "AVAILABLE",
+      "vehiclePlate": "51A-2771",
+      "vehicleModel": "Toyota Vios",
+      "rating": 4.212655561654133,
+      "timestamp": "1762065195466",
+      "geohash": "w3gv5pxn"
+    },
+    {
+      "driverId": "550e8400-e29b-41d4-a716-446655440002",
+      "latitude": 10.765,
+      "longitude": 106.665,
+      "distance": 0.59,
+      "status": "AVAILABLE",
+      "vehiclePlate": "51A-2768",
+      "vehicleModel": "Toyota Vios",
+      "rating": 4.690293025164847,
+      "timestamp": "1762062003600",
+      "geohash": "w3gvk2abc"
+    },
+    {
+      "driverId": "550e8400-e29b-41d4-a716-446655440003",
+      "latitude": 10.77,
+      "longitude": 106.67,
+      "distance": 1.35,
+      "status": "AVAILABLE",
+      "vehiclePlate": "51A-2769",
+      "vehicleModel": "Toyota Vios",
+      "rating": 4.457109441897534,
+      "timestamp": "1762062003600",
+      "geohash": "w3gvk3def"
+    }
+  ],
+  "count": 3,
+  "searchRadius": 5,
+  "searchLocation": {
+    "latitude": 10.762622,
+    "longitude": 106.660172
+  },
+  "success": true,
+  "message": "Nearby drivers found"
+}
+   ✅ Found nearby drivers
+
+3️⃣  Driver Service gRPC: Update driver status to BUSY
+   Executing: grpcurl -d "{\"driver_id\":\"550e8400-e29b-41d4-a716-446655440001\",\"status\":\"BUSY\"}" localhost:50053 driver.DriverService/UpdateDriverStatus
+   Response:
+{
+  "driverId": "550e8400-e29b-41d4-a716-446655440001",
+  "status": "BUSY",
+  "timestamp": "1762067044561",
+  "success": true,
+  "message": "Driver status updated successfully (Mock)"
+}
+   ✅ Driver status updated
+
+4️⃣  Trip Service gRPC: Check trip status
+   Executing: grpcurl -d "{\"trip_id\":\"workflow-trip-456\"}" localhost:50052 trip.TripService/GetTripStatus
+   Response:
+{
+  "tripId": "workflow-trip-456",
+  "status": "REQUESTED",
+  "success": true,
+  "message": "Trip status retrieved successfully"
+}
+   ✅ Trip status retrieved
+
+✨ Complete gRPC-based trip request workflow executed
+
+============================================================
+� gRPC DEMO COMPLETED
+============================================================
+
+✅ All gRPC services tested successfully
+✅ Driver Service gRPC (port 50053) - Working
+✅ Trip Service gRPC (port 50052) - Working
+✅ Integration workflow demonstrated
+
+Press any key to continue . . .

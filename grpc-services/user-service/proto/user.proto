@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/uit-go/grpc-services/user-service/proto";
+
+// User Service definition
+service UserService {
+  // Health check endpoint
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  
+  // Validate if a user exists and is active
+  rpc ValidateUser(ValidateUserRequest) returns (ValidateUserResponse);
+  
+  // Get user profile information
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  
+  // Update user profile
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
+}
+
+// Health check messages
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  string service = 1;
+  string status = 2;
+  int64 timestamp = 3;
+  string message = 4;
+}
+
+// User validation messages
+message ValidateUserRequest {
+  string user_id = 1;
+}
+
+message ValidateUserResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string status = 3;
+  bool success = 4;
+  string message = 5;
+}
+
+// User profile messages
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+message GetUserProfileResponse {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4;
+  string phone_number = 5;
+  string status = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+  bool success = 9;
+  string message = 10;
+}
+
+message UpdateUserProfileRequest {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4;
+  string phone_number = 5;
+}
+
+message UpdateUserProfileResponse {
+  string user_id = 1;
+  bool success = 2;
+  string message = 3;
+  int64 timestamp = 4;
+}
