@@ -25,13 +25,6 @@ public class UserService {
         return null;
     }
 
-    public UserResponse getUserById(Long userId) {
-        // TODO: Find user by ID
-        // TODO: Handle not found case
-        // TODO: Convert to response
-        return null;
-    }
-
     public UserResponse getUserById(UUID userId) {
         System.out.println("🔍 UserService: Looking up user with UUID: " + userId);
         
@@ -58,7 +51,7 @@ public class UserService {
         return null;
     }
 
-    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
+    public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
         // TODO: Find user by ID
         // TODO: Update fields if provided
         // TODO: Save changes

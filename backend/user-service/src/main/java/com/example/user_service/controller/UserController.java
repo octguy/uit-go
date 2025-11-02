@@ -23,7 +23,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<UserResponse> getUser(@PathVariable Long userId) {
+    public ResponseEntity<UserResponse> getUser(@PathVariable UUID userId) {
         UserResponse user = userService.getUserById(userId);
         return ResponseEntity.ok(user);
     }
@@ -35,7 +35,7 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable Long userId, @RequestBody UpdateUserRequest request) {
+    public ResponseEntity<UserResponse> updateUser(@PathVariable UUID userId, @RequestBody UpdateUserRequest request) {
         UserResponse user = userService.updateUser(userId, request);
         return ResponseEntity.ok(user);
     }
@@ -68,5 +68,10 @@ public class UserController {
             ValidateUserResponse response = new ValidateUserResponse(false, null, "Validation error: " + e.getMessage());
             return ResponseEntity.ok(response);
         }
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("API is working");
     }
 }

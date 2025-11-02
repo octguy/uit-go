@@ -8,3 +8,5 @@
   - docker-compose down <service-name>
   - docker-compose build <service-name>
   - docker-compose up -d <service-name>
+- build spring boot: mvnw.cmd clean package -DskipTests | (must cd to appropriate folder)
+- build docker image: docker build -t uit-go/user-service:latest . | (must cd to appropriate folder)

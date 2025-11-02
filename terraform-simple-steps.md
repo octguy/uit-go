@@ -20,7 +20,7 @@ resource "docker_container" "hello" {
   image = "nginx:latest"
   ports {
     internal = 80
-    external = 8888  # Different from your 8080-8083 range
+    external = 8080
   }
 }
 ```
@@ -30,7 +30,7 @@ resource "docker_container" "hello" {
 terraform init
 terraform plan
 terraform apply
-# Visit http://localhost:8888
+# Visit http://localhost:8080
 terraform destroy
 ```
 
@@ -38,7 +38,7 @@ terraform destroy
 Replace `main.tf`:
 ```hcl
 resource "docker_container" "user_db" {
-  name  = "user-db-terraform"
+  name  = "user-service-db"
   image = "postgres:15"
   env = [
     "POSTGRES_DB=user_service_db",
@@ -47,7 +47,7 @@ resource "docker_container" "user_db" {
   ]
   ports {
     internal = 5432
-    external = 5436  # Different from your 5433-5435 range
+    external = 5433
   }
 }
 ```
@@ -65,12 +65,12 @@ resource "docker_container" "user_service" {
   image = "uit-go/user-service:latest"
   depends_on = [docker_container.user_db]
   env = [
-    "DB_HOST=user-db-terraform",
+    "DB_HOST=user-service-db",
     "DB_PASSWORD=password123"
   ]
   ports {
     internal = 8081
-    external = 9081  # Different from your 8081 port
+    external = 8081
   }
 }
 ```
