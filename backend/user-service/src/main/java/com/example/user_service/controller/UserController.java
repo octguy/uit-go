@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,20 +31,15 @@ public class UserController {
         this.userService = userService;
     }
 
-//    @PostConstruct
-//    public void initGrpc() {
-//        this.channel = ManagedChannelBuilder.forAddress(tripServiceHost, tripServicePort)
-//                .usePlaintext()
-//                .build();
-//        this.tripStub = TripServiceGrpc.newBlockingStub(channel);
-//    }
-//
-//    @PreDestroy
-//    public void shutdownGrpc() {
-//        if (this.channel != null && !this.channel.isShutdown()) {
-//            this.channel.shutdownNow();
-//        }
-//    }
+    @GetMapping("/status/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("service", "user-service");
+        response.put("status", "UP");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("message", "User Service is running");
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody @Valid CreateUserRequest request) {
@@ -81,6 +77,35 @@ public class UserController {
         UUID uid = UUID.fromString(userId);
         UserResponse user = userService.getUserById(uid);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/{userId}/validate")
+    public ResponseEntity<Map<String, Object>> validateUser(@PathVariable String userId) {
+        try {
+            UUID uid = UUID.fromString(userId);
+            UserResponse user = userService.validateUser(uid);
+            
+            // Return the format expected by gRPC service matching ValidateUserResponse proto
+            Map<String, Object> response = new HashMap<>();
+            response.put("valid", true);
+            response.put("user_id", userId);
+            response.put("status", "ACTIVE");
+            response.put("success", true);
+            response.put("message", "User is valid and active");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            // Return error format expected by gRPC service
+            Map<String, Object> response = new HashMap<>();
+            response.put("valid", false);
+            response.put("user_id", userId);
+            response.put("status", "NOT_FOUND");
+            response.put("success", false);
+            response.put("message", "User not found or inactive: " + e.getMessage());
+            
+            return ResponseEntity.ok(response); // Return 200 OK with valid=false instead of error status
+        }
     }
 
     @GetMapping("/email/{email}")

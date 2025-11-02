@@ -8,6 +8,7 @@ import uitgo.driverservice.dto.DriverLocationDTO;
 import uitgo.driverservice.entity.Driver;
 import uitgo.driverservice.repository.DriverRepository;
 import uitgo.driverservice.service.DriverLocationService;
+import uitgo.driverservice.service.DriverUpdateService;
 
 import java.util.*;
 
@@ -18,11 +19,15 @@ public class DriverController {
 
     private final DriverLocationService driverLocationService;
     private final DriverRepository driverRepository;
+    private final DriverUpdateService driverUpdateService;
 
     @Autowired
-    public DriverController(DriverLocationService driverLocationService, DriverRepository driverRepository) {
+    public DriverController(DriverLocationService driverLocationService, 
+                           DriverRepository driverRepository,
+                           DriverUpdateService driverUpdateService) {
         this.driverLocationService = driverLocationService;
         this.driverRepository = driverRepository;
+        this.driverUpdateService = driverUpdateService;
     }
 
     @GetMapping("/health")
@@ -343,6 +348,54 @@ public class DriverController {
             errorResponse.put("success", false);
             errorResponse.put("message", "Error updating driver status: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PutMapping("/{driverId}")
+    public ResponseEntity<Map<String, Object>> updateDriver(
+            @PathVariable String driverId,
+            @RequestBody Map<String, Object> request) {
+        
+        try {
+            Map<String, Object> response = driverUpdateService.updateDriver(driverId, request);
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(404).body(errorResponse);
+            } else if (e.getMessage().contains("already exists") || e.getMessage().contains("Invalid")) {
+                return ResponseEntity.status(400).body(errorResponse);
+            } else {
+                return ResponseEntity.status(500).body(errorResponse);
+            }
+        } catch (Exception e) {
+            log.error("Unexpected error updating driver: ", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/{driverId}/validate")
+    public ResponseEntity<Map<String, Object>> validateDriver(@PathVariable String driverId) {
+        try {
+            Map<String, Object> response = driverUpdateService.validateDriver(driverId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Unexpected error validating driver: ", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("valid", false);
+            errorResponse.put("driver_id", driverId);
+            errorResponse.put("success", false);
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", "Unexpected error: " + e.getMessage());
+            return ResponseEntity.ok(errorResponse);
         }
     }
 }

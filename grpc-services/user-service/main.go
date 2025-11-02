@@ -36,59 +36,76 @@ func NewUserServer(springBootURL string) *UserServer {
 
 // HealthCheck implements the health check endpoint
 func (s *UserServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
-	log.Println("gRPC HealthCheck called")
+	log.Printf("🔍 gRPC HealthCheck called with request: %+v", req)
 	
-	return &pb.HealthCheckResponse{
+	response := &pb.HealthCheckResponse{
 		Service:   "user-service-grpc",
 		Status:    "UP",
 		Timestamp: time.Now().Unix(),
 		Message:   "User gRPC Service is running and healthy",
-	}, nil
+	}
+	
+	log.Printf("✅ gRPC HealthCheck response: %+v", response)
+	return response, nil
 }
 
 // ValidateUser validates if a user exists and is active
 func (s *UserServer) ValidateUser(ctx context.Context, req *pb.ValidateUserRequest) (*pb.ValidateUserResponse, error) {
-	log.Printf("gRPC ValidateUser called: user_id=%s", req.UserId)
+	log.Printf("🔍 gRPC ValidateUser called with request: %+v", req)
+	log.Printf("📞 Calling Spring Boot API for user validation: user_id=%s", req.UserId)
 
-	// Construct URL for Spring Boot REST API
-	url := fmt.Sprintf("%s/users/%s/validate", s.springBootURL, req.UserId)
+	// Construct URL for Spring Boot REST API - Fix the endpoint path
+	url := fmt.Sprintf("%s/api/users/%s/validate", s.springBootURL, req.UserId)
+	log.Printf("🌐 Making HTTP GET request to: %s", url)
 
 	// Make HTTP GET request to Spring Boot service
 	resp, err := s.httpClient.Get(url)
 	if err != nil {
-		log.Printf("Error calling Spring Boot API: %v", err)
-		return &pb.ValidateUserResponse{
+		log.Printf("❌ Error calling Spring Boot API: %v", err)
+		errorResponse := &pb.ValidateUserResponse{
 			Valid:   false,
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error calling user service: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC ValidateUser error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
 	defer resp.Body.Close()
+
+	log.Printf("📡 HTTP Response Status: %s", resp.Status)
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response: %v", err)
-		return &pb.ValidateUserResponse{
+		log.Printf("❌ Error reading response: %v", err)
+		errorResponse := &pb.ValidateUserResponse{
 			Valid:   false,
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error reading response: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC ValidateUser error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
+
+	log.Printf("📄 Raw HTTP Response Body: %s", string(body))
 
 	// Parse JSON response
 	var springBootResponse map[string]interface{}
 	if err := json.Unmarshal(body, &springBootResponse); err != nil {
-		log.Printf("Error parsing JSON: %v", err)
-		return &pb.ValidateUserResponse{
+		log.Printf("❌ Error parsing JSON: %v", err)
+		errorResponse := &pb.ValidateUserResponse{
 			Valid:   false,
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error parsing response: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC ValidateUser error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
+
+	log.Printf("🔍 Parsed Spring Boot Response: %+v", springBootResponse)
 
 	// Convert to gRPC response
 	response := &pb.ValidateUserResponse{
@@ -97,60 +114,84 @@ func (s *UserServer) ValidateUser(ctx context.Context, req *pb.ValidateUserReque
 
 	if valid, ok := springBootResponse["valid"].(bool); ok {
 		response.Valid = valid
+		log.Printf("✅ User valid status: %t", valid)
+	} else {
+		log.Printf("⚠️ 'valid' field not found or not boolean in response")
 	}
+	
 	if status, ok := springBootResponse["status"].(string); ok {
 		response.Status = status
+		log.Printf("📊 User status: %s", status)
 	}
+	
 	if success, ok := springBootResponse["success"].(bool); ok {
 		response.Success = success
+		log.Printf("✅ Operation success: %t", success)
 	}
+	
 	if message, ok := springBootResponse["message"].(string); ok {
 		response.Message = message
+		log.Printf("💬 Response message: %s", message)
 	}
 
+	log.Printf("📤 Final gRPC ValidateUser response: %+v", response)
 	return response, nil
 }
 
 // GetUserProfile gets user profile information
 func (s *UserServer) GetUserProfile(ctx context.Context, req *pb.GetUserProfileRequest) (*pb.GetUserProfileResponse, error) {
-	log.Printf("gRPC GetUserProfile called: user_id=%s", req.UserId)
+	log.Printf("🔍 gRPC GetUserProfile called with request: %+v", req)
+	log.Printf("📞 Calling Spring Boot API for user profile: user_id=%s", req.UserId)
 
-	// Construct URL for Spring Boot REST API
-	url := fmt.Sprintf("%s/api/user-service/users/%s", s.springBootURL, req.UserId)
+	// Construct URL for Spring Boot REST API - Fix the endpoint path
+	url := fmt.Sprintf("%s/api/users/%s", s.springBootURL, req.UserId)
+	log.Printf("🌐 Making HTTP GET request to: %s", url)
 
 	// Make HTTP GET request to Spring Boot service
 	resp, err := s.httpClient.Get(url)
 	if err != nil {
-		log.Printf("Error calling Spring Boot API: %v", err)
-		return &pb.GetUserProfileResponse{
+		log.Printf("❌ Error calling Spring Boot API: %v", err)
+		errorResponse := &pb.GetUserProfileResponse{
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error calling user service: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC GetUserProfile error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
 	defer resp.Body.Close()
+
+	log.Printf("📡 HTTP Response Status: %s", resp.Status)
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response: %v", err)
-		return &pb.GetUserProfileResponse{
+		log.Printf("❌ Error reading response: %v", err)
+		errorResponse := &pb.GetUserProfileResponse{
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error reading response: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC GetUserProfile error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
+
+	log.Printf("📄 Raw HTTP Response Body: %s", string(body))
 
 	// Parse JSON response
 	var springBootResponse map[string]interface{}
 	if err := json.Unmarshal(body, &springBootResponse); err != nil {
-		log.Printf("Error parsing JSON: %v", err)
-		return &pb.GetUserProfileResponse{
+		log.Printf("❌ Error parsing JSON: %v", err)
+		errorResponse := &pb.GetUserProfileResponse{
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error parsing response: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC GetUserProfile error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
+
+	log.Printf("🔍 Parsed Spring Boot Response: %+v", springBootResponse)
 
 	// Convert to gRPC response
 	response := &pb.GetUserProfileResponse{
@@ -159,41 +200,53 @@ func (s *UserServer) GetUserProfile(ctx context.Context, req *pb.GetUserProfileR
 
 	if username, ok := springBootResponse["username"].(string); ok {
 		response.Username = username
+		log.Printf("👤 Username: %s", username)
 	}
 	if email, ok := springBootResponse["email"].(string); ok {
 		response.Email = email
+		log.Printf("📧 Email: %s", email)
 	}
 	if fullName, ok := springBootResponse["fullName"].(string); ok {
 		response.FullName = fullName
+		log.Printf("📝 Full Name: %s", fullName)
 	}
 	if phoneNumber, ok := springBootResponse["phoneNumber"].(string); ok {
 		response.PhoneNumber = phoneNumber
+		log.Printf("📞 Phone Number: %s", phoneNumber)
 	}
 	if status, ok := springBootResponse["status"].(string); ok {
 		response.Status = status
+		log.Printf("📊 Status: %s", status)
 	}
 	if createdAt, ok := springBootResponse["createdAt"].(float64); ok {
 		response.CreatedAt = int64(createdAt)
+		log.Printf("📅 Created At: %s", time.Unix(response.CreatedAt, 0).Format(time.RFC3339))
 	}
 	if updatedAt, ok := springBootResponse["updatedAt"].(float64); ok {
 		response.UpdatedAt = int64(updatedAt)
+		log.Printf("🕒 Updated At: %s", time.Unix(response.UpdatedAt, 0).Format(time.RFC3339))
 	}
 	if success, ok := springBootResponse["success"].(bool); ok {
 		response.Success = success
+		log.Printf("✅ Operation success: %t", success)
 	}
 	if message, ok := springBootResponse["message"].(string); ok {
 		response.Message = message
+		log.Printf("💬 Response message: %s", message)
 	}
 
+	log.Printf("📤 Final gRPC GetUserProfile response: %+v", response)
 	return response, nil
 }
 
 // UpdateUserProfile updates user profile information
 func (s *UserServer) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserProfileRequest) (*pb.UpdateUserProfileResponse, error) {
-	log.Printf("gRPC UpdateUserProfile called: user_id=%s", req.UserId)
+	log.Printf("🔍 gRPC UpdateUserProfile called with request: %+v", req)
+	log.Printf("📞 Calling Spring Boot API for user profile update: user_id=%s", req.UserId)
 
-	// Construct URL for Spring Boot REST API
-	url := fmt.Sprintf("%s/api/user-service/users/%s", s.springBootURL, req.UserId)
+	// Construct URL for Spring Boot REST API - Fix the endpoint path
+	url := fmt.Sprintf("%s/api/users/%s", s.springBootURL, req.UserId)
+	log.Printf("🌐 Making HTTP PUT request to: %s", url)
 
 	// Create request body
 	requestBody := map[string]interface{}{
@@ -205,13 +258,17 @@ func (s *UserServer) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserPr
 	
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
-		log.Printf("Error marshaling request: %v", err)
-		return &pb.UpdateUserProfileResponse{
+		log.Printf("❌ Error marshaling request: %v", err)
+		errorResponse := &pb.UpdateUserProfileResponse{
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error creating request: %v", err),
-		}, nil
+		}
+		log.Printf("📤 gRPC UpdateUserProfile error response: %+v", errorResponse)
+		return errorResponse, nil
 	}
+
+	log.Printf("📄 HTTP Request Body: %s", string(jsonBody))
 
 	// Make HTTP PUT request to Spring Boot service
 	httpReq, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
@@ -237,10 +294,12 @@ func (s *UserServer) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserPr
 	}
 	defer resp.Body.Close()
 
+	log.Printf("📡 HTTP Response Status: %s", resp.Status)
+
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response: %v", err)
+		log.Printf("❌ Error reading response: %v", err)
 		return &pb.UpdateUserProfileResponse{
 			UserId:  req.UserId,
 			Success: false,
@@ -248,16 +307,20 @@ func (s *UserServer) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserPr
 		}, nil
 	}
 
+	log.Printf("📄 Raw HTTP Response Body: %s", string(body))
+
 	// Parse JSON response
 	var springBootResponse map[string]interface{}
 	if err := json.Unmarshal(body, &springBootResponse); err != nil {
-		log.Printf("Error parsing JSON: %v", err)
+		log.Printf("❌ Error parsing JSON: %v", err)
 		return &pb.UpdateUserProfileResponse{
 			UserId:  req.UserId,
 			Success: false,
 			Message: fmt.Sprintf("Error parsing response: %v", err),
 		}, nil
 	}
+
+	log.Printf("🔍 Parsed Spring Boot Response: %+v", springBootResponse)
 
 	// Convert to gRPC response
 	response := &pb.UpdateUserProfileResponse{
@@ -266,24 +329,29 @@ func (s *UserServer) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserPr
 
 	if timestamp, ok := springBootResponse["timestamp"].(float64); ok {
 		response.Timestamp = int64(timestamp)
+		log.Printf("⏰ Timestamp: %s", time.Unix(response.Timestamp, 0).Format(time.RFC3339))
 	}
 	if success, ok := springBootResponse["success"].(bool); ok {
 		response.Success = success
+		log.Printf("✅ Operation success: %t", success)
 	}
 	if message, ok := springBootResponse["message"].(string); ok {
 		response.Message = message
+		log.Printf("💬 Response message: %s", message)
 	}
 
+	log.Printf("📤 Final gRPC UpdateUserProfile response: %+v", response)
 	return response, nil
 }
 
 func main() {
 	// Configuration
 	port := ":50051"
-	springBootURL := "http://user-service:8081/api/user-service" // Use correct context path
+	springBootURL := "http://user-service:8081" // Remove the redundant path part
 
 	log.Printf("🚀 Starting gRPC User Service on port %s", port)
 	log.Printf("🔗 Spring Boot backend: %s", springBootURL)
+	log.Printf("📋 Service will log all gRPC calls and responses")
 
 	// Create TCP listener
 	lis, err := net.Listen("tcp", port)

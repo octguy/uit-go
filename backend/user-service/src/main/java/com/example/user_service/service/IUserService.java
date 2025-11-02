@@ -12,6 +12,9 @@ public interface IUserService {
 
     UserResponse createUser(CreateUserRequest request);
 
+    // New: validate user by id
+    UserResponse validateUser(UUID id);
+
     // New: get user by id
     UserResponse getUserById(UUID id);
 

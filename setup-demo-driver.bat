@@ -12,7 +12,7 @@ set USER_ID=660e8400-e29b-41d4-a716-446655440001
 echo 📝 Registering driver with ID: %DRIVER_ID%
 echo.
 
-curl -s -X POST "http://localhost:8083/api/driver-service/drivers/register" ^
+curl -s -X POST "http://localhost:8083/api/driver-service/api/drivers/register" ^
     -H "Content-Type: application/json" ^
     -d "{\"userId\": \"%USER_ID%\", \"email\": \"test.driver@example.com\", \"phone\": \"+84901234567\", \"name\": \"Test Driver\", \"license_number\": \"DL12345678\", \"vehicle_type\": \"Toyota Vios\", \"vehicle_plate\": \"51A-12345\"}" >temp_register.json 2>&1
 

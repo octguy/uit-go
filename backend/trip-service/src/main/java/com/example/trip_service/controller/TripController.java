@@ -22,6 +22,16 @@ public class TripController {
         this.tripService = tripService;
     }
 
+    @GetMapping("/status/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("service", "trip-service");
+        response.put("status", "UP");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("message", "Trip Service is running");
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/request")
     public ResponseEntity<TripResponse> requestTrip(@RequestBody CreateTripRequest request) {
         TripResponse trip = tripService.createTrip(request);

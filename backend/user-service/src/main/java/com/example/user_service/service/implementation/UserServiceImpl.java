@@ -103,6 +103,19 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
+    public UserResponse validateUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+        return UserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .userType(user.getUserType())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    @Override
     public UserResponse login(LoginRequest request) {
         Optional<User> maybeUser = userRepository.findByEmail(request.getEmail());
         if (maybeUser.isEmpty()) {

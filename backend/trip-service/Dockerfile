@@ -2,6 +2,6 @@
 
 FROM openjdk:17-jdk-alpine
 WORKDIR /app
-COPY target/*.jar user-service.jar
+COPY target/*.jar trip-service.jar
 EXPOSE 8082
-ENTRYPOINT ["java", "-jar", "user-service.jar"]
+ENTRYPOINT ["java", "-jar", "trip-service.jar"]

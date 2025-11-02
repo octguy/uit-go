@@ -23,4 +23,13 @@ public class UserResponse {
     private String userType;
 
     private LocalDateTime createdAt;
+    
+    // Additional fields to support validation response format
+    private boolean valid;
+    
+    private String status;
+    
+    private boolean success;
+    
+    private String message;
 }
