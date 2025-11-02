@@ -8,18 +8,23 @@ terraform {
 }
 
 provider "docker" {
-  host = "npipe:////.//pipe//docker_engine" // Windows Docker
+  host = "npipe:////.//pipe//docker_engine"
 }
 
-resource "docker_image" "nginx" {
-  name = "nginx:latest"
+resource "docker_image" "postgres" {
+  name = "postgres:15"
 }
 
-resource "docker_container" "hello" {
-  name  = "hello-terraform"
-  image = docker_image.nginx.image_id
+resource "docker_container" "user_db" {
+  name  = "user-db-terraform"
+  image = docker_image.postgres.image_id
+  env = [
+    "POSTGRES_DB=user_service_db",
+    "POSTGRES_USER=user_service_user", 
+    "POSTGRES_PASSWORD=password123"
+  ]
   ports {
-    internal = 80
-    external = 8888 # Changed from 9080
+    internal = 5432
+    external = 5436  # No conflict with your 5433-5435
   }
 }
