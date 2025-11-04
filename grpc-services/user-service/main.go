@@ -16,7 +16,7 @@ type ValidateUserRequest struct {
 
 type ValidateUserResponse struct {
 	Valid    bool   `json:"valid"`
-	UserType string `json:"userType,omitempty"`
+	UserName string `json:"userName,omitempty"`
 	Message  string `json:"message,omitempty"`
 }
 
@@ -63,7 +63,7 @@ func handleValidateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("✅ Response from Spring User Service: valid=%v, userType=%s", response.Valid, response.UserType)
+	log.Printf("✅ Response from Spring User Service: valid=%v, userName=%s", response.Valid, response.UserName)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)

@@ -4,7 +4,8 @@
 - check user-service table data: docker exec -it user-service-db psql -U user_service_user -d user_service_db -c "SELECT * FROM users;"
 - check trip-service table data: docker exec -it trip-service-db psql -U trip_service_user -d trip_service_db -c "SELECT * FROM trips;"
 - test rest to grpc flow: curl -X POST http://localhost:8082/api/trips/request -H "Content-Type: application/json" -d "{\"passengerId\": \"123e4567-e89b-12d3-a456-426614174000\", \"pickupLocation\": \"University Campus\", \"destination\": \"Downtown Mall\", \"pickupLatitude\": 10.762622, \"pickupLongitude\": 106.660172, \"destinationLatitude\": 10.775818, \"destinationLongitude\": 106.695595}"
-- rebuild container flow:
+- install curl in container (Alpine): docker exec -it trip-service-tf sh -c "apk update && apk add curl"
+- test rest to grpc flow in container (curl): docker exec -it trip-service-tf curl -X POST http://localhost:8082/api/trips/request -H "Content-Type: application/json" -d "{\"passengerId\": \"123e4567-e89b-12d3-a456-426614174000\", \"pickupLocation\": \"University Campus\", \"destination\": \"Downtown Mall\", \"pickupLatitude\": 10.762622, \"pickupLongitude\": 106.660172, \"destinationLatitude\": 10.775818, \"destinationLongitude\": 106.695595}"- rebuild container flow:
   - docker-compose down <service-name>
   - docker-compose build <service-name>
   - docker-compose up -d <service-name>

@@ -56,16 +56,16 @@ public class UserController {
             
             if (user != null) {
                 System.out.println("✅ User found: " + user.getEmail() + " (Type: " + user.getUserType() + ")");
-                ValidateUserResponse response = new ValidateUserResponse(true, user.getUserType(), "User is valid");
+                ValidateUserResponse response = new ValidateUserResponse(true, user.getUserType(), user.getName(), "User is valid");
                 return ResponseEntity.ok(response);
             } else {
                 System.out.println("❌ User not found");
-                ValidateUserResponse response = new ValidateUserResponse(false, null, "User not found");
+                ValidateUserResponse response = new ValidateUserResponse(false, null, null, "User not found");
                 return ResponseEntity.ok(response);
             }
         } catch (Exception e) {
             System.err.println("❌ Validation error: " + e.getMessage());
-            ValidateUserResponse response = new ValidateUserResponse(false, null, "Validation error: " + e.getMessage());
+            ValidateUserResponse response = new ValidateUserResponse(false, null, null, "Validation error: " + e.getMessage());
             return ResponseEntity.ok(response);
         }
     }

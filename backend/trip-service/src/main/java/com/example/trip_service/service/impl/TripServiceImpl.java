@@ -24,55 +24,70 @@ public class TripServiceImpl implements ITripService {
     @Autowired
     private RestTemplate restTemplate;
     
-    @Value("${trip.grpc.service.url:http://trip-grpc-service:50052}")
-    private String tripGrpcServiceUrl;
+    @Value("${user.grpc.service.host:user-grpc-service}")
+    private String userGrpcServiceHost;
+    
+    @Value("${user.grpc.service.port:50051}")
+    private int userGrpcServicePort;
 
     @Override
     public TripResponse createTrip(CreateTripRequest request) {
-        System.out.println("🚀 Pattern 2 POC: Create Trip Request - " + request.getPickupLocation() + " → " + request.getDestination());
+        System.out.println("🚀 Pattern 1 POC: Create Trip Request - " + request.getPickupLocation() + " → " + request.getDestination());
         
-        // Step 1: Call Trip gRPC Service to create trip (which will validate user via User Service)
-        CreateTripGrpcRequest grpcRequest = new CreateTripGrpcRequest();
-        grpcRequest.setPassengerId(request.getPassengerId().toString());
-        grpcRequest.setPickupLocation(request.getPickupLocation());
-        grpcRequest.setDestination(request.getDestination());
+        // Step 1: Validate user via User gRPC Service
+        ValidateUserRequest userRequest = new ValidateUserRequest();
+        userRequest.setUserId(request.getPassengerId().toString());
         
-        CreateTripGrpcResponse grpcResponse = createTripViaGrpc(grpcRequest);
+        ValidateUserResponse userResponse = validateUserViaGrpc(userRequest);
         
-        if (!grpcResponse.isSuccess()) {
-            throw new RuntimeException("❌ Trip creation failed: " + grpcResponse.getMessage());
+        if (!userResponse.isValid()) {
+            throw new RuntimeException("❌ User validation failed: " + userResponse.getMessage());
         }
         
-        System.out.println("✅ Trip created via gRPC: " + grpcResponse.getTripId());
+        System.out.println("✅ User validated: " + userResponse.getUserName());
         
-        // Step 2: Return response
+        // Step 2: Create trip in database
+        Trip trip = new Trip();
+        trip.setId(UUID.randomUUID());
+        trip.setPassengerId(request.getPassengerId());
+        trip.setPickupLocation(request.getPickupLocation());
+        trip.setDestination(request.getDestination());
+        trip.setStatus("REQUESTED");
+        trip.setCreatedAt(LocalDateTime.now());
+        trip.setUpdatedAt(LocalDateTime.now());
+        
+        // Save trip to database
+        Trip savedTrip = tripRepository.save(trip);
+        System.out.println("✅ Trip created in database: " + savedTrip.getId());
+        
+        // Step 3: Return response
         TripResponse response = new TripResponse();
-        response.setId(UUID.fromString(grpcResponse.getTripId()));
-        response.setPassengerId(request.getPassengerId());
-        response.setPickupLocation(request.getPickupLocation());
-        response.setDestination(request.getDestination());
-        response.setStatus("REQUESTED");
-        response.setCreatedAt(LocalDateTime.now());
-        response.setUpdatedAt(LocalDateTime.now());
+        response.setId(savedTrip.getId());
+        response.setPassengerId(savedTrip.getPassengerId());
+        response.setPickupLocation(savedTrip.getPickupLocation());
+        response.setDestination(savedTrip.getDestination());
+        response.setStatus(savedTrip.getStatus());
+        response.setCreatedAt(savedTrip.getCreatedAt());
+        response.setUpdatedAt(savedTrip.getUpdatedAt());
         
         return response;
     }
     
-    private CreateTripGrpcResponse createTripViaGrpc(CreateTripGrpcRequest request) {
-        System.out.println("📞 Making gRPC call to Trip Service for trip creation");
+    private ValidateUserResponse validateUserViaGrpc(ValidateUserRequest request) {
+        System.out.println("📞 Making gRPC call to User Service for validation");
         
         try {
-            String grpcUrl = tripGrpcServiceUrl + "/createTrip";
-            ResponseEntity<CreateTripGrpcResponse> response = restTemplate.postForEntity(
-                grpcUrl, request, CreateTripGrpcResponse.class);
+            String grpcUrl = "http://" + userGrpcServiceHost + ":" + userGrpcServicePort + "/validateUser";
+            ResponseEntity<ValidateUserResponse> response = restTemplate.postForEntity(
+                grpcUrl, request, ValidateUserResponse.class);
                 
-            System.out.println("✅ gRPC response received from Trip Service");
+            System.out.println("✅ gRPC response received from User Service");
             return response.getBody();
             
         } catch (Exception e) {
             System.err.println("❌ gRPC call failed: " + e.getMessage());
-            CreateTripGrpcResponse errorResponse = new CreateTripGrpcResponse();
-            errorResponse.setSuccess(false);
+            ValidateUserResponse errorResponse = new ValidateUserResponse();
+            errorResponse.setValid(false);
             errorResponse.setMessage("gRPC call failed: " + e.getMessage());
             return errorResponse;
         }
@@ -140,32 +155,24 @@ public class TripServiceImpl implements ITripService {
     }
 }
 
-// Inner classes for gRPC communication
-class CreateTripGrpcRequest {
-    private String passengerId;
-    private String pickupLocation;
-    private String destination;
+// Inner classes for gRPC communication with User Service
+class ValidateUserRequest {
+    private String userId;
     
-    public String getPassengerId() { return passengerId; }
-    public void setPassengerId(String passengerId) { this.passengerId = passengerId; }
-    
-    public String getPickupLocation() { return pickupLocation; }
-    public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }
-    
-    public String getDestination() { return destination; }
-    public void setDestination(String destination) { this.destination = destination; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }
 
-class CreateTripGrpcResponse {
-    private boolean success;
-    private String tripId;
+class ValidateUserResponse {
+    private boolean valid;
+    private String userName;
     private String message;
     
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
+    public boolean isValid() { return valid; }
+    public void setValid(boolean valid) { this.valid = valid; }
     
-    public String getTripId() { return tripId; }
-    public void setTripId(String tripId) { this.tripId = tripId; }
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
     
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
