@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: driver-service
+  template:
+    metadata:
+      labels:
+        app: driver-service
+    spec:
+      containers:
+        - name: driver-service
+          image: uit-go/driver-service:latest
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: DB_HOST
+              value: "driver-service-db"
+            - name: DB_USER
+              value: "driver_service_user"
+            - name: DB_PASSWORD
+              value: "driver_service_pass"
+            - name: DB_NAME
+              value: "driver_service_db"
+            - name: DB_PORT
+              value: "5432"

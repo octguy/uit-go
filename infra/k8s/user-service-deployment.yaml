@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: uit-go/user-service:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: DB_HOST
+              value: "user-service-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "user_service_db"
+            - name: DB_USER
+              value: "user_service_user"
+            - name: DB_PASSWORD
+              value: "user_service_pass"
+            

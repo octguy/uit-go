@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver-service-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: driver-service-db
+  template:
+    metadata:
+      labels:
+        app: driver-service-db
+    spec:
+      containers:
+        - name: driver-service-db
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: "driver_service_db"
+            - name: POSTGRES_USER
+              value: "driver_service_user"
+            - name: POSTGRES_PASSWORD
+              value: "driver_service_pass"
+          volumeMounts:
+            - name: driver-db-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: driver-db-data
+          emptyDir: {}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: driver-grpc-service
+spec:
+  selector:
+    app: driver-grpc-service
+  ports:
+    - protocol: TCP
+      port: 50053
+      targetPort: 50053
+  type: ClusterIP
