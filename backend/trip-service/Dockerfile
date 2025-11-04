@@ -1,6 +1,6 @@
 # Dockerfile for Trip Service (Spring Boot)
 
-FROM openjdk:17-jdk-alpine
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 COPY target/*.jar trip-service.jar
 EXPOSE 8082

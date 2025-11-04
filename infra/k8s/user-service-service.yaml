@@ -10,3 +10,4 @@ spec:
       port: 8081
       targetPort: 8081
   type: ClusterIP # Note: In future, when we deploy this project to AWS, if we need multi-cluster design (for high availability and disastor recovery), switch this.
+  

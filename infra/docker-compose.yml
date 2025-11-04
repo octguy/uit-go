@@ -1,6 +1,7 @@
 services:
   api-gateway:
     build: ../backend/api-gateway
+    image: uit-go/api-gateway:latest
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -8,30 +9,42 @@ services:
       - SPRING_PROFILES_ACTIVE=default
   user-service:
     build: ../backend/user-service
+    image: uit-go/user-service:latest
     container_name: user-service
     ports:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=default
+      - DB_HOST=user-service-db
+      - DB_USERNAME=user_service_user
+      - DB_PASSWORD=user_service_pass
     depends_on:
       - user-service-db
   trip-service:
     build: ../backend/trip-service
+    image: uit-go/trip-service:latest
     container_name: trip-service
     ports:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=default
+      - DB_HOST=trip-service-db
+      - DB_USERNAME=trip_service_user
+      - DB_PASSWORD=trip_service_pass
     depends_on:
       - trip-service-db
       - user-grpc-service  # Add dependency on gRPC service
   driver-service:
     build: ../backend/driver-service
+    image: uit-go/driver-service:latest
     container_name: driver-service
     ports:
       - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=default
+      - DB_HOST=driver-service-db
+      - DB_USERNAME=driver_service_user
+      - DB_PASSWORD=driver_service_pass
     depends_on:
       - driver-service-db
   
@@ -40,6 +53,7 @@ services:
     build: 
       context: ../grpc-services
       dockerfile: Dockerfile.user
+    image: uit-go/user-grpc-service:latest
     container_name: user-grpc-service
     ports:
       - "50051:50051"
@@ -56,6 +70,7 @@ services:
     build: 
       context: ../grpc-services
       dockerfile: Dockerfile.trip
+    image: uit-go/trip-grpc-service:latest
     container_name: trip-grpc-service
     ports:
       - "50052:50052"
@@ -72,6 +87,7 @@ services:
     build: 
       context: ../grpc-services
       dockerfile: Dockerfile.driver
+    image: uit-go/driver-grpc-service:latest
     container_name: driver-grpc-service
     ports:
       - "50053:50053"
