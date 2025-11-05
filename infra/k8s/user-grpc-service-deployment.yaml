@@ -15,5 +15,6 @@ spec:
       containers:
         - name: user-grpc-service
           image: uit-go/user-grpc-service:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 50051

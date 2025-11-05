@@ -19,5 +19,4 @@ server:
 
 user:
   grpc:
-    host: ${USER_SERVICE_HOST:localhost}
-    port: ${USER_SERVICE_PORT:50051}
+    host: ${USER_GRPC_SERVICE_URL:localhost:50051}

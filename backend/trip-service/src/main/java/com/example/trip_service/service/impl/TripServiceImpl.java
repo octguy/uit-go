@@ -24,11 +24,8 @@ public class TripServiceImpl implements ITripService {
     @Autowired
     private RestTemplate restTemplate;
     
-    @Value("${user.grpc.service.host:user-grpc-service}")
-    private String userGrpcServiceHost;
-    
-    @Value("${user.grpc.service.port:50051}")
-    private int userGrpcServicePort;
+    @Value("${user.grpc.service.url:localhost:50051}")
+    private String userGrpcServiceUrl;
 
     @Override
     public TripResponse createTrip(CreateTripRequest request) {
@@ -77,7 +74,7 @@ public class TripServiceImpl implements ITripService {
         System.out.println("📞 Making gRPC call to User Service for validation");
         
         try {
-            String grpcUrl = "http://" + userGrpcServiceHost + ":" + userGrpcServicePort + "/validateUser";
+            String grpcUrl = userGrpcServiceUrl + "/validateUser";
             ResponseEntity<ValidateUserResponse> response = restTemplate.postForEntity(
                 grpcUrl, request, ValidateUserResponse.class);
                 

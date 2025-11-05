@@ -15,6 +15,7 @@ spec:
       containers:
         - name: user-service
           image: uit-go/user-service:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
           env:
