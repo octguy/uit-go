@@ -211,7 +211,7 @@ uit-go/
 ## Communication Patterns
 
 ### API Interfaces
-Detailed interface specifications are documented in [`docs/interfaces.md`](docs/interfaces.md), including:
+Detailed interface specifications are documented in [`docs/interfaces.md`](interfaces.md), including:
 - REST API endpoints for each service
 - gRPC service definitions and protobuf schemas
 - Database entity models and repository interfaces
