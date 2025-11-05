@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: trip-grpc-service
+  name: trip-grpc
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: trip-grpc-service
+      app: trip-grpc
   template:
     metadata:
       labels:
-        app: trip-grpc-service
+        app: trip-grpc
     spec:
       containers:
-        - name: trip-grpc-service
-          image: uit-go/trip-grpc-service:latest
+        - name: trip-grpc
+          image: uit-go/trip-grpc:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 50052

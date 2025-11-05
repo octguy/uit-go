@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: driver-grpc-service
+  name: driver-grpc
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: driver-grpc-service
+      app: driver-grpc
   template:
     metadata:
       labels:
-        app: driver-grpc-service
+        app: driver-grpc
     spec:
       containers:
-        - name: driver-grpc-service
-          image: uit-go/driver-grpc-service:latest
+        - name: driver-grpc
+          image: uit-go/driver-grpc:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 50053

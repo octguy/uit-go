@@ -33,7 +33,7 @@ services:
       - DB_PASSWORD=trip_service_pass
     depends_on:
       - trip-service-db
-      - user-grpc-service  # Add dependency on gRPC service
+      - user-grpc  # Add dependency on gRPC service
   driver-service:
     build: ../backend/driver-service
     image: uit-go/driver-service:latest
@@ -49,12 +49,12 @@ services:
       - driver-service-db
   
   # Add gRPC Services
-  user-grpc-service:
+  user-grpc:
     build: 
       context: ../grpc-services
       dockerfile: Dockerfile.user
-    image: uit-go/user-grpc-service:latest
-    container_name: user-grpc-service
+    image: uit-go/user-grpc:latest
+    container_name: user-grpc
     ports:
       - "50051:50051"
     environment:
@@ -66,12 +66,12 @@ services:
     depends_on:
       - user-service-db
   
-  trip-grpc-service:
+  trip-grpc:
     build: 
       context: ../grpc-services
       dockerfile: Dockerfile.trip
-    image: uit-go/trip-grpc-service:latest
-    container_name: trip-grpc-service
+    image: uit-go/trip-grpc:latest
+    container_name: trip-grpc
     ports:
       - "50052:50052"
     environment:
@@ -83,12 +83,12 @@ services:
     depends_on:
       - trip-service-db
   
-  driver-grpc-service:
+  driver-grpc:
     build: 
       context: ../grpc-services
       dockerfile: Dockerfile.driver
-    image: uit-go/driver-grpc-service:latest
-    container_name: driver-grpc-service
+    image: uit-go/driver-grpc:latest
+    container_name: driver-grpc
     ports:
       - "50053:50053"
     environment:

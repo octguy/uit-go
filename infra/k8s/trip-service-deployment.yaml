@@ -31,3 +31,9 @@ spec:
               value: "trip_service_db"
             - name: DB_PORT
               value: "5432"
+            
+            - name: USER_GRPC_SERVICE_HOST
+              value: "user-grpc"
+            - name: USER_GRPC_SERVICE_PORT
+              value: "50051"
+              

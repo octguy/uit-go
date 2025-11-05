@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+
+	"google.golang.org/grpc"
 )
 
 // Simple structs for POC
@@ -23,11 +26,17 @@ type ValidateUserResponse struct {
 func main() {
 	log.Println("🚀 User gRPC Service (Intermediary) - Port :50051")
 
-	// gRPC-style HTTP handler for validateUser
-	http.HandleFunc("/validateUser", handleValidateUser)
-
-	log.Println("✅ Ready to handle gRPC calls and forward to Spring User Service")
-	log.Fatal(http.ListenAndServe(":50051", nil))
+	// Listen my own port
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	// Đăng ký các service handler ở đây, ví dụ:
+	// pb.RegisterUserServiceServer(grpcServer, &UserService{})
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
 
 func handleValidateUser(w http.ResponseWriter, r *http.Request) {
