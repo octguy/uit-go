@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package user;
-option go_package = "github.com/uit-go/grpc-services/user-service/proto/userpb";
+option go_package = "user-service/proto/";
 
 service UserGrpc {
   rpc ValidateUser (ValidateUserRequest) returns (ValidateUserResponse);
