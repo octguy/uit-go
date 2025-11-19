@@ -9,6 +9,7 @@ echo "=== Building all Spring Boot + Go gRPC services sequentially ==="
 echo "=== All builds completed successfully ==="
 echo "=== Stopping Docker containers ==="
 
+cd ..
 cd infra
 docker-compose down
 

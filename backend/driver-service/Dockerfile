@@ -1,46 +1,39 @@
-# Stage 1: Build stage
+# Stage 1: Build
 FROM maven:3.9.0-eclipse-temurin-17 AS builder
 
 WORKDIR /build
 
-# Copy pom.xml
+# Copy pom.xml first for dependency caching
 COPY pom.xml .
 
-# Download dependencies
-RUN mvn dependency:resolve
+# Pre-download dependencies (cache layer)
+RUN mvn -B dependency:go-offline
 
-# Copy source code
+# Now copy the rest of the source
 COPY src ./src
 
-# Build the application
-RUN mvn clean package -DskipTests
+# Build application (skip tests)
+RUN mvn -B clean package -DskipTests
 
-# Stage 2: Runtime stage
+# Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy jar from builder
 COPY --from=builder /build/target/driver-service-*.jar app.jar
 
-# Create non-root user
 RUN addgroup -g 1000 appuser && \
     adduser -D -u 1000 -G appuser appuser
 
-# Change ownership
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-# Expose ports
 EXPOSE 8083 9003
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8083/api/driver-service/actuator/health || exit 1
 
-# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

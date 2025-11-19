@@ -3,6 +3,7 @@
 
 set -e  # Exit immediately if a command fails
 
+cd ..
 echo "=== Building services sequentially ==="
 
 echo "Building user-service..."

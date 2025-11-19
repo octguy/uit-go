@@ -5,6 +5,7 @@ set -e  # Exit immediately if a command fails
 
 echo "=== Building Go gRPC services only ==="
 
+cd ..
 cd grpc-services
 go mod tidy
 

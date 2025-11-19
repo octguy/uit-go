@@ -33,6 +33,7 @@ services:
 
   api-gateway:
     build: ../backend/api-gateway
+    platform: linux/amd64
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -147,7 +148,6 @@ services:
       - "5435:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
-      - ../db/user-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - microservices-network
 
@@ -162,7 +162,6 @@ services:
       - "5433:5432"
     volumes:
       - trip_db_data:/var/lib/postgresql/data
-      - ../db/trip-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - microservices-network
 
@@ -177,7 +176,6 @@ services:
       - "5434:5432"
     volumes:
       - driver_db_data:/var/lib/postgresql/data
-      - ../db/driver-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - microservices-network
 
