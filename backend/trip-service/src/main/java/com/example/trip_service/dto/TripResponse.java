@@ -37,7 +37,9 @@ public class TripResponse {
 
     private BigDecimal fare;
 
-    private LocalDateTime createdAt;
+    private LocalDateTime requestedAt;
 
-    private LocalDateTime updatedAt;
+    private LocalDateTime startedAt;
+
+    private LocalDateTime completedAt;
 }

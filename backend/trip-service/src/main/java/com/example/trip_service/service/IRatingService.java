@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface IRatingService {
 
-    RatingResponse createRating(CreateRatingRequest request);
-
-    RatingResponse getRatingByTripId(UUID tripId);
+//    RatingResponse createRating(CreateRatingRequest request);
+//
+//    RatingResponse getRatingByTripId(UUID tripId);
 }

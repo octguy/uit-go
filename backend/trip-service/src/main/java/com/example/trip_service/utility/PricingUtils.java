@@ -9,7 +9,7 @@ public final class PricingUtils {
     private static final int PER_KM_CENTS = 150;      // $1.50 per km
 
     private PricingUtils() {
-        // Prevent instantiation
+        throw new UnsupportedOperationException("Utility class");
     }
 
     /**

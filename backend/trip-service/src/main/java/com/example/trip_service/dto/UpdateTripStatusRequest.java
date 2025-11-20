@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateTripStatusRequest {
+
     private TripStatus status;
-    private String reason; // Optional reason for status change
 }

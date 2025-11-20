@@ -10,6 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateRatingRequest {
+
     private UUID tripId;
     private UUID raterId; // User who is rating
     private UUID ratedEntityId; // Driver or passenger being rated

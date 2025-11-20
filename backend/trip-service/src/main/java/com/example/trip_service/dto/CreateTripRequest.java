@@ -13,8 +13,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateTripRequest {
 
-    private UUID passengerId;
-
     private String pickupLocation;
 
     private String destination;
