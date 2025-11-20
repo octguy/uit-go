@@ -14,28 +14,17 @@ import java.util.UUID;
 public class Rating {
 
     @Id
-    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="trip_id", columnDefinition = "uuid", nullable = false, unique = true)
+    @JoinColumn(name = "trip_id", columnDefinition = "uuid", nullable = false, unique = true)
     private Trip trip;
 
-    @Column(name="score", nullable = false)
+    @Column(name = "score", nullable = false)
     private int score; // e.g., 1 to 5 stars
 
-    @Column(name="comment", length = 500)
-    private String comment;
-
-    @Column(name="created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @PrePersist
-    protected void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        LocalDateTime now = LocalDateTime.now();
-        this.setCreatedAt(now);
-    }
 }

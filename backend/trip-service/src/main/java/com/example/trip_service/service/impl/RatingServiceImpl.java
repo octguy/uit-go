@@ -27,56 +27,59 @@ public class RatingServiceImpl implements IRatingService {
     @Override
     @Transactional
     public RatingResponse createRating(CreateRatingRequest request) {
-        // Validate rating range
-        if (request.getRating() < 1 || request.getRating() > 5) {
-            throw new IllegalArgumentException("Rating must be between 1 and 5");
-        }
-
-        // Check if trip exists
-        Trip trip = tripRepository.findById(request.getTripId())
-                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + request.getTripId()));
-
-        // Verify trip is completed
-        if (trip.getStatus() != TripStatus.COMPLETED) {
-            throw new IllegalStateException("Can only rate completed trips");
-        }
-
-        // Check if rating already exists for this trip
-        if (ratingRepository.existsByTripId(request.getTripId())) {
-            throw new IllegalStateException("Rating already exists for this trip");
-        }
-
-        // Create rating entity
-        Rating rating = new Rating();
-        rating.setTrip(trip);
-        rating.setScore(request.getRating());
-        rating.setComment(request.getComment());
-
-        // Save rating
-        Rating savedRating = ratingRepository.save(rating);
-
-        // Convert to response
-        return toRatingResponse(savedRating);
+//        // Validate rating range
+//        if (request.getRating() < 1 || request.getRating() > 5) {
+//            throw new IllegalArgumentException("Rating must be between 1 and 5");
+//        }
+//
+//        // Check if trip exists
+//        Trip trip = tripRepository.findById(request.getTripId())
+//                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + request.getTripId()));
+//
+//        // Verify trip is completed
+//        if (trip.getStatus() != TripStatus.COMPLETED) {
+//            throw new IllegalStateException("Can only rate completed trips");
+//        }
+//
+//        // Check if rating already exists for this trip
+//        if (ratingRepository.existsByTripId(request.getTripId())) {
+//            throw new IllegalStateException("Rating already exists for this trip");
+//        }
+//
+//        // Create rating entity
+//        Rating rating = new Rating();
+//        rating.setTrip(trip);
+//        rating.setScore(request.getRating());
+//        rating.setComment(request.getComment());
+//
+//        // Save rating
+//        Rating savedRating = ratingRepository.save(rating);
+//
+//        // Convert to response
+//        return toRatingResponse(savedRating);
+        return null;
     }
 
     @Override
     public RatingResponse getRatingByTripId(UUID tripId) {
-        Rating rating = ratingRepository.findByTripId(tripId)
-                .orElseThrow(() -> new RuntimeException("Rating not found for trip: " + tripId));
-
-        return toRatingResponse(rating);
+//        Rating rating = ratingRepository.findByTripId(tripId)
+//                .orElseThrow(() -> new RuntimeException("Rating not found for trip: " + tripId));
+//
+//        return toRatingResponse(rating);
+        return null;
     }
 
     private RatingResponse toRatingResponse(Rating rating) {
-        RatingResponse response = new RatingResponse();
-        response.setId(rating.getId());
-        response.setTripId(rating.getTrip().getId());
-        response.setRaterId(null); // Not available in current entity
-        response.setRatedEntityId(null); // Not available in current entity
-        response.setRatingType("trip"); // Default value
-        response.setRating(rating.getScore());
-        response.setComment(rating.getComment());
-        response.setCreatedAt(rating.getCreatedAt());
-        return response;
+//        RatingResponse response = new RatingResponse();
+//        response.setId(rating.getId());
+//        response.setTripId(rating.getTrip().getId());
+//        response.setRaterId(null); // Not available in current entity
+//        response.setRatedEntityId(null); // Not available in current entity
+//        response.setRatingType("trip"); // Default value
+//        response.setRating(rating.getScore());
+//        response.setComment(rating.getComment());
+//        response.setCreatedAt(rating.getCreatedAt());
+//        return response;
+        return null;
     }
 }

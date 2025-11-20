@@ -65,7 +65,6 @@ services:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       - trip-service-db
-      - user-grpc-service  # Add dependency on gRPC service
     networks:
       - microservices-network
 

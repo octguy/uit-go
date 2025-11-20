@@ -16,7 +16,7 @@ import java.util.UUID;
 public class Trip {
 
     @Id
-    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
     @Column(name="passenger_id", columnDefinition = "uuid", nullable = false)
@@ -51,45 +51,12 @@ public class Trip {
     private BigDecimal fare;
 
     @Column(name="requested_at", nullable = false)
-    private LocalDateTime requestedAt;
-
-    @Column(name="accepted_at")
-    private LocalDateTime acceptedAt;
+    private LocalDateTime requestedAt; // always not null
 
     @Column(name="started_at")
-    private LocalDateTime startedAt;
+    private LocalDateTime startedAt; // null if it is cancelled
 
     @Column(name="completed_at")
-    private LocalDateTime completedAt;
+    private LocalDateTime completedAt; // null if it is cancelled
 
-    @Column(name="cancelled_at")
-    private LocalDateTime cancelledAt;
-
-    @Column(name="created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name="updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name="deleted_at")
-    private LocalDateTime deletedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-
-        this.setRequestedAt(now);
-        this.setCreatedAt(now);
-        this.setUpdatedAt(now);
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        LocalDateTime now = LocalDateTime.now();
-        this.setUpdatedAt(now);
-    }
 }

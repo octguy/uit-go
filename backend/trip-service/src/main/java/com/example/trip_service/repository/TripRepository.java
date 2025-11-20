@@ -11,14 +11,4 @@ import java.util.UUID;
 
 @Repository
 public interface TripRepository extends JpaRepository<Trip, UUID> {
-    
-    List<Trip> findByPassengerId(UUID passengerId);
-    
-    List<Trip> findByDriverId(UUID driverId);
-    
-    @Query("SELECT t FROM Trip t WHERE t.passengerId = :passengerId ORDER BY t.createdAt DESC")
-    List<Trip> findByPassengerIdOrderByCreatedAtDesc(@Param("passengerId") UUID passengerId);
-    
-    @Query("SELECT t FROM Trip t WHERE t.driverId = :driverId ORDER BY t.createdAt DESC")
-    List<Trip> findByDriverIdOrderByCreatedAtDesc(@Param("driverId") UUID driverId);
 }

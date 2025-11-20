@@ -10,18 +10,4 @@ import java.util.UUID;
 
 @Repository
 public interface RatingRepository extends JpaRepository<Rating, UUID> {
-    
-    /**
-     * Find rating by trip ID
-     * @param tripId the UUID of the trip
-     * @return optional rating for the trip
-     */
-    Optional<Rating> findByTripId(UUID tripId);
-    
-    /**
-     * Check if rating exists for trip
-     * @param tripId the UUID of the trip
-     * @return true if rating exists
-     */
-    boolean existsByTripId(UUID tripId);
 }
