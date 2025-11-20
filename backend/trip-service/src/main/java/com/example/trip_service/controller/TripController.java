@@ -15,6 +15,20 @@ import java.util.UUID;
 @RequestMapping("/api/trips")
 public class TripController {
 
+    private final ITripService tripService;
+
+    public TripController(ITripService tripService) {
+        this.tripService = tripService;
+    }
+
+    @GetMapping("/get-user-request")
+    public ResponseEntity<?> getUserRequest(@RequestHeader("Authorization") String token) {
+        System.out.println("In getUserRequest of TripController: " + token);
+        String cleanedToken = token.replaceFirst("(?i)^Bearer\\s+", "");
+        UserValidationResponse user = tripService.validateToken(cleanedToken);
+        return ResponseEntity.ok(user);
+    }
+
 //    private final ITripService tripService;
 //
 //    public TripController(ITripService tripService) {

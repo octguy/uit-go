@@ -6,6 +6,8 @@ import java.util.UUID;
 
 public interface ITripService {
 
+    UserValidationResponse validateToken(String token);
+
 //    /**
 //     * Create a new trip request with estimated fare
 //     * @param request the trip creation request
