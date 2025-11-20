@@ -3,7 +3,6 @@ package com.example.trip_service.controller;
 import com.example.trip_service.dto.*;
 import com.example.trip_service.enums.TripStatus;
 import com.example.trip_service.service.ITripService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,16 +19,6 @@ public class TripController {
 
     public TripController(ITripService tripService) {
         this.tripService = tripService;
-    }
-
-    @GetMapping("/status/health")
-    public ResponseEntity<Map<String, Object>> health() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("service", "trip-service");
-        response.put("status", "UP");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("message", "Trip Service is running");
-        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/request")

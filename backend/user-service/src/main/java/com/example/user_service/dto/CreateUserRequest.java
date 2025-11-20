@@ -18,9 +18,4 @@ public class CreateUserRequest {
     @NotBlank(message = "Password is mandatory")
     private String password;
 
-    @NotBlank(message = "Name is mandatory")
-    private String name;
-
-    @NotBlank(message = "User type is mandatory")
-    private String userType; // "PASSENGER" or "DRIVER"
 }

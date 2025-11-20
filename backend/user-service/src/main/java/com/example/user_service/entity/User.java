@@ -22,15 +22,6 @@ public class User {
 
     @Column(name="password", nullable = false)
     private String password; // not hashed for simplicity
-
-    @Column(name="user_type", nullable = false)
-    private String userType; // "PASSENGER" or "DRIVER"
-    
-    @Column(name="name", nullable = false)
-    private String name;
-
-    @Column(name="phone")
-    private String phone;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

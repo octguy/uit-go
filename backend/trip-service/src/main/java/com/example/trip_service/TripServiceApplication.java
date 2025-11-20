@@ -9,13 +9,6 @@ import org.springframework.web.client.RestTemplate;
 public class TripServiceApplication {
 
 	public static void main(String[] args) {
-		System.out.println("🚗 Trip Service Starting...");
 		SpringApplication.run(TripServiceApplication.class, args);
-		System.out.println("✅ Trip Service Ready!");
-	}
-
-	@Bean
-	public RestTemplate restTemplate() {
-		return new RestTemplate();
 	}
 }
