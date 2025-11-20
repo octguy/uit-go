@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Optional;
 
@@ -53,6 +54,7 @@ public class UserServiceImpl implements IUserService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 
