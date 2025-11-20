@@ -1,12 +1,12 @@
 package com.example.user_service.jwt;
 
+import com.example.user_service.entity.CustomUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -28,7 +29,7 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    public String extractUsername(String token) {
+    public String extractUserId(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -53,9 +54,9 @@ public class JwtUtil {
         return extractExpiration(token).before(new Date());
     }
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(CustomUserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername());
+        return createToken(claims, userDetails.getUserId().toString());
     }
 
     private String createToken(Map<String, Object> claims, String subject) {
@@ -68,9 +69,9 @@ public class JwtUtil {
                 .compact();
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    public Boolean validateToken(String token, CustomUserDetails userDetails) {
+        final UUID id = UUID.fromString(extractUserId(token));
+        return (id.equals(userDetails.getUserId()) && !isTokenExpired(token));
     }
 
     public Boolean validateToken(String token) {

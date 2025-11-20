@@ -1,13 +1,19 @@
 package com.example.user_service.service.implementation;
 
+import com.example.user_service.dto.AuthResponse;
 import com.example.user_service.dto.CreateUserRequest;
 import com.example.user_service.dto.UserResponse;
 import com.example.user_service.dto.LoginRequest;
+import com.example.user_service.entity.CustomUserDetails;
 import com.example.user_service.entity.User;
 import com.example.user_service.exception.UserNotFoundException;
+import com.example.user_service.jwt.JwtUtil;
 import com.example.user_service.repository.UserRepository;
 import com.example.user_service.service.IUserService;
 import com.example.user_service.util.SecurityUtil;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +27,16 @@ public class UserServiceImpl implements IUserService {
 
     private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    private final AuthenticationManager authenticationManager;
+
+    private final JwtUtil jwtUtil;
+
+    public UserServiceImpl(UserRepository userRepository,
+                           PasswordEncoder passwordEncoder,
+                           AuthenticationManager authenticationManager,
+                           JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+        this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
     }
@@ -66,21 +81,25 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public UserResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
         Optional<User> maybeUser = userRepository.findByEmail(request.getEmail());
         if (maybeUser.isEmpty()) {
             throw new IllegalArgumentException("Invalid email or password");
         }
 
-        User user = maybeUser.get();
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
-        }
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
 
-        return UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .createdAt(user.getCreatedAt())
+        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        String accessToken = jwtUtil.generateToken(customUserDetails);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
                 .build();
     }
 

@@ -1,5 +1,6 @@
 package com.example.user_service.jwt;
 
+import com.example.user_service.entity.CustomUserDetails;
 import com.example.user_service.service.implementation.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+
+import java.util.UUID;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -33,13 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
 
-        String email = null;
+        UUID id = null;
         String jwt = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
             try {
-                email = jwtUtil.extractUsername(jwt);
+                id = UUID.fromString(jwtUtil.extractUserId(jwt));
             }
             catch (Exception e) {
                 // Log the exception or handle it as needed
@@ -47,8 +50,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        if (id != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            CustomUserDetails userDetails = userDetailsService.loadUserById(id);
 
             if (jwtUtil.validateToken(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

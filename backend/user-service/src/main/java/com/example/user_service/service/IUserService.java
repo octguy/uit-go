@@ -1,5 +1,6 @@
 package com.example.user_service.service;
 
+import com.example.user_service.dto.AuthResponse;
 import com.example.user_service.dto.CreateUserRequest;
 import com.example.user_service.dto.UserResponse;
 import com.example.user_service.dto.LoginRequest;
@@ -15,7 +16,7 @@ public interface IUserService {
 
     UserResponse getUserByEmail(String email);
 
-    UserResponse login(LoginRequest request);
+    AuthResponse login(LoginRequest request);
 
     UserResponse getCurrentUser();
 
