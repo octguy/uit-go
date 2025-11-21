@@ -1,4 +1,4 @@
-package com.example.trip_service.dto;
+package com.example.trip_service.dto.request;
 
 import com.example.trip_service.enums.TripStatus;
 import lombok.AllArgsConstructor;

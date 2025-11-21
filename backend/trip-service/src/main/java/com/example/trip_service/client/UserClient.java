@@ -1,6 +1,6 @@
 package com.example.trip_service.client;
 
-import com.example.trip_service.dto.UserValidationResponse;
+import com.example.trip_service.dto.response.UserValidationResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;

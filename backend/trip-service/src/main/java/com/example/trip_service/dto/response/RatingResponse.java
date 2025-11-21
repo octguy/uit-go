@@ -1,4 +1,4 @@
-package com.example.trip_service.dto;
+package com.example.trip_service.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

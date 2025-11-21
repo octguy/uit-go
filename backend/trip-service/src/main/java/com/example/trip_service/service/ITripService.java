@@ -1,12 +1,14 @@
 package com.example.trip_service.service;
 
-import com.example.trip_service.dto.*;
-import java.util.List;
-import java.util.UUID;
+import com.example.trip_service.dto.request.EstimateFareRequest;
+import com.example.trip_service.dto.response.EstimateFareResponse;
+import com.example.trip_service.dto.response.UserValidationResponse;
 
 public interface ITripService {
 
     UserValidationResponse validateToken(String token);
+
+    EstimateFareResponse estimateFare(EstimateFareRequest request);
 
 //    /**
 //     * Create a new trip request with estimated fare
