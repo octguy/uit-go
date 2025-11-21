@@ -13,6 +13,7 @@ public class AuthenticatedUserAspect {
     @Before("@annotation(RequireUser)")
     public void ensureUserAuthenticated() {
         if (UserContext.getUserId() == null) {
+            System.out.println("In Aspect, user id is null");
             throw new UnauthorizedException("User not authenticated");
         }
     }

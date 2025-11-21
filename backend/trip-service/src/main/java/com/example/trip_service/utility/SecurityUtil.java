@@ -1,6 +1,7 @@
 package com.example.trip_service.utility;
 
 import com.example.trip_service.aop.RequireUser;
+import com.example.trip_service.exception.UnauthorizedException;
 import com.example.trip_service.security.UserContext;
 
 import java.util.UUID;
@@ -11,8 +12,12 @@ public final class SecurityUtil {
         throw new UnsupportedOperationException("Utility class");
     }
 
-    @RequireUser
     public static UUID getCurrentUserId() {
-        return UserContext.getUserId();
+        UUID userId = UserContext.getUserId();
+        if (userId == null) {
+            System.err.println("In SecurityUtil, user id is null");
+            throw new UnauthorizedException("User is not authenticated");
+        }
+        return userId;
     }
 }

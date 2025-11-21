@@ -1,5 +1,6 @@
 package com.example.trip_service.controller;
 
+import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
 import com.example.trip_service.dto.response.UserValidationResponse;
 import com.example.trip_service.service.ITripService;
@@ -25,5 +26,10 @@ public class TripController {
     @GetMapping("/get-estimated-fare")
     public ResponseEntity<?> getEstimatedFare(@RequestBody @Valid EstimateFareRequest request) {
         return ResponseEntity.ok(tripService.estimateFare(request));
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<?> createTrip(@RequestBody @Valid CreateTripRequest request) {
+        return ResponseEntity.ok(tripService.createTrip(request));
     }
 }
