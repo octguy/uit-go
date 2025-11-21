@@ -29,12 +29,6 @@ public class Trip {
     @Column(name="status", nullable = false)
     private TripStatus status;
 
-    @Column(name="pickup_location", nullable = false)
-    private String pickupLocation;
-
-    @Column(name="destination", nullable = false)
-    private String destination;
-
     @Column(name="pickup_latitude", nullable = false)
     private Double pickupLatitude;
 

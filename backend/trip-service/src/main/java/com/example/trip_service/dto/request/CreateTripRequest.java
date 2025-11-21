@@ -11,15 +11,13 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CreateTripRequest {
 
-    private String pickupLocation;
+    private Double pickupLatitude;
 
-    private String destination;
+    private Double pickupLongitude;
 
-    private BigDecimal pickupLatitude;
+    private Double destinationLatitude;
 
-    private BigDecimal pickupLongitude;
+    private Double destinationLongitude;
 
-    private BigDecimal destinationLatitude;
-
-    private BigDecimal destinationLongitude;
+    private BigDecimal estimatedFare;
 }

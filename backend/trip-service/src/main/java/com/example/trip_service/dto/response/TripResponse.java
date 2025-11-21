@@ -23,17 +23,13 @@ public class TripResponse {
 
     private String status;
 
-    private String pickupLocation;
+    private Double pickupLatitude;
 
-    private String destination;
+    private Double pickupLongitude;
 
-    private BigDecimal pickupLatitude;
+    private Double destinationLatitude;
 
-    private BigDecimal pickupLongitude;
-
-    private BigDecimal destinationLatitude;
-
-    private BigDecimal destinationLongitude;
+    private Double destinationLongitude;
 
     private BigDecimal fare;
 

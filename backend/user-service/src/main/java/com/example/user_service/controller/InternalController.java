@@ -30,6 +30,7 @@ public class InternalController {
             return ResponseEntity.ok(new UserValidationResponse(userId, true));
         }
         catch (Exception e) {
+            System.out.println("Failed in validate of InternalController (User-service): " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new UserValidationResponse(null, false));
         }

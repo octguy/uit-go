@@ -18,25 +18,12 @@ public class TripController {
     }
 
     @GetMapping("/get-user-request")
-    public ResponseEntity<?> getUserRequest(@RequestHeader("Authorization") String token) {
-        System.out.println("In getUserRequest of TripController: " + token);
-        String cleanedToken = token.replaceFirst("(?i)^Bearer\\s+", "");
-        UserValidationResponse user = tripService.validateToken(cleanedToken);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> getUserRequest() {
+        return ResponseEntity.ok(tripService.getUserId());
     }
 
     @GetMapping("/get-estimated-fare")
-    public ResponseEntity<?> getEstimatedFare(@RequestHeader("Authorization") String token,
-                                              @RequestBody @Valid EstimateFareRequest request) {
-        System.out.println("In getEstimatedFare of TripController: " + token);
-        String cleanedToken = token.replaceFirst("(?i)^Bearer\\s+", "");
-
-        try {
-            tripService.validateToken(cleanedToken);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body("❌ Unauthorized when get estimate fare: " + e.getMessage());
-        }
-
+    public ResponseEntity<?> getEstimatedFare(@RequestBody @Valid EstimateFareRequest request) {
         return ResponseEntity.ok(tripService.estimateFare(request));
     }
 }
