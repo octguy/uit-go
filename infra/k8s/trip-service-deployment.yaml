@@ -33,5 +33,5 @@ spec:
               value: "5432"
             
             - name: USER_GRPC_SERVICE_URL
-              value: "user-grpc-service:50051"
+              value: "user-grpc:50051"
 

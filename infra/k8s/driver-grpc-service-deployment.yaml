@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: driver-grpc
-          image: uit-go/driver-grpc:latest
-          imagePullPolicy: IfNotPresent
+          image: driver-grpc:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 50053

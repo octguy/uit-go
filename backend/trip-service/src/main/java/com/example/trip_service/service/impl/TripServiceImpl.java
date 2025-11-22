@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -25,7 +24,7 @@ public class TripServiceImpl implements ITripService {
     @Autowired
     private TripRepository tripRepository;
     
-    @Value("${user.grpc.service.url:user-grpc-service:50051}")
+    @Value("${user.grpc.service.url:user-grpc:50051}")
     private String userGrpcServiceUrl;
 
     // Added reusable ManagedChannel and Stub

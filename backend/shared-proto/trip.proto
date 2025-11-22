@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package trip;
+
+option go_package = "./proto";
+
+// Empty service for now
+service Trip {
+    // Placeholder method
+    rpc Ping(PingRequest) returns (PingResponse) {}
+}
+
+message PingRequest {
+    // Empty
+}
+
+message PingResponse {
+    // Empty
+}

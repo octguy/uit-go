@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: trip-grpc
-          image: uit-go/trip-grpc:latest
-          imagePullPolicy: IfNotPresent
+          image: trip-grpc:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 50052

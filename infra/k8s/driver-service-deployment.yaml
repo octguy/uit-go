@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: driver-service
-          image: uit-go/driver-service:latest
-          imagePullPolicy: IfNotPresent
+          image: driver-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8083
           env:

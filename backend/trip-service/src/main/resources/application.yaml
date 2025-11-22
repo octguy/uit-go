@@ -20,4 +20,4 @@ server:
 user:
   grpc:
     service:
-      url: user-grpc-service:50051
+      url: user-grpc:50051

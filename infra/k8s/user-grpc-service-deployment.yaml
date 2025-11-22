@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: user-grpc-service
+  name: user-grpc
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: user-grpc-service
+      app: user-grpc
   template:
     metadata:
       labels:
-        app: user-grpc-service
+        app: user-grpc
     spec:
       containers:
-        - name: user-grpc-service
-          image: user-grpc-service:latest
+        - name: user-grpc
+          image: user-grpc:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 50051

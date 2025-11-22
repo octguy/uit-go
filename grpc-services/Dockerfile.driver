@@ -23,7 +23,7 @@ RUN go mod download
 COPY . .
 
 # Sinh mã Go từ .proto
-RUN protoc --go_out=. --go-grpc_out=. proto/driver-grpc.proto
+RUN protoc --go_out=. --go-grpc_out=. ./driver-service/proto/driver.proto
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o driver-service ./driver-service
