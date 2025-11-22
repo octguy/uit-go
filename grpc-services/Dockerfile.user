@@ -13,8 +13,8 @@ RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 ENV PATH="/go/bin:/usr/local/bin:${PATH}"
 
 # Copy go mod files
-COPY go.mod ./
-COPY go.sum ./
+COPY grpc-services/go.mod ./
+COPY grpc-services/go.sum ./
 
 # Download dependencies (if any)
 RUN go mod download
@@ -23,17 +23,18 @@ RUN go mod download
 COPY . .
 
 # Sinh mã Go từ .proto
-RUN protoc --go_out=. --go-grpc_out=. ./user-service/proto/user.proto
+RUN protoc --go_out=. --go-grpc_out=. ./grpc-services/user-service/proto/user.proto
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o user-service ./user-service
+WORKDIR /app/grpc-services/user-service
+RUN CGO_ENABLED=0 GOOS=linux go build -o user-service main.go
 
 # Final stage
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 # Copy the binary
-COPY --from=builder /app/user-service .
+COPY --from=builder /app/grpc-services/user-service/user-service .
 # Expose port
 EXPOSE 50051
 # Run the application

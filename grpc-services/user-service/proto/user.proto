@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package user;
-option go_package = "proto/";
+option go_package = "user-service/proto/";
 
 service User {
   rpc ValidateUser (ValidateUserRequest) returns (ValidateUserResponse);

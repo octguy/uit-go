@@ -11,3 +11,6 @@
   - docker-compose up -d <service-name>
 - build spring boot: mvnw.cmd clean package -DskipTests | (must cd to appropriate folder)
 - build docker image: docker build -t uit-go/user-service:latest . | (must cd to appropriate folder)
+
+
+- forward k8s: kubectl port-forward service/trip-service 8082:8082

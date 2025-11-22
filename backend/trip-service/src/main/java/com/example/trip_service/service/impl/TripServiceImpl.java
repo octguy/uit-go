@@ -4,6 +4,7 @@ import com.example.trip_service.dto.*;
 import com.example.trip_service.entity.Trip;
 import com.example.trip_service.repository.TripRepository;
 import com.example.trip_service.service.ITripService;
+import com.example.trip_service.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -58,7 +59,7 @@ public class TripServiceImpl implements ITripService {
         ValidateUserResponse userResponse = validateUserViaGrpc(userRequest);
         
         if (!userResponse.getValid()) {
-            throw new RuntimeException("❌ User validation failed: " + userResponse.getMessage());
+            throw new UserNotFoundException("User validation failed: " + userResponse.getMessage());
         }
         
         System.out.println("✅ User validated: " + userResponse.getUserName());
