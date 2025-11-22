@@ -6,14 +6,18 @@ import com.example.trip_service.repository.TripRepository;
 import com.example.trip_service.service.ITripService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
+import user.UserGrpc;
+import user.UserOuterClass.ValidateUserRequest;
+import user.UserOuterClass.ValidateUserResponse;
 
 @Service
 public class TripServiceImpl implements ITripService {
@@ -21,23 +25,40 @@ public class TripServiceImpl implements ITripService {
     @Autowired
     private TripRepository tripRepository;
     
-    @Autowired
-    private RestTemplate restTemplate;
-    
-    @Value("${user.grpc.service.url:localhost:50051}")
+    @Value("${user.grpc.service.url:user-grpc-service:50051}")
     private String userGrpcServiceUrl;
+
+    // Added reusable ManagedChannel and Stub
+    private ManagedChannel channel;
+    private UserGrpc.UserBlockingStub userServiceStub;
+
+    @PostConstruct
+    public void initGrpcClient() {
+        channel = ManagedChannelBuilder.forTarget(userGrpcServiceUrl)
+            .usePlaintext()
+            .build();
+        userServiceStub = UserGrpc.newBlockingStub(channel);
+    }
+
+    @PreDestroy
+    public void shutdownGrpcClient() {
+        if (channel != null) {
+            channel.shutdown();
+        }
+    }
 
     @Override
     public TripResponse createTrip(CreateTripRequest request) {
-        System.out.println("🚀 Pattern 1 POC: Create Trip Request - " + request.getPickupLocation() + " → " + request.getDestination());
+        System.out.println("🚀 Create Trip Request - " + request.getPickupLocation() + " → " + request.getDestination());
         
         // Step 1: Validate user via User gRPC Service
-        ValidateUserRequest userRequest = new ValidateUserRequest();
-        userRequest.setUserId(request.getPassengerId().toString());
+        ValidateUserRequest userRequest = ValidateUserRequest.newBuilder()
+            .setUserId(request.getPassengerId().toString())
+            .build();
         
         ValidateUserResponse userResponse = validateUserViaGrpc(userRequest);
         
-        if (!userResponse.isValid()) {
+        if (!userResponse.getValid()) {
             throw new RuntimeException("❌ User validation failed: " + userResponse.getMessage());
         }
         
@@ -45,7 +66,6 @@ public class TripServiceImpl implements ITripService {
         
         // Step 2: Create trip in database
         Trip trip = new Trip();
-        trip.setId(UUID.randomUUID());
         trip.setPassengerId(request.getPassengerId());
         trip.setPickupLocation(request.getPickupLocation());
         trip.setDestination(request.getDestination());
@@ -70,71 +90,21 @@ public class TripServiceImpl implements ITripService {
         return response;
     }
     
+    // Updated validateUserViaGrpc to use reusable Stub
     private ValidateUserResponse validateUserViaGrpc(ValidateUserRequest request) {
         System.out.println("📞 Making gRPC call to User Service for validation");
-        
+
         try {
-            String grpcUrl = userGrpcServiceUrl + "/validateUser";
-            ResponseEntity<ValidateUserResponse> response = restTemplate.postForEntity(
-                grpcUrl, request, ValidateUserResponse.class);
-                
+            ValidateUserResponse response = userServiceStub.validateUser(request);
             System.out.println("✅ gRPC response received from User Service");
-            return response.getBody();
-            
+            return response;
         } catch (Exception e) {
             System.err.println("❌ gRPC call failed: " + e.getMessage());
-            ValidateUserResponse errorResponse = new ValidateUserResponse();
-            errorResponse.setValid(false);
-            errorResponse.setMessage("gRPC call failed: " + e.getMessage());
-            return errorResponse;
+            return ValidateUserResponse.newBuilder()
+                .setValid(false)
+                .setMessage("gRPC call failed: " + e.getMessage())
+                .build();
         }
-    }
-
-    @Override
-    public TripResponse getTripById(UUID tripId) {
-        // TODO: Find trip by ID
-        // TODO: Handle not found case
-        // TODO: Convert to response
-        return null;
-    }
-
-    @Override
-    public TripResponse updateTripStatus(UUID tripId, UpdateTripStatusRequest request) {
-        // TODO: Find trip by ID
-        // TODO: Update status field
-        // TODO: Update timestamp
-        // TODO: Save changes
-        return null;
-    }
-
-    @Override
-    public TripResponse assignDriver(UUID tripId, AssignDriverRequest request) {
-        // TODO: Find trip by ID
-        // TODO: Assign driver ID
-        // TODO: Update status to ACCEPTED
-        // TODO: Save changes
-        return null;
-    }
-
-    @Override
-    public List<TripResponse> getTripsByPassenger(UUID passengerId) {
-        // TODO: Query trips by passenger ID
-        // TODO: Convert to response DTOs
-        return null;
-    }
-
-    @Override
-    public List<TripResponse> getTripsByDriver(UUID driverId) {
-        // TODO: Query trips by driver ID
-        // TODO: Convert to response DTOs
-        return null;
-    }
-
-    private BigDecimal calculateFare(Trip trip) {
-        // TODO: Calculate fare based on distance
-        // TODO: Apply surge pricing if applicable
-        // TODO: Consider time of day multipliers
-        return null;
     }
 
     private TripResponse convertToResponse(Trip trip) {
@@ -150,27 +120,4 @@ public class TripServiceImpl implements ITripService {
         response.setUpdatedAt(trip.getUpdatedAt());
         return response;
     }
-}
-
-// Inner classes for gRPC communication with User Service
-class ValidateUserRequest {
-    private String userId;
-    
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-}
-
-class ValidateUserResponse {
-    private boolean valid;
-    private String userName;
-    private String message;
-    
-    public boolean isValid() { return valid; }
-    public void setValid(boolean valid) { this.valid = valid; }
-    
-    public String getUserName() { return userName; }
-    public void setUserName(String userName) { this.userName = userName; }
-    
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
 }

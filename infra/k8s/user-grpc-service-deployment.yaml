@@ -1,20 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: user-grpc
+  name: user-grpc-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: user-grpc
+      app: user-grpc-service
   template:
     metadata:
       labels:
-        app: user-grpc
+        app: user-grpc-service
     spec:
       containers:
-        - name: user-grpc
-          image: uit-go/user-grpc:latest
-          imagePullPolicy: IfNotPresent
+        - name: user-grpc-service
+          image: user-grpc-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 50051
+          env:
+            - name: SPRING_USER_SERVICE_URL
+              value: "http://user-service:8081"

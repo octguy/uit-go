@@ -19,4 +19,5 @@ server:
 
 user:
   grpc:
-    host: ${USER_GRPC_SERVICE_URL:localhost:50051}
+    service:
+      url: user-grpc-service:50051

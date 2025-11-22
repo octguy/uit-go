@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: trip-service
-          image: uit-go/trip-service:latest
-          imagePullPolicy: IfNotPresent
+          image: trip-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8082
           env:
@@ -32,8 +32,6 @@ spec:
             - name: DB_PORT
               value: "5432"
             
-            - name: USER_GRPC_SERVICE_HOST
-              value: "user-grpc"
-            - name: USER_GRPC_SERVICE_PORT
-              value: "50051"
-              
+            - name: USER_GRPC_SERVICE_URL
+              value: "user-grpc-service:50051"
+
