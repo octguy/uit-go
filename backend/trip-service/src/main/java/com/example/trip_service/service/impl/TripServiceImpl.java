@@ -1,6 +1,7 @@
 package com.example.trip_service.service.impl;
 
 import com.example.trip_service.aop.RequireDriver;
+import com.example.trip_service.aop.RequirePassenger;
 import com.example.trip_service.aop.RequireUser;
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
@@ -29,14 +30,13 @@ public class TripServiceImpl implements ITripService {
     }
 
     @Override
+    @RequireUser
     public UUID getUserId() {
         return SecurityUtil.getCurrentUserId();
     }
 
-
-
     @Override
-    @RequireUser
+    @RequirePassenger
     public EstimateFareResponse estimateFare(EstimateFareRequest request) {
         Double distance = PricingUtils.calculateDistanceInKm(request);
 
@@ -49,7 +49,7 @@ public class TripServiceImpl implements ITripService {
     }
 
     @Override
-    @RequireUser
+    @RequirePassenger
     @Transactional
     public TripResponse createTrip(CreateTripRequest request) {
         Trip trip = new Trip();
@@ -83,7 +83,7 @@ public class TripServiceImpl implements ITripService {
     }
 
     @Override
-    @RequireUser
+    @RequirePassenger
     public UUID getPassengerId() {
         return SecurityUtil.getCurrentUserId();
     }
@@ -92,5 +92,27 @@ public class TripServiceImpl implements ITripService {
     @RequireDriver
     public UUID getDriverId() {
         return SecurityUtil.getCurrentUserId();
+    }
+
+    @Override
+    @RequireUser
+    public TripResponse getTripById(UUID id) {
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        return TripResponse.builder()
+                .id(trip.getId())
+                .passengerId(trip.getPassengerId())
+                .driverId(trip.getDriverId())
+                .status(trip.getStatus().name())
+                .pickupLatitude(trip.getPickupLatitude())
+                .pickupLongitude(trip.getPickupLongitude())
+                .destinationLatitude(trip.getDestinationLatitude())
+                .destinationLongitude(trip.getDestinationLongitude())
+                .fare(trip.getFare())
+                .requestedAt(trip.getRequestedAt())
+                .startedAt(trip.getStartedAt())
+                .completedAt(trip.getCompletedAt())
+                .build();
     }
 }

@@ -19,4 +19,6 @@ public interface ITripService {
 
     UUID getDriverId();
 
+    TripResponse getTripById(UUID id);
+
 }

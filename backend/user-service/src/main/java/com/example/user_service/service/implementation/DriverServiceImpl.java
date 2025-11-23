@@ -11,6 +11,7 @@ import com.example.user_service.repository.UserRepository;
 import com.example.user_service.service.IDriverService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +31,7 @@ public class DriverServiceImpl implements IDriverService {
     }
 
     @Override
+    @Transactional
     public DriverResponse createDriver(RegisterDriverRequest request) {
         User user = new User();
         Driver driver = new Driver();

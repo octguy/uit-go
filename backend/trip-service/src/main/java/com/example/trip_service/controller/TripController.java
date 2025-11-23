@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/trips")
 public class TripController {
@@ -40,5 +42,10 @@ public class TripController {
     @PostMapping("/create")
     public ResponseEntity<?> createTrip(@RequestBody @Valid CreateTripRequest request) {
         return ResponseEntity.ok(tripService.createTrip(request));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTripById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.getTripById(UUID.fromString(id)));
     }
 }
