@@ -17,7 +17,7 @@ public class RatingController {
         this.ratingService = ratingService;
     }
 
-    @GetMapping
+    @GetMapping("/hello")
     public ResponseEntity<String> sayHello() {
         return ResponseEntity.ok("Hello from Rating Service!");
     }
