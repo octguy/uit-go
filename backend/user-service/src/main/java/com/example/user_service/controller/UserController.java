@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -74,28 +75,9 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    // New: call trip-service via gRPC to list trips for a user
-//    @GetMapping("/{userId}/trips")
-//    public ResponseEntity<?> getTripsForUser(@PathVariable String userId) {
-//        try {
-//            UUID uid = UUID.fromString(userId);
-//
-//            // Build and send gRPC request - adjust field names to match your proto
-//            TripRequest req = TripRequest.newBuilder()
-//                    .setUserId(uid.toString())
-//                    .build();
-//
-//            TripListResponse resp = tripStub.getTripsForUser(req); // adjust method name to match proto
-//
-//            // Return the raw trip list response (or map to DTOs as needed)
-//            return ResponseEntity.ok(resp);
-//        } catch (IllegalArgumentException ie) {
-//            return ResponseEntity.badRequest().body("Invalid userId format");
-//        } catch (Exception e) {
-//            // log and return a 502-ish response indicating upstream failure
-//            System.err.println("Error calling trip-service: " + e.getMessage());
-//            return ResponseEntity.status(502).body("Failed to fetch trips from trip-service: " + e.getMessage());
-//        }
-//        return null;
-//    }
+    @GetMapping
+    public  ResponseEntity<List<UserResponse>> getAllUsers() {
+        List<UserResponse> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
 }

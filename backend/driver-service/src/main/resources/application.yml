@@ -7,108 +7,22 @@ spring:
     username: driver_service_user
     password: driver_service_pass
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        use_sql_comments: true
-        default_schema: drivers
-    show-sql: false
 
-  data:
     redis:
       host: redis
       port: 6379
-      timeout: 2000
-      database: 0
-      client-type: jedis
-      jedis:
-        pool:
-          max-active: 128
-          max-idle: 128
-          min-idle: 16
-          max-wait: -1ms
-          time-between-eviction-runs: 60s
-
-  session:
-    store-type: redis
-    redis:
-      namespace: spring:session
-      flush-mode: on_save
-      save-mode: on_set_attribute
-
-  rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: guest
-    password: guest
-    virtual-host: /
-    listener:
-      simple:
-        concurrency: 5
-        max-concurrency: 10
-        prefetch: 1
-    template:
-      retry:
-        enabled: true
-        initial-interval: 1000
-        max-interval: 10000
-        multiplier: 2.0
-        max-attempts: 3
 
 grpc:
   server:
-    port: 9003
-    enable-keep-alive: true
-    keep-alive-time: 30s
-    keep-alive-timeout: 10s
-
-logging:
-  level:
-    root: INFO
-    uitgo.driverservice: DEBUG
-  pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    port: 9092
 
 server:
   port: 8083
-  servlet:
-    context-path: /api/driver-service
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
-
-driver:
-  cache:
-    ttl: 900
-  retry:
-    max-attempts: 3
-    initial-delay-ms: 1000
-    max-delay-ms: 30000
-    backoff-multiplier: 2.0
-  monitoring:
-    health-check-interval-minutes: 5
-    metrics-log-interval-minutes: 15
-
-# gRPC User Service Configuration
-user:
-  grpc:
-    service:
-      host: user-grpc-service
-      port: 50051
-
-# Logging configuration for gRPC debugging
-logging:
-  level:
-    com.example.trip_service.service.impl.TripServiceImpl: DEBUG
-    io.grpc: DEBUG

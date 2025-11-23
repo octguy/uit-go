@@ -5,6 +5,7 @@ import com.example.user_service.dto.request.CreateUserRequest;
 import com.example.user_service.dto.response.UserResponse;
 import com.example.user_service.dto.request.LoginRequest;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface IUserService {
@@ -18,5 +19,7 @@ public interface IUserService {
     AuthResponse login(LoginRequest request);
 
     UserResponse getCurrentUser();
+
+    List<UserResponse> getAllUsers();
 
 }

@@ -5,6 +5,7 @@ import com.example.trip_service.dto.request.EstimateFareRequest;
 import com.example.trip_service.dto.response.EstimateFareResponse;
 import com.example.trip_service.dto.response.TripResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface ITripService {
@@ -28,5 +29,7 @@ public interface ITripService {
     TripResponse completeTrip(UUID id);
 
     TripResponse startTrip(UUID id);
+
+    List<TripResponse> getAllTrips();
 
 }

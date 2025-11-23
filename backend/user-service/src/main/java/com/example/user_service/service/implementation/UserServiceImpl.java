@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
 
@@ -122,5 +123,17 @@ public class UserServiceImpl implements IUserService {
                 .role(user.getRole().toString())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    @Override
+    public List<UserResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(user -> UserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole().toString())
+                .createdAt(user.getCreatedAt())
+                .build()).toList();
     }
 }
