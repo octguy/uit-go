@@ -1,32 +1,22 @@
 package com.example.user_service.service;
 
-import com.example.user_service.dto.CreateUserRequest;
-import com.example.user_service.dto.UpdateUserRequest;
-import com.example.user_service.dto.UserResponse;
-import com.example.user_service.dto.LoginRequest;
+import com.example.user_service.dto.response.AuthResponse;
+import com.example.user_service.dto.request.CreateUserRequest;
+import com.example.user_service.dto.response.UserResponse;
+import com.example.user_service.dto.request.LoginRequest;
 
 import java.util.UUID;
-import java.util.List;
 
 public interface IUserService {
 
     UserResponse createUser(CreateUserRequest request);
 
-    // New: validate user by id
-    UserResponse validateUser(UUID id);
-
-    // New: get user by id
     UserResponse getUserById(UUID id);
 
-    // New: get user by email
     UserResponse getUserByEmail(String email);
 
-    // New: update user by id
-    UserResponse updateUser(UUID id, UpdateUserRequest request);
+    AuthResponse login(LoginRequest request);
 
-    // Modified: login now returns UserResponse (raw email/password comparison)
-    UserResponse login(LoginRequest request);
+    UserResponse getCurrentUser();
 
-    // New: get users by userType
-    List<UserResponse> getUsersByType(String userType);
 }

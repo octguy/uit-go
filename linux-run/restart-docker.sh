@@ -3,6 +3,7 @@
 
 set -e  # Exit immediately if a command fails
 
+cd ..
 echo "=== Stopping Docker containers ==="
 cd infra
 docker-compose down

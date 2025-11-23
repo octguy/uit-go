@@ -1,6 +1,0 @@
-@echo off
-echo Testing GetTripStatus with debug...
-grpcurl -plaintext -d "{\"trip_id\": \"debug-test-123\"}" localhost:50052 trip.TripService/GetTripStatus
-echo.
-echo Checking logs...
-docker logs trip-grpc-service --tail 5

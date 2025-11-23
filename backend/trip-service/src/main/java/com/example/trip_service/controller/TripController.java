@@ -1,15 +1,12 @@
 package com.example.trip_service.controller;
 
-import com.example.trip_service.dto.*;
-import com.example.trip_service.enums.TripStatus;
+import com.example.trip_service.dto.request.CreateTripRequest;
+import com.example.trip_service.dto.request.EstimateFareRequest;
 import com.example.trip_service.service.ITripService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -22,121 +19,53 @@ public class TripController {
         this.tripService = tripService;
     }
 
-    @GetMapping("/status/health")
-    public ResponseEntity<Map<String, Object>> health() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("service", "trip-service");
-        response.put("status", "UP");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("message", "Trip Service is running");
-        return ResponseEntity.ok(response);
+    @GetMapping("/get-user-request")
+    public ResponseEntity<?> getUserRequest() {
+        return ResponseEntity.ok(tripService.getUserId());
     }
 
-    @PostMapping("/request")
-    public ResponseEntity<TripResponse> requestTrip(@RequestBody CreateTripRequest request) {
-        TripResponse trip = tripService.createTrip(request);
-        return ResponseEntity.ok(trip);
+    @GetMapping("/user")
+    public ResponseEntity<?> getUser() {
+        return ResponseEntity.ok(tripService.getPassengerId());
     }
 
-    @PostMapping("/estimate")
-    public ResponseEntity<?> getEstimatedFare(@RequestBody CreateTripRequest request) {
-        try {
-            EstimatedFareResponse estimate = tripService.getEstimatedFare(request);
-            return ResponseEntity.ok(estimate);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Invalid request: " + e.getMessage(),
-                "error", "INVALID_COORDINATES"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "message", "Error calculating fare estimate: " + e.getMessage(),
-                "error", "INTERNAL_ERROR"
-            ));
-        }
+    @GetMapping("/driver")
+    public ResponseEntity<?> getDriver() {
+        return ResponseEntity.ok(tripService.getDriverId());
     }
 
-    @GetMapping("/{tripId}")
-    public ResponseEntity<TripResponse> getTrip(@PathVariable UUID tripId) {
-        TripResponse trip = tripService.getTripById(tripId);
-        return ResponseEntity.ok(trip);
+    @GetMapping("/get-estimated-fare")
+    public ResponseEntity<?> getEstimatedFare(@RequestBody @Valid EstimateFareRequest request) {
+        return ResponseEntity.ok(tripService.estimateFare(request));
     }
 
-    @PutMapping("/{tripId}/status")
-    public ResponseEntity<?> updateTripStatus(@PathVariable UUID tripId, @RequestBody UpdateTripStatusRequest request) {
-        try {
-            TripResponse trip = tripService.updateTripStatus(tripId, request);
-            return ResponseEntity.ok(trip);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Invalid request: " + e.getMessage(),
-                "error", "INVALID_REQUEST"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "message", "Error updating trip status: " + e.getMessage(),
-                "error", "INTERNAL_ERROR"
-            ));
-        }
+    @PostMapping("/create")
+    public ResponseEntity<?> createTrip(@RequestBody @Valid CreateTripRequest request) {
+        return ResponseEntity.ok(tripService.createTrip(request));
     }
 
-    @PutMapping("/{tripId}/assign-driver")
-    public ResponseEntity<?> assignDriver(@PathVariable UUID tripId, @RequestBody AssignDriverRequest request) {
-        try {
-            TripResponse trip = tripService.assignDriver(tripId, request);
-            return ResponseEntity.ok(trip);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Invalid request: " + e.getMessage(),
-                "error", "INVALID_REQUEST"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "message", "Error assigning driver: " + e.getMessage(),
-                "error", "INTERNAL_ERROR"
-            ));
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTripById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.getTripById(UUID.fromString(id)));
     }
 
-    @PutMapping("/{tripId}/complete")
-    public ResponseEntity<TripResponse> completeTrip(@PathVariable UUID tripId) {
-        UpdateTripStatusRequest request = new UpdateTripStatusRequest();
-        request.setStatus(TripStatus.COMPLETED);
-        TripResponse trip = tripService.updateTripStatus(tripId, request);
-        return ResponseEntity.ok(trip);
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.cancelTrip(UUID.fromString(id)));
     }
 
-    @PutMapping("/{tripId}/location")
-    public ResponseEntity<Map<String, Object>> updateTripLocation(
-            @PathVariable UUID tripId, 
-            @RequestBody Map<String, Object> request) {
-        // Mock implementation for trip location tracking
-        Map<String, Object> response = new HashMap<>();
-        response.put("tripId", tripId.toString());
-        response.put("latitude", request.get("latitude"));
-        response.put("longitude", request.get("longitude"));
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("success", true);
-        response.put("message", "Trip location updated successfully");
-        
-        return ResponseEntity.ok(response);
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<?> acceptTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.acceptTrip(UUID.fromString(id)));
     }
 
-    @GetMapping("/passenger/{passengerId}")
-    public ResponseEntity<List<TripResponse>> getTripsByPassenger(@PathVariable UUID passengerId) {
-        List<TripResponse> trips = tripService.getTripsByPassenger(passengerId);
-        return ResponseEntity.ok(trips);
+    @PostMapping("/{id}/start")
+    public ResponseEntity<?> startTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.startTrip(UUID.fromString(id)));
     }
 
-    @GetMapping("/driver/{driverId}")
-    public ResponseEntity<List<TripResponse>> getTripsByDriver(@PathVariable UUID driverId) {
-        List<TripResponse> trips = tripService.getTripsByDriver(driverId);
-        return ResponseEntity.ok(trips);
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<?> completeTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.completeTrip(UUID.fromString(id)));
     }
 }

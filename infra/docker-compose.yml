@@ -43,7 +43,6 @@ services:
 
   user-service:
     build: ../backend/user-service
-    platform: linux/amd64
     container_name: user-service
     ports:
       - "8081:8081"
@@ -56,7 +55,6 @@ services:
 
   trip-service:
     build: ../backend/trip-service
-    platform: linux/amd64
     container_name: trip-service
     ports:
       - "8082:8082"
@@ -64,13 +62,11 @@ services:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       - trip-service-db
-      - user-grpc-service  # Add dependency on gRPC service
     networks:
       - microservices-network
 
   driver-service:
     build: ../backend/driver-service
-    platform: linux/amd64
     container_name: driver-service
     ports:
       - "8083:8083"
@@ -80,64 +76,9 @@ services:
       - driver-service-db
     networks:
       - microservices-network
-  
-  # Add gRPC Services
-  user-grpc-service:
-    build: 
-      context: ../grpc-services
-      dockerfile: Dockerfile.user
-    container_name: user-grpc-service
-    ports:
-      - "50051:50051"
-    environment:
-      - DB_HOST=user-service-db
-      - DB_PORT=5432
-      - DB_USER=user_service_user
-      - DB_PASSWORD=user_service_pass
-      - DB_NAME=user_service_db
-    depends_on:
-      - user-service-db
-    networks:
-      - microservices-network
-  
-  trip-grpc-service:
-    build: 
-      context: ../grpc-services
-      dockerfile: Dockerfile.trip
-    container_name: trip-grpc-service
-    ports:
-      - "50052:50052"
-    environment:
-      - DB_HOST=trip-service-db
-      - DB_PORT=5432
-      - DB_USER=trip_service_user
-      - DB_PASSWORD=trip_service_pass
-      - DB_NAME=trip_service_db
-    depends_on:
-      - trip-service-db
-    networks:
-      - microservices-network
-  
-  driver-grpc-service:
-    build: 
-      context: ../grpc-services
-      dockerfile: Dockerfile.driver
-    container_name: driver-grpc-service
-    ports:
-      - "50053:50053"
-    environment:
-      - DB_HOST=driver-service-db
-      - DB_PORT=5432
-      - DB_USER=driver_service_user
-      - DB_PASSWORD=driver_service_pass
-      - DB_NAME=driver_service_db
-    depends_on:
-      - driver-service-db
-    networks:
-      - microservices-network
 
   user-service-db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: user-service-db
     environment:
       POSTGRES_DB: user_service_db
@@ -147,12 +88,11 @@ services:
       - "5435:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
-      - ../db/user-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - microservices-network
 
   trip-service-db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: trip-service-db
     environment:
       POSTGRES_DB: trip_service_db
@@ -162,12 +102,11 @@ services:
       - "5433:5432"
     volumes:
       - trip_db_data:/var/lib/postgresql/data
-      - ../db/trip-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - microservices-network
 
   driver-service-db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: driver-service-db
     environment:
       POSTGRES_DB: driver_service_db
@@ -177,7 +116,6 @@ services:
       - "5434:5432"
     volumes:
       - driver_db_data:/var/lib/postgresql/data
-      - ../db/driver-service-db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - microservices-network
 
