@@ -1,4 +1,4 @@
-package com.example.user_service.dto;
+package com.example.user_service.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -7,9 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class CreateUserRequest {
+@NoArgsConstructor
+public class RegisterDriverRequest {
 
     @NotBlank(message = "Email is mandatory")
     @Email(message = "Email should be valid")
@@ -18,4 +18,9 @@ public class CreateUserRequest {
     @NotBlank(message = "Password is mandatory")
     private String password;
 
+    @NotBlank(message = "Vehicle model is mandatory")
+    private String vehicleModel;
+
+    @NotBlank(message = "Vehicle number is mandatory")
+    private String vehicleNumber;
 }

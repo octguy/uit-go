@@ -1,6 +1,6 @@
 package com.example.user_service.controller;
 
-import com.example.user_service.dto.UserValidationResponse;
+import com.example.user_service.dto.response.UserValidationResponse;
 import com.example.user_service.jwt.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

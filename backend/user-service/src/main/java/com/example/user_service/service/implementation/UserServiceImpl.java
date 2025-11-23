@@ -1,11 +1,12 @@
 package com.example.user_service.service.implementation;
 
-import com.example.user_service.dto.AuthResponse;
-import com.example.user_service.dto.CreateUserRequest;
-import com.example.user_service.dto.UserResponse;
-import com.example.user_service.dto.LoginRequest;
+import com.example.user_service.dto.response.AuthResponse;
+import com.example.user_service.dto.request.CreateUserRequest;
+import com.example.user_service.dto.response.UserResponse;
+import com.example.user_service.dto.request.LoginRequest;
 import com.example.user_service.entity.CustomUserDetails;
 import com.example.user_service.entity.User;
+import com.example.user_service.enums.UserRole;
 import com.example.user_service.exception.UserNotFoundException;
 import com.example.user_service.jwt.JwtUtil;
 import com.example.user_service.repository.UserRepository;
@@ -50,6 +51,7 @@ public class UserServiceImpl implements IUserService {
 
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(UserRole.ROLE_USER);
 
         user = userRepository.save(user);
 

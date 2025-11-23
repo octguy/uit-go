@@ -1,12 +1,11 @@
 package com.example.user_service.service;
 
-import com.example.user_service.dto.AuthResponse;
-import com.example.user_service.dto.CreateUserRequest;
-import com.example.user_service.dto.UserResponse;
-import com.example.user_service.dto.LoginRequest;
+import com.example.user_service.dto.response.AuthResponse;
+import com.example.user_service.dto.request.CreateUserRequest;
+import com.example.user_service.dto.response.UserResponse;
+import com.example.user_service.dto.request.LoginRequest;
 
 import java.util.UUID;
-import java.util.List;
 
 public interface IUserService {
 

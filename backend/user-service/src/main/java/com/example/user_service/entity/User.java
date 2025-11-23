@@ -1,5 +1,6 @@
 package com.example.user_service.entity;
 
+import com.example.user_service.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,6 +23,10 @@ public class User {
 
     @Column(name="password", nullable = false)
     private String password; // not hashed for simplicity
+
+    @Column(name="role", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

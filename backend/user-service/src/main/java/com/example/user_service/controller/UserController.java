@@ -1,6 +1,9 @@
 package com.example.user_service.controller;
 
-import com.example.user_service.dto.*;
+import com.example.user_service.dto.request.CreateUserRequest;
+import com.example.user_service.dto.request.LoginRequest;
+import com.example.user_service.dto.response.AuthResponse;
+import com.example.user_service.dto.response.UserResponse;
 import com.example.user_service.service.IUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
