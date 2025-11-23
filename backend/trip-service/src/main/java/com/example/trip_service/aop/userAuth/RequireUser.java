@@ -1,4 +1,4 @@
-package com.example.trip_service.aop;
+package com.example.trip_service.aop.userAuth;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -1,4 +1,4 @@
-package com.example.trip_service.aop;
+package com.example.trip_service.aop.driverAuth;
 
 import com.example.trip_service.exception.UnauthorizedException;
 import com.example.trip_service.security.UserContext;
@@ -12,7 +12,7 @@ import java.util.Objects;
 @Component
 public class AuthenticatedDriverAspect {
 
-    @Before("@annotation(RequireDriver)")
+    @Before("@annotation(com.example.trip_service.aop.driverAuth.RequireDriver)")
     public void ensureDriverAuthenticated() {
         if (UserContext.getUserId() == null || !Objects.equals(UserContext.getUserRole(), "ROLE_DRIVER")) {
             System.out.println("In Aspect, user id is null or role is not ROLE_DRIVER");

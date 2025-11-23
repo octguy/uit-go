@@ -1,4 +1,4 @@
-package com.example.trip_service.aop;
+package com.example.trip_service.aop.driverAuth;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,5 +7,5 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequirePassenger {
+public @interface RequireDriver {
 }

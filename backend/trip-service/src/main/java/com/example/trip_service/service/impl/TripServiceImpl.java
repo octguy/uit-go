@@ -1,8 +1,8 @@
 package com.example.trip_service.service.impl;
 
-import com.example.trip_service.aop.RequireDriver;
-import com.example.trip_service.aop.RequirePassenger;
-import com.example.trip_service.aop.RequireUser;
+import com.example.trip_service.aop.driverAuth.RequireDriver;
+import com.example.trip_service.aop.passengerAuth.RequirePassenger;
+import com.example.trip_service.aop.userAuth.RequireUser;
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
 import com.example.trip_service.dto.response.EstimateFareResponse;
@@ -105,6 +105,7 @@ public class TripServiceImpl implements ITripService {
 
     @Override
     @RequirePassenger
+    @Transactional
     public TripResponse cancelTrip(UUID id) {
         Trip trip = tripRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
@@ -121,6 +122,7 @@ public class TripServiceImpl implements ITripService {
 
     @Override
     @RequireDriver
+    @Transactional
     public TripResponse acceptTrip(UUID id) {
         UUID driverId = SecurityUtil.getCurrentUserId();
 
@@ -139,6 +141,7 @@ public class TripServiceImpl implements ITripService {
 
     @Override
     @RequireDriver
+    @Transactional
     public TripResponse completeTrip(UUID id) {
         UUID driverId = SecurityUtil.getCurrentUserId();
 
@@ -161,6 +164,7 @@ public class TripServiceImpl implements ITripService {
 
     @Override
     @RequireDriver
+    @Transactional
     public TripResponse startTrip(UUID id) {
         UUID driverId = SecurityUtil.getCurrentUserId();
 
