@@ -1,4 +1,4 @@
-package com.example.trip_service.utility;
+package com.example.trip_service.util;
 
 import com.example.trip_service.exception.UnauthorizedException;
 import com.example.trip_service.security.UserContext;

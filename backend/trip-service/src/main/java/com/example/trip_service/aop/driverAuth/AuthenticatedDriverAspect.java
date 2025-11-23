@@ -12,7 +12,7 @@ import java.util.Objects;
 @Component
 public class AuthenticatedDriverAspect {
 
-    @Before("@annotation(com.example.trip_service.aop.driverAuth.RequireDriver)")
+    @Before("@annotation(RequireDriver)")
     public void ensureDriverAuthenticated() {
         if (UserContext.getUserId() == null || !Objects.equals(UserContext.getUserRole(), "ROLE_DRIVER")) {
             System.out.println("In Aspect, user id is null or role is not ROLE_DRIVER");

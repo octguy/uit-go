@@ -11,8 +11,8 @@ import com.example.trip_service.entity.Trip;
 import com.example.trip_service.enums.TripStatus;
 import com.example.trip_service.repository.TripRepository;
 import com.example.trip_service.service.ITripService;
-import com.example.trip_service.utility.PricingUtils;
-import com.example.trip_service.utility.SecurityUtil;
+import com.example.trip_service.util.PricingUtils;
+import com.example.trip_service.util.SecurityUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

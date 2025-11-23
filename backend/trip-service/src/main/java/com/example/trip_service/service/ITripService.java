@@ -4,7 +4,6 @@ import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
 import com.example.trip_service.dto.response.EstimateFareResponse;
 import com.example.trip_service.dto.response.TripResponse;
-import com.example.trip_service.enums.TripStatus;
 
 import java.util.UUID;
 

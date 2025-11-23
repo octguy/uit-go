@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthenticatedUserAspect {
 
-    @Before("@annotation(com.example.trip_service.aop.userAuth.RequireUser)")
+    @Before("@annotation(RequireUser)")
     public void ensureUserAuthenticated() {
         if (UserContext.getUserId() == null) {
             System.out.println("In Aspect, user id is null");

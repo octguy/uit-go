@@ -12,7 +12,7 @@ import java.util.Objects;
 @Component
 public class AuthenticatedPassengerAspect {
 
-    @Before("@annotation(com.example.trip_service.aop.passengerAuth.RequirePassenger)")
+    @Before("@annotation(RequirePassenger)")
     public void ensurePassengerAuthenticated() {
         if (UserContext.getUserId() == null || !Objects.equals(UserContext.getUserRole(), "ROLE_USER")) {
             System.out.println("In Aspect, user id is null or role is not ROLE_USER");
