@@ -6,7 +6,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
-    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -14,32 +13,32 @@ services:
     networks:
       - microservices-network
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-      RABBITMQ_DEFAULT_VHOST: /
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    networks:
-      - microservices-network
+#  rabbitmq:
+#    image: rabbitmq:3.13-management-alpine
+#    container_name: rabbitmq
+#    environment:
+#      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+#      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+#      RABBITMQ_DEFAULT_VHOST: /
+#    ports:
+#      - "5672:5672"
+#      - "15672:15672"
+#    volumes:
+#      - rabbitmq-data:/var/lib/rabbitmq
+#    networks:
+#      - microservices-network
 
   # ==================== MICROSERVICES ====================
 
-  api-gateway:
-    build: ../backend/api-gateway
-    container_name: api-gateway
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    networks:
-      - microservices-network
+#  api-gateway:
+#    build: ../backend/api-gateway
+#    container_name: api-gateway
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=default
+#    networks:
+#      - microservices-network
 
   user-service:
     build: ../backend/user-service
@@ -124,7 +123,6 @@ volumes:
   trip_db_data:
   driver_db_data:
   redis-data:
-  rabbitmq-data:
 
 networks:
   microservices-network:

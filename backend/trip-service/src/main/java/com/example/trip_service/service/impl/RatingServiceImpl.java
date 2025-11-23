@@ -12,6 +12,7 @@ import com.example.trip_service.util.SecurityUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -59,5 +60,10 @@ public class RatingServiceImpl implements IRatingService {
                 .rating(score)
                 .createdAt(rating.getCreatedAt())
                 .build();
+    }
+
+    @Override
+    public List<Rating> getAllRatings() {
+        return ratingRepository.findAll();
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -183,6 +184,13 @@ public class TripServiceImpl implements ITripService {
         trip.setStartedAt(LocalDateTime.now());
 
         return getTripResponse(trip);
+    }
+
+    @Override
+    public List<TripResponse> getAllTrips() {
+        List<Trip> trips = tripRepository.findAll();
+
+        return trips.stream().map(this::getTripResponse).toList();
     }
 
     private TripResponse getTripResponse(Trip trip) {

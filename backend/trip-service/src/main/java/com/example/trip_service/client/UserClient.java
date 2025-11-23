@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(
-    name = "user-service",
-    url = "http://user-service:8081"
+        name = "user-service",
+        url = "http://user-service:8081"
 )
 public interface UserClient {
 

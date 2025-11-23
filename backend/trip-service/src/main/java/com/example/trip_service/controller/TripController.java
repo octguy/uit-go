@@ -23,6 +23,11 @@ public class TripController {
         this.tripService = tripService;
     }
 
+    @GetMapping
+    public ResponseEntity<?> getAllTrips() {
+        return ResponseEntity.ok(tripService.getAllTrips());
+    }
+
     @GetMapping("/get-user-request")
     public ResponseEntity<?> getUserRequest() {
         return ResponseEntity.ok(tripService.getUserId());
