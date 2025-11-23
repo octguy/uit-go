@@ -2,7 +2,6 @@ package com.example.user_service.service.implementation;
 
 import com.example.user_service.dto.request.RegisterDriverRequest;
 import com.example.user_service.dto.response.DriverResponse;
-import com.example.user_service.dto.response.UserResponse;
 import com.example.user_service.entity.Driver;
 import com.example.user_service.entity.User;
 import com.example.user_service.enums.UserRole;

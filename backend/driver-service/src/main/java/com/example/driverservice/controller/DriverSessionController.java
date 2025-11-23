@@ -1,7 +1,7 @@
 package com.example.driverservice.controller;
 
 import com.example.driverservice.entity.DriverSession;
-import com.example.driverservice.repository.DriverSessionRepository;
+import com.example.driverservice.service.IDriverSessonService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,14 +12,14 @@ import java.util.List;
 @RequestMapping("/api/driver-sessions")
 public class DriverSessionController {
 
-    private final DriverSessionRepository driverSessionRepository;
+    private final IDriverSessonService driverSessonService;
 
-    public DriverSessionController(DriverSessionRepository driverSessionRepository) {
-        this.driverSessionRepository = driverSessionRepository;
+    public DriverSessionController(IDriverSessonService driverSessonService) {
+        this.driverSessonService = driverSessonService;
     }
 
     @GetMapping
     public List<DriverSession> findAll() {
-        return driverSessionRepository.findAll();
+        return driverSessonService.findAll();
     }
 }

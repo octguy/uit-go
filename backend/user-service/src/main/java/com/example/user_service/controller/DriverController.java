@@ -3,7 +3,6 @@ package com.example.user_service.controller;
 import com.example.user_service.client.DriverClient;
 import com.example.user_service.dto.request.RegisterDriverRequest;
 import com.example.user_service.dto.response.DriverResponse;
-import com.example.user_service.dto.response.UserResponse;
 import com.example.user_service.service.IDriverService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
