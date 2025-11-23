@@ -33,7 +33,6 @@ services:
 
   api-gateway:
     build: ../backend/api-gateway
-    platform: linux/amd64
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -44,7 +43,6 @@ services:
 
   user-service:
     build: ../backend/user-service
-    platform: linux/amd64
     container_name: user-service
     ports:
       - "8081:8081"
@@ -57,7 +55,6 @@ services:
 
   trip-service:
     build: ../backend/trip-service
-    platform: linux/amd64
     container_name: trip-service
     ports:
       - "8082:8082"
@@ -70,7 +67,6 @@ services:
 
   driver-service:
     build: ../backend/driver-service
-    platform: linux/amd64
     container_name: driver-service
     ports:
       - "8083:8083"
@@ -137,7 +133,7 @@ services:
       - microservices-network
 
   user-service-db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: user-service-db
     environment:
       POSTGRES_DB: user_service_db
@@ -151,7 +147,7 @@ services:
       - microservices-network
 
   trip-service-db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: trip-service-db
     environment:
       POSTGRES_DB: trip_service_db
@@ -165,7 +161,7 @@ services:
       - microservices-network
 
   driver-service-db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: driver-service-db
     environment:
       POSTGRES_DB: driver_service_db

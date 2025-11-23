@@ -1,9 +1,7 @@
 package com.example.user_service.controller;
 
 import com.example.user_service.dto.UserValidationResponse;
-import com.example.user_service.entity.User;
 import com.example.user_service.jwt.JwtUtil;
-import com.example.user_service.util.SecurityUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
