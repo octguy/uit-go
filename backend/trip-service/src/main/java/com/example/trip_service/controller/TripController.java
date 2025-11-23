@@ -2,6 +2,7 @@ package com.example.trip_service.controller;
 
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
+import com.example.trip_service.service.IRatingService;
 import com.example.trip_service.service.ITripService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,10 @@ public class TripController {
 
     private final ITripService tripService;
 
-    public TripController(ITripService tripService) {
+    private final IRatingService ratingService;
+
+    public TripController(ITripService tripService, IRatingService ratingService) {
+        this.ratingService = ratingService;
         this.tripService = tripService;
     }
 
@@ -67,5 +71,10 @@ public class TripController {
     @PostMapping("/{id}/complete")
     public ResponseEntity<?> completeTrip(@PathVariable("id") String id) {
         return ResponseEntity.ok(tripService.completeTrip(UUID.fromString(id)));
+    }
+
+    @PostMapping("{id}/rate")
+    public ResponseEntity<?> rateTrip(@PathVariable("id") String id, @RequestParam("rating") int rating) {
+        return ResponseEntity.ok(ratingService.rateTrip(UUID.fromString(id), rating));
     }
 }
