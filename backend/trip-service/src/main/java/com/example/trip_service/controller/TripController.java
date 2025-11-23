@@ -48,4 +48,24 @@ public class TripController {
     public ResponseEntity<?> getTripById(@PathVariable("id") String id) {
         return ResponseEntity.ok(tripService.getTripById(UUID.fromString(id)));
     }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.cancelTrip(UUID.fromString(id)));
+    }
+
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<?> acceptTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.acceptTrip(UUID.fromString(id)));
+    }
+
+    @PostMapping("/{id}/start")
+    public ResponseEntity<?> startTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.startTrip(UUID.fromString(id)));
+    }
+
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<?> completeTrip(@PathVariable("id") String id) {
+        return ResponseEntity.ok(tripService.completeTrip(UUID.fromString(id)));
+    }
 }

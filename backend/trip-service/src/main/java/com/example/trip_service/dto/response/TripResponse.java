@@ -38,4 +38,6 @@ public class TripResponse {
     private LocalDateTime startedAt;
 
     private LocalDateTime completedAt;
+
+    private LocalDateTime cancelledAt;
 }

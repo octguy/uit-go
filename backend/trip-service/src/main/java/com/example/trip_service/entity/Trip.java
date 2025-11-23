@@ -53,6 +53,9 @@ public class Trip {
     @Column(name="completed_at")
     private LocalDateTime completedAt; // null if it is cancelled
 
+    @Column(name="cancelled_at")
+    private LocalDateTime cancelledAt; // null if it is completed
+
     @PrePersist
     protected void init() {
         this.setRequestedAt(LocalDateTime.now());

@@ -6,3 +6,11 @@ CREATE TABLE "user"
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     deleted_at TIMESTAMP WITHOUT TIME ZONE
 );
+
+CREATE TABLE driver (
+    id UUID PRIMARY KEY,
+    vehicle_model VARCHAR(255) NOT NULL,
+    vehicle_number VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT fk_user FOREIGN KEY (id) REFERENCES "user"(id) ON DELETE CASCADE
+);

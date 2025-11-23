@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -64,22 +65,7 @@ public class TripServiceImpl implements ITripService {
 
         System.out.println("Trip before save: " + trip.getId() + ", request: " + trip.getRequestedAt());
 
-        trip = tripRepository.save(trip);
-
-        return TripResponse.builder()
-                .id(trip.getId())
-                .passengerId(trip.getPassengerId())
-                .driverId(trip.getDriverId())
-                .status(trip.getStatus().name())
-                .pickupLatitude(trip.getPickupLatitude())
-                .pickupLongitude(trip.getPickupLongitude())
-                .destinationLatitude(trip.getDestinationLatitude())
-                .destinationLongitude(trip.getDestinationLongitude())
-                .fare(trip.getFare())
-                .requestedAt(trip.getRequestedAt())
-                .startedAt(trip.getStartedAt())
-                .completedAt(trip.getCompletedAt())
-                .build();
+        return getTripResponse(trip);
     }
 
     @Override
@@ -113,6 +99,105 @@ public class TripServiceImpl implements ITripService {
                 .requestedAt(trip.getRequestedAt())
                 .startedAt(trip.getStartedAt())
                 .completedAt(trip.getCompletedAt())
+                .cancelledAt(trip.getCancelledAt())
+                .build();
+    }
+
+    @Override
+    @RequirePassenger
+    public TripResponse cancelTrip(UUID id) {
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        if (trip.getStatus() == TripStatus.COMPLETED || trip.getStatus() == TripStatus.CANCELLED) {
+            throw new RuntimeException("Cannot cancel a completed or already cancelled trip");
+        }
+
+        trip.setStatus(TripStatus.CANCELLED);
+        trip.setCancelledAt(LocalDateTime.now());
+
+        return getTripResponse(trip);
+    }
+
+    @Override
+    @RequireDriver
+    public TripResponse acceptTrip(UUID id) {
+        UUID driverId = SecurityUtil.getCurrentUserId();
+
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
+            throw new RuntimeException("Trip is not available for acceptance");
+        }
+
+        trip.setDriverId(driverId);
+        trip.setStatus(TripStatus.ACCEPTED);
+
+        return getTripResponse(trip);
+    }
+
+    @Override
+    @RequireDriver
+    public TripResponse completeTrip(UUID id) {
+        UUID driverId = SecurityUtil.getCurrentUserId();
+
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        if (trip.getStatus() != TripStatus.IN_PROGRESS) {
+            throw new RuntimeException("Trip is not in progress and cannot be completed");
+        }
+
+        if (!trip.getDriverId().equals(driverId)) {
+            throw new RuntimeException("You are not authorized to complete this trip");
+        }
+
+        trip.setStatus(TripStatus.COMPLETED);
+        trip.setCompletedAt(LocalDateTime.now());
+
+        return getTripResponse(trip);
+    }
+
+    @Override
+    @RequireDriver
+    public TripResponse startTrip(UUID id) {
+        UUID driverId = SecurityUtil.getCurrentUserId();
+
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        if (trip.getStatus() != TripStatus.ACCEPTED) {
+            throw new RuntimeException("Trip is not accepted and cannot be started");
+        }
+
+        if (!trip.getDriverId().equals(driverId)) {
+            throw new RuntimeException("You are not authorized to start this trip");
+        }
+
+        trip.setStatus(TripStatus.IN_PROGRESS);
+        trip.setStartedAt(LocalDateTime.now());
+
+        return getTripResponse(trip);
+    }
+
+    private TripResponse getTripResponse(Trip trip) {
+        trip = tripRepository.save(trip);
+
+        return TripResponse.builder()
+                .id(trip.getId())
+                .passengerId(trip.getPassengerId())
+                .driverId(trip.getDriverId())
+                .status(trip.getStatus().name())
+                .pickupLatitude(trip.getPickupLatitude())
+                .pickupLongitude(trip.getPickupLongitude())
+                .destinationLatitude(trip.getDestinationLatitude())
+                .destinationLongitude(trip.getDestinationLongitude())
+                .fare(trip.getFare())
+                .requestedAt(trip.getRequestedAt())
+                .startedAt(trip.getStartedAt())
+                .completedAt(trip.getCompletedAt())
+                .cancelledAt(trip.getCancelledAt())
                 .build();
     }
 }
