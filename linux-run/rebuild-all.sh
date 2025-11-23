@@ -3,7 +3,7 @@
 
 set -e  # Exit immediately if a command fails
 
-echo "=== Building all Spring Boot + Go gRPC services sequentially ==="
+echo "=== Building all Spring Boot ==="
 ./build-sequential.sh || { echo "Build failed! Stopping script."; exit 1; }
 
 echo "=== All builds completed successfully ==="
@@ -16,4 +16,4 @@ docker-compose down
 echo "=== Building and starting Docker containers ==="
 docker-compose up --build
 
-echo "=== All services (Spring Boot + Go gRPC) rebuilt and restarted! ==="
+echo "=== All services (Spring Boot) rebuilt and restarted! ==="

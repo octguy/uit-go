@@ -7,7 +7,7 @@ cd ../infra
 echo "Stopping existing containers..."
 docker-compose down
 
-# Start PostgreSQL databases, user-service and trip-service
+# Start the containers
 echo "Starting containers..."
 
 echo "Starting driver service and its database..."
