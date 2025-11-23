@@ -13,5 +13,7 @@ public class UserValidationResponse {
 
     private UUID userId;
 
+    private String role;
+
     private boolean valid;
 }

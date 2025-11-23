@@ -15,4 +15,8 @@ public interface ITripService {
 
     TripResponse createTrip(CreateTripRequest request);
 
+    UUID getPassengerId();
+
+    UUID getDriverId();
+
 }

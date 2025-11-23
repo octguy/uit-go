@@ -2,7 +2,6 @@ package com.example.trip_service.controller;
 
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
-import com.example.trip_service.dto.response.UserValidationResponse;
 import com.example.trip_service.service.ITripService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +20,16 @@ public class TripController {
     @GetMapping("/get-user-request")
     public ResponseEntity<?> getUserRequest() {
         return ResponseEntity.ok(tripService.getUserId());
+    }
+
+    @GetMapping("/user")
+    public ResponseEntity<?> getUser() {
+        return ResponseEntity.ok(tripService.getPassengerId());
+    }
+
+    @GetMapping("/driver")
+    public ResponseEntity<?> getDriver() {
+        return ResponseEntity.ok(tripService.getDriverId());
     }
 
     @GetMapping("/get-estimated-fare")

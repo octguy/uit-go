@@ -58,6 +58,7 @@ public class UserServiceImpl implements IUserService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .role(user.getRole().toString())
                 .createdAt(LocalDateTime.now())
                 .build();
     }
@@ -70,6 +71,7 @@ public class UserServiceImpl implements IUserService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .role(user.getRole().toString())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
@@ -82,6 +84,7 @@ public class UserServiceImpl implements IUserService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .role(user.getRole().toString())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
@@ -116,6 +119,7 @@ public class UserServiceImpl implements IUserService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .role(user.getRole().toString())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

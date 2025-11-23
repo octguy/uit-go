@@ -1,5 +1,6 @@
 package com.example.trip_service.service.impl;
 
+import com.example.trip_service.aop.RequireDriver;
 import com.example.trip_service.aop.RequireUser;
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
@@ -28,10 +29,11 @@ public class TripServiceImpl implements ITripService {
     }
 
     @Override
-    @RequireUser
     public UUID getUserId() {
         return SecurityUtil.getCurrentUserId();
     }
+
+
 
     @Override
     @RequireUser
@@ -78,5 +80,17 @@ public class TripServiceImpl implements ITripService {
                 .startedAt(trip.getStartedAt())
                 .completedAt(trip.getCompletedAt())
                 .build();
+    }
+
+    @Override
+    @RequireUser
+    public UUID getPassengerId() {
+        return SecurityUtil.getCurrentUserId();
+    }
+
+    @Override
+    @RequireDriver
+    public UUID getDriverId() {
+        return SecurityUtil.getCurrentUserId();
     }
 }

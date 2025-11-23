@@ -1,6 +1,5 @@
 package com.example.trip_service.utility;
 
-import com.example.trip_service.aop.RequireUser;
 import com.example.trip_service.exception.UnauthorizedException;
 import com.example.trip_service.security.UserContext;
 

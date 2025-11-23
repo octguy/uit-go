@@ -35,6 +35,7 @@ public class AuthFilter extends OncePerRequestFilter {
                     UserValidationResponse res = userClient.validate(token);
                     if (res.isValid()) {
                         UserContext.setUserId(res.getUserId());
+                        UserContext.setUserRole(res.getRole());
                     }
                 } catch (Exception e) {
                     System.err.println("Invalid JWT Token: " + e.getMessage());
