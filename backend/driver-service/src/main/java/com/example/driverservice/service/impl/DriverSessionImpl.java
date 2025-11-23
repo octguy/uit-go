@@ -3,7 +3,7 @@ package com.example.driverservice.service.impl;
 import com.example.driverservice.entity.DriverSession;
 import com.example.driverservice.enums.DriverStatus;
 import com.example.driverservice.repository.DriverSessionRepository;
-import com.example.driverservice.service.IDriverSessonService;
+import com.example.driverservice.service.IDriverSessionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class DriverSessionImpl implements IDriverSessonService {
+public class DriverSessionImpl implements IDriverSessionService {
 
     private final DriverSessionRepository driverSessionRepository;
 
