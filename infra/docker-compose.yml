@@ -1,8 +1,6 @@
 version: '3.8'
 
 services:
-  # ==================== INFRASTRUCTURE ====================
-  
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -12,33 +10,6 @@ services:
       - redis-data:/data
     networks:
       - microservices-network
-
-#  rabbitmq:
-#    image: rabbitmq:3.13-management-alpine
-#    container_name: rabbitmq
-#    environment:
-#      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-#      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-#      RABBITMQ_DEFAULT_VHOST: /
-#    ports:
-#      - "5672:5672"
-#      - "15672:15672"
-#    volumes:
-#      - rabbitmq-data:/var/lib/rabbitmq
-#    networks:
-#      - microservices-network
-
-  # ==================== MICROSERVICES ====================
-
-#  api-gateway:
-#    build: ../backend/api-gateway
-#    container_name: api-gateway
-#    ports:
-#      - "8080:8080"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=default
-#    networks:
-#      - microservices-network
 
   user-service:
     build: ../backend/user-service
@@ -72,7 +43,19 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
-      - driver-service-db
+      - redis   # ✔ driver-service cần redis
+    networks:
+      - microservices-network
+
+  driver-simulator:
+    build: ../backend/driver-simulator
+    container_name: driver-simulator
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      - driver-service   # ✔ simulator cần driver-service
     networks:
       - microservices-network
 
@@ -104,24 +87,9 @@ services:
     networks:
       - microservices-network
 
-  driver-service-db:
-    image: postgres:15
-    container_name: driver-service-db
-    environment:
-      POSTGRES_DB: driver_service_db
-      POSTGRES_USER: driver_service_user
-      POSTGRES_PASSWORD: driver_service_pass
-    ports:
-      - "5434:5432"
-    volumes:
-      - driver_db_data:/var/lib/postgresql/data
-    networks:
-      - microservices-network
-
 volumes:
   user_db_data:
   trip_db_data:
-  driver_db_data:
   redis-data:
 
 networks:

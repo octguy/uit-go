@@ -1,34 +1,47 @@
 #!/bin/bash
 
-# Navigate to user-service and trip-service directory
+set -e  # Stop script when any command fails
+
+echo "=============================================="
+echo "            UIT-GO DEPLOY SCRIPT"
+echo "=============================================="
+
+# Move into infra folder
 cd ../infra
 
-# Stop any existing containers
 echo "Stopping existing containers..."
 docker-compose down
 
-# Start the containers
-echo "Starting containers..."
+echo "Starting containers (with build cache)..."
+docker-compose up -d --build
 
-echo "Starting driver service and its database..."
-docker-compose up -d --build driver-service-db driver-service
+echo "Waiting for databases to be ready..."
+sleep 5
 
-echo "Starting user service and its database..."
-docker-compose up -d --build user-service-db user-service
-
-echo "Starting trip service and its database..."
-docker-compose up -d --build trip-service-db trip-service
-
-# Wait for database to be ready
-echo "Waiting for database to be ready..."
-
-# Show running containers
-echo "User, Trip, Driver Service containers:"
+echo ""
+echo "=============================================="
+echo "               RUNNING CONTAINERS"
+echo "=============================================="
 docker-compose ps
+echo "=============================================="
 
-echo "User Service started successfully!"
-echo "Trip Service started successfully!"
-echo "Driver Service started successfully!"
-echo "Application available at: http://localhost:8081, http://localhost:8082, http://localhost:8083"
-echo "Database available at: localhost:5435, localhost:5433, localhost:5434"
+echo ""
+echo "🚀 Services started successfully!"
 
+echo ""
+echo "🔧 Application Endpoints:"
+echo "User Service:    http://localhost:8081"
+echo "Trip Service:    http://localhost:8082"
+echo "Driver Service:  http://localhost:8083"
+
+echo ""
+echo "🗄  Database endpoints:"
+echo "User DB:    localhost:5435"
+echo "Trip DB:    localhost:5433"
+
+echo ""
+echo "🧰 Redis:"
+echo "Redis:       localhost:6379"
+
+echo ""
+echo "🎉 Deploy done!"
