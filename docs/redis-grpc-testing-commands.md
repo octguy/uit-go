@@ -4,7 +4,7 @@ Tài liệu này tổng hợp **tất cả các lệnh quan trọng** để ki�
 
 ---
 
-# 🟩 1. Vào Redis CLI
+## 1. Vào Redis CLI
 
 Nếu chạy Redis bằng Docker Compose:
 
@@ -20,7 +20,7 @@ redis-cli
 
 ---
 
-# 🟦 2. Kiểm tra danh sách Key trong Redis
+## 2. Kiểm tra danh sách Key trong Redis
 
 ```bash
 KEYS *
@@ -28,7 +28,7 @@ KEYS *
 
 ---
 
-# 🟦 3. Lấy toạ độ GEO của tài xế
+## 3. Lấy toạ độ GEO của tài xế
 
 ```bash
 GEOPOS drivers:locations <driverId>
@@ -42,7 +42,7 @@ GEOPOS drivers:locations 4236bc9f-afb8-4d62-a966-ab79b8bf830a
 
 ---
 
-# 🟧 4. Tìm tài xế gần một vị trí cụ thể (Redis trực tiếp)
+## 4. Tìm tài xế gần một vị trí cụ thể (Redis trực tiếp)
 
 ```bash
 GEOSEARCH drivers:locations FROMLONLAT <lng> <lat> BYRADIUS 3 km WITHDIST WITHCOORD
@@ -56,7 +56,7 @@ GEOSEARCH drivers:locations FROMLONLAT 106.69064909219742 10.773321541456605 BYR
 
 ---
 
-# 🟦 5. Xem thông tin driver trong Redis (HASH)
+## 5. Xem thông tin driver trong Redis (HASH)
 
 ```bash
 HGETALL driver:<driverId>
@@ -70,7 +70,7 @@ HGETALL driver:4236bc9f-afb8-4d62-a966-ab79b8bf830a
 
 ---
 
-# 🟩 6. Gọi API `/nearby` trực tiếp vào Driver-Service (8083)
+## 6. Gọi API `/nearby` trực tiếp vào Driver-Service (8083)
 
 ```bash
 curl -s "http://localhost:8083/api/internal/drivers/nearby?lat=<lat>&lng=<lng>&radiusKm=3&limit=5" | jq
@@ -84,7 +84,7 @@ curl -s "http://localhost:8083/api/internal/drivers/nearby?lat=10.77332154145660
 
 ---
 
-# 🟩 7. Gọi API `/nearby` thông qua Trip-Service (8082)
+## 7. Gọi API `/nearby` thông qua Trip-Service (8082)
 
 ```bash
 curl -s "http://localhost:8082/api/trips/driver/get-nearby-drivers?lat=<lat>&lng=<lng>&radiusKm=3&limit=5" | jq
@@ -98,7 +98,7 @@ curl -s "http://localhost:8082/api/trips/driver/get-nearby-drivers?lat=10.773321
 
 ---
 
-# 🟧 8. Bắt đầu mô phỏng tài xế chạy (Driver-Simulator – port 8084)
+## 8. Bắt đầu mô phỏng tài xế chạy (Driver-Simulator – port 8084)
 
 ```bash
 curl -X POST "http://localhost:8084/api/simulate/start-all?startLat=<lat1>&startLng=<lng1>&endLat=<lat2>&endLng=<lng2>&steps=200&delayMillis=1000"
@@ -112,7 +112,7 @@ curl -X POST "http://localhost:8084/api/simulate/start-all?startLat=10.762622&st
 
 ---
 
-# 🟦 9. Theo dõi Redis realtime
+## 9. Theo dõi Redis realtime
 
 Trong Redis CLI:
 
@@ -131,7 +131,7 @@ HSET driver:<id> updatedAt <timestamp>
 
 ---
 
-# 🟥 10. Xoá toàn bộ dữ liệu driver trong Redis (reset)
+## 10. Xoá toàn bộ dữ liệu driver trong Redis (reset)
 
 ```bash
 DEL drivers:locations
@@ -151,7 +151,7 @@ DEL driver:<id>
 
 ---
 
-# 🟧 11. Kiểm tra khoảng cách giữa 2 tài xế (Redis)
+## 11. Kiểm tra khoảng cách giữa 2 tài xế (Redis)
 
 ```bash
 GEODIST drivers:locations <driver1> <driver2> km
@@ -159,12 +159,10 @@ GEODIST drivers:locations <driver1> <driver2> km
 
 ---
 
-# 🎉 DONE!
+# DONE!
 
 Bạn có thể sử dụng file README này để kiểm tra toàn bộ hệ thống: 
 - Driver-Simulator → gRPC → Driver-Service
 - Driver-Service → Redis GEO
 - Trip-Service → Feign → Driver-Service
 - Toạ độ, khoảng cách, nearby drivers
-
-Nếu bạn muốn bổ sung thêm phần **flow diagram**, **architecture**, hoặc **API docs**, cứ nói nhé! 🚀
