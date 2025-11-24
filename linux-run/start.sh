@@ -30,9 +30,10 @@ echo "🚀 Services started successfully!"
 
 echo ""
 echo "🔧 Application Endpoints:"
-echo "User Service:    http://localhost:8081"
-echo "Trip Service:    http://localhost:8082"
-echo "Driver Service:  http://localhost:8083"
+echo "User Service:     http://localhost:8081"
+echo "Trip Service:     http://localhost:8082"
+echo "Driver Service:   http://localhost:8083"
+echo "Driver Simulator: http://localhost:8084"
 
 echo ""
 echo "🗄  Database endpoints:"

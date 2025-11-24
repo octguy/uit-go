@@ -10,54 +10,11 @@ services:
       - redis-data:/data
     networks:
       - microservices-network
-
-  user-service:
-    build: ../backend/user-service
-    container_name: user-service
-    ports:
-      - "8081:8081"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - user-service-db
-    networks:
-      - microservices-network
-
-  trip-service:
-    build: ../backend/trip-service
-    container_name: trip-service
-    ports:
-      - "8082:8082"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - trip-service-db
-    networks:
-      - microservices-network
-
-  driver-service:
-    build: ../backend/driver-service
-    container_name: driver-service
-    ports:
-      - "8083:8083"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - redis   # ✔ driver-service cần redis
-    networks:
-      - microservices-network
-
-  driver-simulator:
-    build: ../backend/driver-simulator
-    container_name: driver-simulator
-    ports:
-      - "8084:8084"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - driver-service   # ✔ simulator cần driver-service
-    networks:
-      - microservices-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   user-service-db:
     image: postgres:15
@@ -72,6 +29,11 @@ services:
       - user_db_data:/var/lib/postgresql/data
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_service_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   trip-service-db:
     image: postgres:15
@@ -84,6 +46,78 @@ services:
       - "5433:5432"
     volumes:
       - trip_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trip_service_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  user-service:
+    build: ../backend/user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      user-service-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  trip-service:
+    build: ../backend/trip-service
+    container_name: trip-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      trip-service-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  driver-service:
+    build: ../backend/driver-service
+    container_name: driver-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  driver-simulator:
+    build: ../backend/driver-simulator
+    container_name: driver-simulator
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      driver-service:
+        condition: service_healthy
     networks:
       - microservices-network
 

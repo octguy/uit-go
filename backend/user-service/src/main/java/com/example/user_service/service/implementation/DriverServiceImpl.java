@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class DriverServiceImpl implements IDriverService {
@@ -53,5 +54,19 @@ public class DriverServiceImpl implements IDriverService {
                 .vehicleNumber(driver.getVehicleNumber())
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    @Override
+    public List<DriverResponse> getAllDrivers() {
+        List<Driver> drivers = driverRepository.findAll();
+        return drivers.stream()
+                .map(driver -> DriverResponse.builder()
+                        .id(driver.getId())
+                        .email(driver.getUser().getEmail())
+                        .vehicleModel(driver.getVehicleModel())
+                        .vehicleNumber(driver.getVehicleNumber())
+                        .createdAt(driver.getCreatedAt())
+                        .build())
+                .toList();
     }
 }

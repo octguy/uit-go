@@ -1,6 +1,5 @@
 package com.example.user_service.controller;
 
-import com.example.user_service.client.DriverClient;
 import com.example.user_service.dto.request.RegisterDriverRequest;
 import com.example.user_service.dto.response.DriverResponse;
 import com.example.user_service.service.IDriverService;
@@ -18,10 +17,7 @@ public class DriverController {
 
     private final IDriverService driverService;
 
-    private final DriverClient driverClient;
-
-    public DriverController(IDriverService driverService, DriverClient driverClient) {
-        this.driverClient = driverClient;
+    public DriverController(IDriverService driverService) {
         this.driverService = driverService;
     }
 
@@ -29,7 +25,6 @@ public class DriverController {
     public ResponseEntity<?> registerDriver(@RequestBody RegisterDriverRequest request) {
         try {
             DriverResponse driver = driverService.createDriver(request);
-            driverClient.createDriver(driver.getId());
             System.out.println(driver.getId());
             return ResponseEntity.ok(driver);
         } catch (IllegalArgumentException e) {
