@@ -1,4 +1,4 @@
-package com.example.driverservice.service.impl;
+package com.example.driverservice.service;
 
 import org.springframework.data.geo.*;
 import org.springframework.data.redis.connection.RedisGeoCommands;

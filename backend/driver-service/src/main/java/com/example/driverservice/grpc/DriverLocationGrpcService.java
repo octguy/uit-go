@@ -1,10 +1,10 @@
 package com.example.driverservice.grpc;
 
-import com.example.driverservice.service.impl.DriverLocationService;
+import com.example.driverservice.service.DriverLocationService;
 import io.grpc.stub.StreamObserver;
+import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
+@Component
 public class DriverLocationGrpcService extends DriverLocationServiceGrpc.DriverLocationServiceImplBase {
 
     private final DriverLocationService driverLocationService;
@@ -15,11 +15,11 @@ public class DriverLocationGrpcService extends DriverLocationServiceGrpc.DriverL
 
     @Override
     public StreamObserver<LocationRequest> sendLocation(StreamObserver<LocationResponse> responseObserver) {
-        return new StreamObserver<LocationRequest>() {
+        return new StreamObserver<>() {
             @Override
             public void onNext(LocationRequest locationRequest) {
-                driverLocationService.updateLocation(
-                        UUID.fromString(locationRequest.getDriverId()),
+                driverLocationService.updateDriverLocation(
+                        locationRequest.getDriverId(),
                         locationRequest.getLatitude(),
                         locationRequest.getLongitude()
                 );
@@ -28,6 +28,7 @@ public class DriverLocationGrpcService extends DriverLocationServiceGrpc.DriverL
             @Override
             public void onError(Throwable throwable) {
                 responseObserver.onError(throwable);
+                System.err.println("Error in location stream: " + throwable.getMessage());
             }
 
             @Override

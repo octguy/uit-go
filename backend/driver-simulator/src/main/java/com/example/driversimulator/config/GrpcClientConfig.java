@@ -18,7 +18,7 @@ public class GrpcClientConfig {
     }
 
     @Bean
-    public DriverLocationServiceGrpc.DriverLocationServiceBlockingStub locationStub(ManagedChannel channel) {
-        return DriverLocationServiceGrpc.newBlockingStub(channel);
+    public DriverLocationServiceGrpc.DriverLocationServiceStub locationStub(ManagedChannel channel) {
+        return DriverLocationServiceGrpc.newStub(channel);
     }
 }
