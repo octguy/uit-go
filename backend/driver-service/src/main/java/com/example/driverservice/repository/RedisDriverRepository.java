@@ -45,13 +45,27 @@ public class RedisDriverRepository {
     }
 
     public GeoResults<RedisGeoCommands.GeoLocation<String>> findNearbyDrivers(
-            double lat, double lng, double radiusKm) {
+            double lat,
+            double lng,
+            double radiusKm,
+            int limit
+    ) {
 
-        Circle circle = new Circle(
+        // Tạo vòng tròn tìm kiếm
+        Circle within = new Circle(
                 new org.springframework.data.geo.Point(lng, lat),
                 new Distance(radiusKm, Metrics.KILOMETERS)
         );
 
-        return redisTemplate.opsForGeo().radius(GEO_KEY, circle);
+        // Args để yêu cầu Redis trả về coordinates + distance
+        RedisGeoCommands.GeoRadiusCommandArgs args =
+                RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs()
+                        .includeCoordinates()
+                        .includeDistance()
+                        .sortAscending()
+                        .limit(limit);
+
+        return redisTemplate.opsForGeo()
+                .radius(GEO_KEY, within, args);
     }
 }
