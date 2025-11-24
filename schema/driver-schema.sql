@@ -1,6 +1,0 @@
-CREATE TABLE driver_session
-(
-    id UUID PRIMARY KEY,
-    status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);

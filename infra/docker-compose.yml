@@ -1,8 +1,6 @@
 version: '3.8'
 
 services:
-  # ==================== INFRASTRUCTURE ====================
-  
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -12,69 +10,11 @@ services:
       - redis-data:/data
     networks:
       - microservices-network
-
-#  rabbitmq:
-#    image: rabbitmq:3.13-management-alpine
-#    container_name: rabbitmq
-#    environment:
-#      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-#      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-#      RABBITMQ_DEFAULT_VHOST: /
-#    ports:
-#      - "5672:5672"
-#      - "15672:15672"
-#    volumes:
-#      - rabbitmq-data:/var/lib/rabbitmq
-#    networks:
-#      - microservices-network
-
-  # ==================== MICROSERVICES ====================
-
-#  api-gateway:
-#    build: ../backend/api-gateway
-#    container_name: api-gateway
-#    ports:
-#      - "8080:8080"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=default
-#    networks:
-#      - microservices-network
-
-  user-service:
-    build: ../backend/user-service
-    container_name: user-service
-    ports:
-      - "8081:8081"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - user-service-db
-    networks:
-      - microservices-network
-
-  trip-service:
-    build: ../backend/trip-service
-    container_name: trip-service
-    ports:
-      - "8082:8082"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - trip-service-db
-    networks:
-      - microservices-network
-
-  driver-service:
-    build: ../backend/driver-service
-    container_name: driver-service
-    ports:
-      - "8083:8083"
-    environment:
-      - SPRING_PROFILES_ACTIVE=default
-    depends_on:
-      - driver-service-db
-    networks:
-      - microservices-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   user-service-db:
     image: postgres:15
@@ -89,6 +29,11 @@ services:
       - user_db_data:/var/lib/postgresql/data
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_service_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   trip-service-db:
     image: postgres:15
@@ -103,25 +48,82 @@ services:
       - trip_db_data:/var/lib/postgresql/data
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trip_service_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  driver-service-db:
-    image: postgres:15
-    container_name: driver-service-db
-    environment:
-      POSTGRES_DB: driver_service_db
-      POSTGRES_USER: driver_service_user
-      POSTGRES_PASSWORD: driver_service_pass
+  user-service:
+    build: ../backend/user-service
+    container_name: user-service
     ports:
-      - "5434:5432"
-    volumes:
-      - driver_db_data:/var/lib/postgresql/data
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      user-service-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  trip-service:
+    build: ../backend/trip-service
+    container_name: trip-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      trip-service-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  driver-service:
+    build: ../backend/driver-service
+    container_name: driver-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  driver-simulator:
+    build: ../backend/driver-simulator
+    container_name: driver-simulator
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      driver-service:
+        condition: service_healthy
     networks:
       - microservices-network
 
 volumes:
   user_db_data:
   trip_db_data:
-  driver_db_data:
   redis-data:
 
 networks:

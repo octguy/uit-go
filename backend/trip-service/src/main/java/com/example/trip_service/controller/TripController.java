@@ -1,5 +1,6 @@
 package com.example.trip_service.controller;
 
+import com.example.trip_service.client.DriverClient;
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
 import com.example.trip_service.service.IRatingService;
@@ -18,7 +19,10 @@ public class TripController {
 
     private final IRatingService ratingService;
 
-    public TripController(ITripService tripService, IRatingService ratingService) {
+    private final DriverClient driverClient;
+
+    public TripController(ITripService tripService, IRatingService ratingService, DriverClient driverClient) {
+        this.driverClient = driverClient;
         this.ratingService = ratingService;
         this.tripService = tripService;
     }
@@ -81,5 +85,17 @@ public class TripController {
     @PostMapping("{id}/rate")
     public ResponseEntity<?> rateTrip(@PathVariable("id") String id, @RequestParam("rating") int rating) {
         return ResponseEntity.ok(ratingService.rateTrip(UUID.fromString(id), rating));
+    }
+
+    @GetMapping("/driver/get-nearby-drivers")
+    public ResponseEntity<?> getNearbyDrivers(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "3.0") double radiusKm,
+            @RequestParam(defaultValue = "5") int limit
+    ) {
+        return ResponseEntity.ok(
+                driverClient.getNearbyDrivers(lat, lng, radiusKm, limit)
+        );
     }
 }
