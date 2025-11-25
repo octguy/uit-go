@@ -46,24 +46,22 @@ UIT-Go is a comprehensive ride-hailing microservices system implementing modern 
 
 ## Prerequisites
 
-Ensure the following are installed on your system:
+### Required for Docker-based local run
 
-### Required
+- **Docker Desktop** 20.10+ (with Docker Compose) and at least **4GB** memory allocated
+  ```bash
+  docker --version
+  docker compose version  # or docker-compose --version
+  ```
+- **Git** - To clone the repository
+
+### Optional (for local development outside Docker)
 
 - **Java 17** or higher
   ```bash
   java -version
   ```
 - **Maven 3.6+** (Maven Wrapper included in each service)
-- **Docker Desktop** (version 20.10+)
-  ```bash
-  docker --version
-  docker-compose --version
-  ```
-
-### Optional (for development)
-
-- **Git** - Version control
 - **Postman** or **curl** - API testing
 - **psql** or **DBeaver** - Database management
 - **Redis CLI** - Redis inspection and debugging
@@ -137,115 +135,74 @@ uit-go/
 
 ## Installation
 
-### 1. Clone the Repository
+Follow these steps to install and run everything locally with Docker (no host-side Java/Maven needed):
 
-```bash
-git clone https://github.com/octguy/uit-go.git
-cd uit-go
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/octguy/uit-go.git
+   cd uit-go
+   ```
+2. **Start Docker Desktop** and confirm it is running:
+   ```bash
+   docker ps
+   ```
+3. **Run the automated Docker build + start**
+   - macOS/Linux:
+     ```bash
+     cd linux-run
+     chmod +x start.sh stop.sh
+     ./start.sh
+     ```
+   - Windows (PowerShell or Command Prompt):
+     ```cmd
+     cd win-run
+     rebuild-all.bat
+     ```
+   These scripts will stop any old containers, build all service images (using the Maven wrapper inside the Docker build), and start the full stack.
+4. **Verify the stack**
+   ```bash
+   cd infra
+   docker-compose ps          # container status
+   docker-compose logs --tail=50 api-gateway  # sample logs
+   ```
+5. **Stop when finished**
+   ```bash
+   cd infra
+   docker-compose down        # keep data volumes
+   # or to reset everything (including Postgres/Redis data):
+   docker-compose down -v
+   ```
 
-### 2. Verify Prerequisites
-
-```bash
-# Check Java version (must be 17+)
-java -version
-
-# Check Docker
-docker --version
-docker-compose --version
-
-# Ensure Docker Desktop is running
-docker ps
-```
-
-### 3. Build All Services
-
-The project uses Maven Wrapper, so Maven installation is not required.
-
-#### On macOS/Linux:
-
-```bash
-cd linux-run
-chmod +x *.sh
-./start.sh
-```
-
-This script will automatically:
-
-1. Build all Spring Boot services using Maven
-2. Stop any existing Docker containers
-3. Start all services with Docker Compose
-
-#### On Windows:
-
-```cmd
-cd win-run
-rebuild-all.bat
-```
-
-#### Manual Build (Optional):
-
-To build services individually:
-
-```bash
-# Build a specific service
-cd backend/user-service
-./mvnw clean package -DskipTests
-
-# Build all services manually
-cd backend/api-gateway && ./mvnw clean package -DskipTests
-cd ../user-service && ./mvnw clean package -DskipTests
-cd ../trip-service && ./mvnw clean package -DskipTests
-cd ../driver-service && ./mvnw clean package -DskipTests
-cd ../driver-simulator && ./mvnw clean package -DskipTests
-```
+> If you prefer to build outside Docker, the Maven wrapper lives under each service (e.g., `backend/user-service/mvnw`).
 
 ## Running the System
 
-### Quick Start (Recommended)
-
-#### macOS/Linux:
+### Quick Start with Docker (Recommended)
 
 ```bash
-cd linux-run
-./start.sh
+# macOS/Linux
+cd linux-run && ./start.sh
+
+# Windows
+cd win-run && rebuild-all.bat
 ```
 
-#### Windows:
-
-```cmd
-cd win-run
-start.bat
-```
-
-The quick start script will:
-
-- Stop any existing containers
-- Build and start all services with Docker Compose
-- Wait for databases to initialize
-- Display service endpoints and health status
+What this does:
+- Stops any existing UIT-Go containers
+- Builds fresh images for every service
+- Starts the full stack with Docker Compose
+- Prints running containers and key endpoints
 
 ### Manual Start with Docker Compose
 
 ```bash
-# Start all services
 cd infra
-docker-compose up -d
-
-# View logs for all services
-docker-compose logs -f
-
-# View logs for specific service
-docker-compose logs -f user-service
-
-# Check service status
-docker-compose ps
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (clean slate)
-docker-compose down -v
+docker-compose up -d --build   # build images and start
+docker-compose ps              # check status
+docker-compose logs -f         # tail all logs
+docker-compose logs -f user-service  # tail one service
+docker-compose down            # stop (keeps data)
+docker-compose down -v         # stop and wipe data volumes
 ```
 
 ### Individual Service Development
