@@ -14,3 +14,4 @@
 
 
 - forward k8s: kubectl port-forward service/trip-service 8082:8082
+- test grpc flow: curl -X POST http://localhost:8082/api/trips/request -H "Content-Type: application/json" -d "{\"pickupLocation\":\"123 Main St\",\"destination\":\"456 Elm St\",\"passengerId\":\"11111111-1111-1111-1111-111111111111\"}"
