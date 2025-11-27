@@ -2,9 +2,9 @@ spring:
   application:
     name: user-service
   datasource:
-    url: jdbc:postgresql://user-service-db:5432/user_service_db
-    username: user_service_user
-    password: user_service_pass
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/user_service_db
+    username: ${DB_USERNAME:user_service_user}
+    password: ${DB_PASSWORD:user_service_pass}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

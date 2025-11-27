@@ -1,0 +1,50 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and modify the values as needed
+
+# Environment name (e.g., dev, staging, prod)
+environment = "dev"
+
+# Kubernetes namespace to deploy to
+namespace = "default"
+
+# Database passwords (change these in production!)
+user_db_password = "password123"
+trip_db_password = "password123"
+driver_db_password = "password123"
+
+# Service replicas for scaling
+user_service_replicas = 1
+trip_service_replicas = 1
+driver_service_replicas = 1
+
+# Resource limits for services
+user_service_cpu_limit = "500m"
+user_service_memory_limit = "512Mi"
+trip_service_cpu_limit = "500m"
+trip_service_memory_limit = "512Mi"
+driver_service_cpu_limit = "500m"
+driver_service_memory_limit = "512Mi"
+
+# gRPC service replicas and resource limits
+grpc_user_service_replicas = 1
+grpc_trip_service_replicas = 1
+grpc_driver_service_replicas = 1
+
+grpc_user_service_cpu_limit = "500m"
+grpc_user_service_memory_limit = "256Mi"
+grpc_trip_service_cpu_limit = "500m"
+grpc_trip_service_memory_limit = "256Mi"
+grpc_driver_service_cpu_limit = "500m"
+grpc_driver_service_memory_limit = "256Mi"
+
+# Database resource limits
+db_cpu_limit = "500m"
+db_memory_limit = "512Mi"
+
+# Docker image tags (update these when you have new versions)
+user_service_image = "uit-go/user-service:latest"
+trip_service_image = "uit-go/trip-service:latest"
+driver_service_image = "uit-go/driver-service:latest"
+grpc_user_service_image = "uit-go/grpc-user-service:latest"
+grpc_trip_service_image = "uit-go/grpc-trip-service:latest"
+grpc_driver_service_image = "uit-go/grpc-driver-service:latest"

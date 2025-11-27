@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trip-service-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trip-service-db
+  template:
+    metadata:
+      labels:
+        app: trip-service-db
+    spec:
+      containers:
+        - name: trip-service-db
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: "trip_service_db"
+            - name: POSTGRES_USER
+              value: "trip_service_user"
+            - name: POSTGRES_PASSWORD
+              value: "trip_service_pass"
+          volumeMounts:
+            - name: trip-db-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: trip-db-data
+          emptyDir: {}

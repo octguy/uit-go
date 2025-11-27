@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-grpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-grpc
+  template:
+    metadata:
+      labels:
+        app: user-grpc
+    spec:
+      containers:
+        - name: user-grpc
+          image: user-grpc:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 50051
+          env:
+            - name: SPRING_USER_SERVICE_URL
+              value: "http://user-service:8081"
