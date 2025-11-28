@@ -13,6 +13,19 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest
+    password: guest
 
 server:
   port: 8082
+
+rabbitmq:
+  exchange:
+    trip: trip.exchange
+  queue:
+    trip-notification: trip.notification.queue
+  routing-key:
+    trip-notification: trip.notification

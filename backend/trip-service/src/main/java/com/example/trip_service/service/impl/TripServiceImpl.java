@@ -3,33 +3,46 @@ package com.example.trip_service.service.impl;
 import com.example.trip_service.aop.driverAuth.RequireDriver;
 import com.example.trip_service.aop.passengerAuth.RequirePassenger;
 import com.example.trip_service.aop.userAuth.RequireUser;
+import com.example.trip_service.client.DriverClient;
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
+import com.example.trip_service.dto.request.TripNotificationRequest;
 import com.example.trip_service.dto.response.EstimateFareResponse;
+import com.example.trip_service.dto.response.NearbyDriverResponse;
 import com.example.trip_service.dto.response.TripResponse;
 import com.example.trip_service.entity.Trip;
 import com.example.trip_service.enums.TripStatus;
 import com.example.trip_service.repository.TripRepository;
+import com.example.trip_service.service.ITripNotificationService;
 import com.example.trip_service.service.ITripService;
 import com.example.trip_service.util.PricingUtils;
 import com.example.trip_service.util.SecurityUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import java.util.UUID;
 import java.util.List;
 
 @Service
+@Slf4j
 public class TripServiceImpl implements ITripService {
 
     private final TripRepository tripRepository;
+    private final ITripNotificationService tripNotificationService;
+    private final DriverClient driverClient;
 
-    public TripServiceImpl(TripRepository tripRepository) {
+    public TripServiceImpl(TripRepository tripRepository, 
+                          ITripNotificationService tripNotificationService,
+                          DriverClient driverClient) {
         this.tripRepository = tripRepository;
+        this.tripNotificationService = tripNotificationService;
+        this.driverClient = driverClient;
     }
 
     @Override
@@ -67,7 +80,54 @@ public class TripServiceImpl implements ITripService {
 
         System.out.println("Trip before save: " + trip.getId() + ", request: " + trip.getRequestedAt());
 
-        return getTripResponse(trip);
+        TripResponse tripResponse = getTripResponse(trip);
+        
+        // Get nearby drivers
+        List<NearbyDriverResponse> nearbyDrivers = driverClient.getNearbyDrivers(
+            request.getPickupLatitude(), 
+            request.getPickupLongitude(), 
+            3.0, 
+            10
+        );
+        
+        // Get only the nearest driver (first in the list, sorted by distance)
+        List<String> nearbyDriverIds = nearbyDrivers.stream()
+            .limit(1)  // Only take the nearest driver
+            .map(NearbyDriverResponse::getDriverId)
+            .toList();
+        
+        // Calculate distance for notification
+        EstimateFareRequest estimateFareRequest = new EstimateFareRequest();
+        estimateFareRequest.setPickupLatitude(request.getPickupLatitude());
+        estimateFareRequest.setPickupLongitude(request.getPickupLongitude());
+        estimateFareRequest.setDestinationLatitude(request.getDestinationLatitude());
+        estimateFareRequest.setDestinationLongitude(request.getDestinationLongitude());
+        Double distanceKm = PricingUtils.calculateDistanceInKm(estimateFareRequest);
+        
+        // Publish trip notification to RabbitMQ for nearby drivers
+        TripNotificationRequest notification = TripNotificationRequest.builder()
+            .tripId(tripResponse.getId())
+            .passengerId(tripResponse.getPassengerId())
+            .pickupLatitude(request.getPickupLatitude())
+            .pickupLongitude(request.getPickupLongitude())
+            .destinationLatitude(request.getDestinationLatitude())
+            .destinationLongitude(request.getDestinationLongitude())
+            .estimatedFare(request.getEstimatedFare())
+            .distanceKm(distanceKm)
+            .requestedAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+            .nearbyDriverIds(nearbyDriverIds)
+            .build();
+        
+        // Only send notification if there are nearby drivers
+        if (!nearbyDriverIds.isEmpty()) {
+            tripNotificationService.notifyNearbyDrivers(notification);
+            log.info("Trip {} created and notification sent to RabbitMQ for nearest driver: {}", 
+                tripResponse.getId(), nearbyDriverIds.get(0));
+        } else {
+            log.warn("Trip {} created but no drivers to notify", tripResponse.getId());
+        }
+
+        return tripResponse;
     }
 
     @Override
@@ -125,25 +185,6 @@ public class TripServiceImpl implements ITripService {
     @Override
     @RequireDriver
     @Transactional
-    public TripResponse acceptTrip(UUID id) {
-        UUID driverId = SecurityUtil.getCurrentUserId();
-
-        Trip trip = tripRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
-
-        if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
-            throw new RuntimeException("Trip is not available for acceptance");
-        }
-
-        trip.setDriverId(driverId);
-        trip.setStatus(TripStatus.ACCEPTED);
-
-        return getTripResponse(trip);
-    }
-
-    @Override
-    @RequireDriver
-    @Transactional
     public TripResponse completeTrip(UUID id) {
         UUID driverId = SecurityUtil.getCurrentUserId();
 
@@ -183,6 +224,25 @@ public class TripServiceImpl implements ITripService {
 
         trip.setStatus(TripStatus.IN_PROGRESS);
         trip.setStartedAt(LocalDateTime.now());
+
+        return getTripResponse(trip);
+    }
+
+    @Override
+    @RequireDriver
+    @Transactional
+    public TripResponse acceptTrip(UUID id) {
+        UUID driverId = SecurityUtil.getCurrentUserId();
+
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
+            throw new RuntimeException("Trip is not available for acceptance");
+        }
+
+        trip.setDriverId(driverId);
+        trip.setStatus(TripStatus.ACCEPTED);
 
         return getTripResponse(trip);
     }

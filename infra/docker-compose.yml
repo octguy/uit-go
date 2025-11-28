@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   redis:
@@ -14,6 +14,25 @@ services:
       test: ["CMD", "redis-cli", "PING"]
       interval: 5s
       timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672" # AMQP port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   user-service-db:
@@ -82,6 +101,8 @@ services:
     depends_on:
       trip-service-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - microservices-network
     healthcheck:
@@ -99,6 +120,8 @@ services:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - microservices-network
@@ -125,6 +148,7 @@ volumes:
   user_db_data:
   trip_db_data:
   redis-data:
+  rabbitmq-data:
 
 networks:
   microservices-network:
