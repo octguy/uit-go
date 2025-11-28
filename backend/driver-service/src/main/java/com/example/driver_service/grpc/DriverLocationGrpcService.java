@@ -1,6 +1,6 @@
-package com.example.driverservice.grpc;
+package com.example.driver_service.grpc;
 
-import com.example.driverservice.service.DriverLocationService;
+import com.example.driver_service.service.DriverLocationService;
 import io.grpc.stub.StreamObserver;
 import org.springframework.stereotype.Component;
 

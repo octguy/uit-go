@@ -1,7 +1,7 @@
-package com.example.driverservice.utils;
+package com.example.driver_service.utils;
 
-import com.example.driverservice.exception.UnauthorizedException;
-import com.example.driverservice.security.UserContext;
+import com.example.driver_service.exception.UnauthorizedException;
+import com.example.driver_service.security.UserContext;
 
 import java.util.UUID;
 

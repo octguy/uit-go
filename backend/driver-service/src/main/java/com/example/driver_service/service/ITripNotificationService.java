@@ -1,8 +1,8 @@
-package com.example.driverservice.service;
+package com.example.driver_service.service;
 
-import com.example.driverservice.dto.TripNotificationRequest;
-import com.example.driverservice.dto.TripNotificationResponse;
-import com.example.driverservice.entity.PendingTripNotification;
+import com.example.driver_service.dto.TripNotificationRequest;
+import com.example.driver_service.dto.TripNotificationResponse;
+import com.example.driver_service.entity.PendingTripNotification;
 
 import java.util.List;
 import java.util.Optional;

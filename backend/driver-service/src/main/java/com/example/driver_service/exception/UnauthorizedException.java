@@ -1,4 +1,4 @@
-package com.example.driverservice.exception;
+package com.example.driver_service.exception;
 
 public class UnauthorizedException extends RuntimeException {
     public UnauthorizedException(String message) {

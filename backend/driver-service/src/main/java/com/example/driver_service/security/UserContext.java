@@ -1,4 +1,4 @@
-package com.example.driverservice.security;
+package com.example.driver_service.security;
 
 import java.util.UUID;
 

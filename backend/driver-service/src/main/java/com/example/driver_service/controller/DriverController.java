@@ -1,11 +1,11 @@
-package com.example.driverservice.controller;
+package com.example.driver_service.controller;
 
-import com.example.driverservice.service.DriverStatusService;
+import com.example.driver_service.service.DriverStatusService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("api/drivers")
+@RequestMapping("/api/drivers")
 public class DriverController {
 
     private final DriverStatusService driverStatusService;

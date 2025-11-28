@@ -269,6 +269,7 @@ POST http://localhost:8084/api/simulate/start-all?startLat=10.762622&startLng=10
 ### Token-based Authentication
 
 Most endpoints require a JWT token in the Authorization header:
+
 ```
 Authorization: Bearer <token>
 ```

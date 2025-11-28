@@ -1,4 +1,4 @@
-package com.example.driverservice;
+package com.example.driver_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

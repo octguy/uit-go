@@ -1,10 +1,10 @@
-package com.example.driverservice.service.impl;
+package com.example.driver_service.service.impl;
 
-import com.example.driverservice.client.TripClient;
-import com.example.driverservice.dto.TripNotificationRequest;
-import com.example.driverservice.dto.TripNotificationResponse;
-import com.example.driverservice.entity.PendingTripNotification;
-import com.example.driverservice.service.ITripNotificationService;
+import com.example.driver_service.client.TripClient;
+import com.example.driver_service.dto.TripNotificationRequest;
+import com.example.driver_service.dto.TripNotificationResponse;
+import com.example.driver_service.entity.PendingTripNotification;
+import com.example.driver_service.service.ITripNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;

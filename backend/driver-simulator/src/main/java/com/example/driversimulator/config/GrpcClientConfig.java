@@ -1,6 +1,6 @@
 package com.example.driversimulator.config;
 
-import com.example.driverservice.grpc.DriverLocationServiceGrpc;
+import com.example.driver_service.grpc.DriverLocationServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.springframework.context.annotation.Bean;

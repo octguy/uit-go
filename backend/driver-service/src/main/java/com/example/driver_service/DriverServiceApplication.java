@@ -1,4 +1,4 @@
-package com.example.driverservice;
+package com.example.driver_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

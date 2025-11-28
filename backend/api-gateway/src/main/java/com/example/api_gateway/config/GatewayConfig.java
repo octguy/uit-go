@@ -21,7 +21,6 @@ public class GatewayConfig {
                 
                 // Driver Service Routes (with path rewriting for context path)
                 .route("driver-service", r -> r.path("/api/drivers/**")
-                        .filters(f -> f.rewritePath("/api/drivers/(?<segment>.*)", "/api/driver-service/api/drivers/$\\{segment}"))
                         .uri("http://driver-service:8083"))
                 
                 .build();

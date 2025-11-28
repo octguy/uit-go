@@ -1,4 +1,4 @@
-package com.example.driverservice.enums;
+package com.example.driver_service.enums;
 
 public enum DriverStatus {
     ONLINE, OFFLINE, BUSY

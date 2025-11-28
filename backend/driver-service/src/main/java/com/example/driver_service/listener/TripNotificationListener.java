@@ -1,7 +1,7 @@
-package com.example.driverservice.listener;
+package com.example.driver_service.listener;
 
-import com.example.driverservice.dto.TripNotificationRequest;
-import com.example.driverservice.service.ITripNotificationService;
+import com.example.driver_service.dto.TripNotificationRequest;
+import com.example.driver_service.service.ITripNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;

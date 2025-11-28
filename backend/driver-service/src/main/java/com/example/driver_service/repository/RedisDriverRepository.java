@@ -1,6 +1,6 @@
-package com.example.driverservice.repository;
+package com.example.driver_service.repository;
 
-import com.example.driverservice.enums.DriverStatus;
+import com.example.driver_service.enums.DriverStatus;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;

@@ -6,9 +6,9 @@
 set -e
 
 # Configuration
-USER_SERVICE_PORT=8081
-TRIP_SERVICE_PORT=8082
-DRIVER_SERVICE_PORT=8083
+USER_SERVICE_PORT=8080
+TRIP_SERVICE_PORT=8080
+DRIVER_SERVICE_PORT=8080
 
 # Default test credentials
 PASSENGER_EMAIL="${PASSENGER_EMAIL:-user1@gmail.com}"
@@ -87,7 +87,7 @@ echo "=========================================================="
 echo -e "${BLUE}Step 2: Finding nearby drivers at pickup location...${NC}"
 echo "Pickup Location: ($PICKUP_LAT, $PICKUP_LNG)"
 
-NEARBY_DRIVERS=$(curl -s -X GET "http://localhost:${DRIVER_SERVICE_PORT}/api/internal/drivers/nearby?lat=${PICKUP_LAT}&lng=${PICKUP_LNG}&radiusKm=3.0&limit=10")
+NEARBY_DRIVERS=$(curl -s -X GET "http://localhost:8083/api/internal/drivers/nearby?lat=${PICKUP_LAT}&lng=${PICKUP_LNG}&radiusKm=3.0&limit=10")
 
 if echo "$NEARBY_DRIVERS" | jq -e 'type == "array"' > /dev/null 2>&1; then
     DRIVER_COUNT=$(echo "$NEARBY_DRIVERS" | jq 'length')
