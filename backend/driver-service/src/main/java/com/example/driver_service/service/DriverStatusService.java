@@ -1,11 +1,11 @@
-package com.example.driverservice.service;
+package com.example.driver_service.service;
 
-import com.example.driverservice.aop.RequireDriver;
-import com.example.driverservice.client.UserClient;
-import com.example.driverservice.dto.DriverResponse;
-import com.example.driverservice.enums.DriverStatus;
-import com.example.driverservice.repository.RedisDriverRepository;
-import com.example.driverservice.utils.SecurityUtil;
+import com.example.driver_service.aop.RequireDriver;
+import com.example.driver_service.client.UserClient;
+import com.example.driver_service.dto.DriverResponse;
+import com.example.driver_service.enums.DriverStatus;
+import com.example.driver_service.repository.RedisDriverRepository;
+import com.example.driver_service.utils.SecurityUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

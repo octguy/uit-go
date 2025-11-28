@@ -397,7 +397,7 @@ MQTT: Requires additional libraries, broker management
 ```protobuf
 syntax = "proto3";
 
-option java_package = "com.example.driverservice.grpc";
+option java_package = "com.example.driver_service.grpc";
 option java_multiple_files = true;
 
 package driver;

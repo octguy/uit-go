@@ -1,4 +1,4 @@
-package com.example.driverservice.config;
+package com.example.driver_service.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;

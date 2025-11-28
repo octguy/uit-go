@@ -1,4 +1,4 @@
-package com.example.driverservice.client;
+package com.example.driver_service.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;

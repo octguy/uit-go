@@ -1,4 +1,4 @@
-package com.example.driverservice.config;
+package com.example.driver_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;

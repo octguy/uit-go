@@ -1,7 +1,7 @@
-package com.example.driverservice.client;
+package com.example.driver_service.client;
 
-import com.example.driverservice.dto.DriverResponse;
-import com.example.driverservice.dto.UserValidationResponse;
+import com.example.driver_service.dto.DriverResponse;
+import com.example.driver_service.dto.UserValidationResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;

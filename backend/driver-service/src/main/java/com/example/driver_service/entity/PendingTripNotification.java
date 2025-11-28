@@ -1,4 +1,4 @@
-package com.example.driverservice.entity;
+package com.example.driver_service.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

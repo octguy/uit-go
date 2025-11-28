@@ -1,7 +1,7 @@
-package com.example.driverservice.service;
+package com.example.driver_service.service;
 
-import com.example.driverservice.dto.NearbyDriverResponse;
-import com.example.driverservice.repository.RedisDriverRepository;
+import com.example.driver_service.dto.NearbyDriverResponse;
+import com.example.driver_service.repository.RedisDriverRepository;
 import org.springframework.data.geo.GeoResult;
 import org.springframework.data.geo.GeoResults;
 import org.springframework.data.geo.Point;

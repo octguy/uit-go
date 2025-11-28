@@ -1,8 +1,8 @@
 package com.example.driversimulator.simulate;
 
-import com.example.driverservice.grpc.DriverLocationServiceGrpc;
-import com.example.driverservice.grpc.LocationRequest;
-import com.example.driverservice.grpc.LocationResponse;
+import com.example.driver_service.grpc.DriverLocationServiceGrpc;
+import com.example.driver_service.grpc.LocationRequest;
+import com.example.driver_service.grpc.LocationResponse;
 import com.example.driversimulator.entity.Point;
 import io.grpc.stub.StreamObserver;
 import org.springframework.stereotype.Component;

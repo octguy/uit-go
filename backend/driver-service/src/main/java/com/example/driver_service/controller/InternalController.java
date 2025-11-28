@@ -1,7 +1,7 @@
-package com.example.driverservice.controller;
+package com.example.driver_service.controller;
 
-import com.example.driverservice.dto.NearbyDriverResponse;
-import com.example.driverservice.service.DriverLocationService;
+import com.example.driver_service.dto.NearbyDriverResponse;
+import com.example.driver_service.service.DriverLocationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

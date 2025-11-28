@@ -1,7 +1,7 @@
-package com.example.driverservice.aop;
+package com.example.driver_service.aop;
 
-import com.example.driverservice.exception.UnauthorizedException;
-import com.example.driverservice.security.UserContext;
+import com.example.driver_service.exception.UnauthorizedException;
+import com.example.driver_service.security.UserContext;
 import org.springframework.stereotype.Component;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;

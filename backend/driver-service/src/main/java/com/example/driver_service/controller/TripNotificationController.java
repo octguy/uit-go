@@ -1,8 +1,8 @@
-package com.example.driverservice.controller;
+package com.example.driver_service.controller;
 
-import com.example.driverservice.dto.TripNotificationResponse;
-import com.example.driverservice.entity.PendingTripNotification;
-import com.example.driverservice.service.ITripNotificationService;
+import com.example.driver_service.dto.TripNotificationResponse;
+import com.example.driver_service.entity.PendingTripNotification;
+import com.example.driver_service.service.ITripNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

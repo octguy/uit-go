@@ -1,7 +1,7 @@
-package com.example.driverservice.security;
+package com.example.driver_service.security;
 
-import com.example.driverservice.client.UserClient;
-import com.example.driverservice.dto.UserValidationResponse;
+import com.example.driver_service.client.UserClient;
+import com.example.driver_service.dto.UserValidationResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
