@@ -54,9 +54,9 @@ services:
       timeout: 5s
       retries: 10
 
-  trip-service-db:
+  trip-service-db-vn:
     image: postgres:15
-    container_name: trip-service-db
+    container_name: trip-service-db-vn
     environment:
       POSTGRES_DB: trip_service_db
       POSTGRES_USER: trip_service_user
@@ -64,7 +64,26 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - trip_db_data:/var/lib/postgresql/data
+      - trip_db_vn_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trip_service_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  trip-service-db-th:
+    image: postgres:15
+    container_name: trip-service-db-th
+    environment:
+      POSTGRES_DB: trip_service_db
+      POSTGRES_USER: trip_service_user
+      POSTGRES_PASSWORD: trip_service_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - trip_db_th_data:/var/lib/postgresql/data
     networks:
       - microservices-network
     healthcheck:
@@ -99,7 +118,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
-      trip-service-db:
+      trip-service-db-vn:
+        condition: service_healthy
+      trip-service-db-th:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -168,7 +189,8 @@ services:
 
 volumes:
   user_db_data:
-  trip_db_data:
+  trip_db_vn_data:
+  trip_db_th_data:
   redis-data:
   rabbitmq-data:
 

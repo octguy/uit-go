@@ -2,10 +2,16 @@ spring:
   application:
     name: trip-service
   datasource:
-    url: jdbc:postgresql://trip-service-db:5432/trip_service_db
-    username: trip_service_user
-    password: trip_service_pass
-    driver-class-name: org.postgresql.Driver
+    vn:
+      jdbc-url: jdbc:postgresql://trip-service-db-vn:5432/trip_service_db
+      username: trip_service_user
+      password: trip_service_pass
+      driver-class-name: org.postgresql.Driver
+    th:
+      jdbc-url: jdbc:postgresql://trip-service-db-th:5432/trip_service_db
+      username: trip_service_user
+      password: trip_service_pass
+      driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
