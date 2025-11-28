@@ -83,8 +83,10 @@ public class TripController {
     }
 
     @PostMapping("{id}/rate")
-    public ResponseEntity<?> rateTrip(@PathVariable("id") String id, @RequestParam("rating") int rating) {
-        return ResponseEntity.ok(ratingService.rateTrip(UUID.fromString(id), rating));
+    public ResponseEntity<?> rateTrip(@PathVariable("id") String id,
+                                      @RequestParam("rating") int rating,
+                                      @RequestParam("comment") String comment) {
+        return ResponseEntity.ok(ratingService.rateTrip(UUID.fromString(id), rating, comment));
     }
 
     @GetMapping("/driver/get-nearby-drivers")
