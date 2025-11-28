@@ -241,6 +241,14 @@ public class TripServiceImpl implements ITripService {
             throw new RuntimeException("Trip is not available for acceptance");
         }
 
+        // Check if trip notification has expired (15 seconds TTL)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expirationTime = trip.getRequestedAt().plusSeconds(15);
+        
+        if (now.isAfter(expirationTime)) {
+            throw new RuntimeException("Trip notification has expired. This trip is no longer available for acceptance.");
+        }
+
         trip.setDriverId(driverId);
         trip.setStatus(TripStatus.ACCEPTED);
 
