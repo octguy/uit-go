@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.example.trip_service.config.DbContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
@@ -169,7 +168,7 @@ public class TripServiceImpl implements ITripService {
         try {
             return transactionTemplate.execute(status -> {
                 Trip trip = tripRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+                        .orElseThrow(() -> new RuntimeException("VN-Trip not found with id: " + id));
                 return getTripResponse(trip);
             });
         } catch (Exception e) {
@@ -178,7 +177,7 @@ public class TripServiceImpl implements ITripService {
             try {
                 return transactionTemplate.execute(status -> {
                     Trip trip = tripRepository.findById(id)
-                            .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+                            .orElseThrow(() -> new RuntimeException("TH-Trip not found with id: " + id));
                     return getTripResponse(trip);
                 });
             } finally {
@@ -342,48 +341,79 @@ public class TripServiceImpl implements ITripService {
         DbContextHolder.setDbType("VN");
         try {
             return transactionTemplate.execute(status -> {
-                Trip trip = tripRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
 
-                if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
-                    throw new RuntimeException("Trip is not available for acceptance");
+                System.out.println("[VN] Checking trip " + id + " for driver " + driverId);
+
+                Trip trip = tripRepository.findById(id).orElse(null);
+
+                if (trip == null) {
+                    System.out.println("[VN] Trip not found: " + id);
+                    throw new TripNotFoundException("VN-Trip not found with id: " + id);
                 }
 
-                // Check if trip notification has expired (15 seconds TTL)
+                System.out.println("[VN] Trip found with status = " + trip.getStatus());
+
+                if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
+                    System.out.println("[VN] Trip is NOT available. Current status: " + trip.getStatus());
+                    throw new TripNotAvailableException("VN-Trip is not available for acceptance");
+                }
+
+                // Check TTL
                 LocalDateTime now = LocalDateTime.now();
                 LocalDateTime expirationTime = trip.getRequestedAt().plusSeconds(15);
 
+                System.out.println("[VN] now=" + now + ", expireAt=" + expirationTime);
+
                 if (now.isAfter(expirationTime)) {
-                    throw new RuntimeException("Trip notification has expired. This trip is no longer available for acceptance.");
+                    System.out.println("[VN] Trip expired. now=" + now + ", expireAt=" + expirationTime);
+                    throw new TripExpiredException("Trip notification has expired. This trip is no longer available for acceptance.");
                 }
 
                 trip.setDriverId(driverId);
                 trip.setStatus(TripStatus.ACCEPTED);
 
+                System.out.println("[VN] Trip accepted by driver " + driverId);
+
                 return getTripResponse(trip);
             });
-        } catch (Exception e) {
-            // Try TH
+        }
+        catch (TripNotFoundException e) {
+            // Only try TH if trip was not found in VN
+            System.out.println("[VN] Trip not found, trying TH database...");
+
             DbContextHolder.setDbType("TH");
             try {
                 return transactionTemplate.execute(status -> {
+
+                    System.out.println("[TH] Checking trip " + id + " for driver " + driverId);
+
                     Trip trip = tripRepository.findById(id)
-                            .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+                            .orElseThrow(() -> {
+                                System.out.println("[TH] Trip not found: " + id);
+                                return new RuntimeException("Trip not found with id: " + id);
+                            });
+
+                    System.out.println("[TH] Trip found with status = " + trip.getStatus());
 
                     if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
+                        System.out.println("[TH] Trip NOT available. Current status: " + trip.getStatus());
                         throw new RuntimeException("Trip is not available for acceptance");
                     }
 
-                    // Check if trip notification has expired (15 seconds TTL)
                     LocalDateTime now = LocalDateTime.now();
                     LocalDateTime expirationTime = trip.getRequestedAt().plusSeconds(15);
 
+                    System.out.println("[TH] now=" + now + ", expireAt=" + expirationTime);
+
                     if (now.isAfter(expirationTime)) {
+                        System.out.println("[TH] Trip expired. now=" + now + ", expireAt=" + expirationTime);
                         throw new RuntimeException("Trip notification has expired. This trip is no longer available for acceptance.");
                     }
 
                     trip.setDriverId(driverId);
                     trip.setStatus(TripStatus.ACCEPTED);
+
+                    System.out.println("[TH] Trip accepted by driver " + driverId);
 
                     return getTripResponse(trip);
                 });
@@ -391,7 +421,38 @@ public class TripServiceImpl implements ITripService {
                 DbContextHolder.clearDbType();
             }
         }
+        catch (TripExpiredException | TripNotAvailableException e) {
+            // Trip was found in VN but is expired or not available - don't try TH
+            System.out.println("[VN] Trip found but not acceptable: " + e.getMessage());
+            DbContextHolder.clearDbType();
+            throw new RuntimeException(e.getMessage());
+        }
+        catch (Exception e) {
+            // Unexpected error
+            DbContextHolder.clearDbType();
+            throw e;
+        }
     }
+
+    // Create these custom exception classes
+    static class TripNotFoundException extends RuntimeException {
+        public TripNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    static class TripExpiredException extends RuntimeException {
+        public TripExpiredException(String message) {
+            super(message);
+        }
+    }
+
+    static class TripNotAvailableException extends RuntimeException {
+        public TripNotAvailableException(String message) {
+            super(message);
+        }
+    }
+
 
     @Override
     public List<TripResponse> getAllTrips() {
