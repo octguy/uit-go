@@ -2,8 +2,11 @@ package com.example.user_service.controller;
 
 import com.example.user_service.dto.request.CreateUserRequest;
 import com.example.user_service.dto.request.LoginRequest;
+import com.example.user_service.dto.request.RegisterDriverRequest;
 import com.example.user_service.dto.response.AuthResponse;
+import com.example.user_service.dto.response.DriverResponse;
 import com.example.user_service.dto.response.UserResponse;
+import com.example.user_service.service.IDriverService;
 import com.example.user_service.service.IUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +22,10 @@ public class UserController {
 
     private final IUserService userService;
 
-    public UserController(IUserService userService) {
+    private final IDriverService driverService;
+
+    public UserController(IUserService userService, IDriverService driverService) {
+        this.driverService = driverService;
         this.userService = userService;
     }
 
@@ -39,6 +45,27 @@ public class UserController {
                 "success", false,
                 "message", "Error creating user account: " + e.getMessage(),
                 "error", "INTERNAL_ERROR"
+            ));
+        }
+    }
+
+    @PostMapping("/register-driver")
+    public ResponseEntity<?> registerDriver(@RequestBody RegisterDriverRequest request) {
+        try {
+            DriverResponse driver = driverService.createDriver(request);
+            System.out.println(driver.getId());
+            return ResponseEntity.ok(driver);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Invalid registration data: " + e.getMessage(),
+                    "error", "INVALID_REQUEST"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Error creating user account: " + e.getMessage(),
+                    "error", "INTERNAL_ERROR"
             ));
         }
     }
