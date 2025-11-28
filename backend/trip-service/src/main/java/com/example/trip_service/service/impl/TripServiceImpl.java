@@ -3,33 +3,46 @@ package com.example.trip_service.service.impl;
 import com.example.trip_service.aop.driverAuth.RequireDriver;
 import com.example.trip_service.aop.passengerAuth.RequirePassenger;
 import com.example.trip_service.aop.userAuth.RequireUser;
+import com.example.trip_service.client.DriverClient;
 import com.example.trip_service.dto.request.CreateTripRequest;
 import com.example.trip_service.dto.request.EstimateFareRequest;
+import com.example.trip_service.dto.request.TripNotificationRequest;
 import com.example.trip_service.dto.response.EstimateFareResponse;
+import com.example.trip_service.dto.response.NearbyDriverResponse;
 import com.example.trip_service.dto.response.TripResponse;
 import com.example.trip_service.entity.Trip;
 import com.example.trip_service.enums.TripStatus;
 import com.example.trip_service.repository.TripRepository;
+import com.example.trip_service.service.ITripNotificationService;
 import com.example.trip_service.service.ITripService;
 import com.example.trip_service.util.PricingUtils;
 import com.example.trip_service.util.SecurityUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import java.util.UUID;
 import java.util.List;
 
 @Service
+@Slf4j
 public class TripServiceImpl implements ITripService {
 
     private final TripRepository tripRepository;
+    private final ITripNotificationService tripNotificationService;
+    private final DriverClient driverClient;
 
-    public TripServiceImpl(TripRepository tripRepository) {
+    public TripServiceImpl(TripRepository tripRepository, 
+                          ITripNotificationService tripNotificationService,
+                          DriverClient driverClient) {
         this.tripRepository = tripRepository;
+        this.tripNotificationService = tripNotificationService;
+        this.driverClient = driverClient;
     }
 
     @Override
@@ -67,7 +80,45 @@ public class TripServiceImpl implements ITripService {
 
         System.out.println("Trip before save: " + trip.getId() + ", request: " + trip.getRequestedAt());
 
-        return getTripResponse(trip);
+        TripResponse tripResponse = getTripResponse(trip);
+        
+        // Get nearby drivers
+        List<NearbyDriverResponse> nearbyDrivers = driverClient.getNearbyDrivers(
+            request.getPickupLatitude(), 
+            request.getPickupLongitude(), 
+            3.0, 
+            10
+        );
+        
+        log.info("Found {} nearby drivers for trip {}", nearbyDrivers.size(), tripResponse.getId());
+        
+        // Calculate distance for notification
+        EstimateFareRequest estimateFareRequest = new EstimateFareRequest();
+        estimateFareRequest.setPickupLatitude(request.getPickupLatitude());
+        estimateFareRequest.setPickupLongitude(request.getPickupLongitude());
+        estimateFareRequest.setDestinationLatitude(request.getDestinationLatitude());
+        estimateFareRequest.setDestinationLongitude(request.getDestinationLongitude());
+        Double distanceKm = PricingUtils.calculateDistanceInKm(estimateFareRequest);
+        
+        // Publish trip notification to RabbitMQ for nearby drivers
+        TripNotificationRequest notification = TripNotificationRequest.builder()
+            .tripId(tripResponse.getId())
+            .passengerId(tripResponse.getPassengerId())
+            .passengerName("Passenger") // We can enhance this later with actual passenger name
+            .pickupLatitude(request.getPickupLatitude())
+            .pickupLongitude(request.getPickupLongitude())
+            .destinationLatitude(request.getDestinationLatitude())
+            .destinationLongitude(request.getDestinationLongitude())
+            .estimatedFare(request.getEstimatedFare())
+            .distanceKm(distanceKm)
+            .requestedAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+            .build();
+            
+        tripNotificationService.notifyNearbyDrivers(notification);
+        
+        log.info("Trip {} created and notification sent to RabbitMQ", tripResponse.getId());
+
+        return tripResponse;
     }
 
     @Override
