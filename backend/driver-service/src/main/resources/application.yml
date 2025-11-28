@@ -11,6 +11,12 @@ spring:
     server:
       port: 9092
 
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest
+    password: guest
+
 server:
   port: 8083
 
@@ -23,3 +29,10 @@ management:
     health:
       show-details: always
 
+rabbitmq:
+  exchange:
+    trip: trip.exchange
+  queue:
+    trip-notification: trip.notification.queue
+  routing-key:
+    trip-notification: trip.notification

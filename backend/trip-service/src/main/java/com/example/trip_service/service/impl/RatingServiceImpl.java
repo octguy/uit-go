@@ -31,7 +31,7 @@ public class RatingServiceImpl implements IRatingService {
     @Override
     @RequirePassenger
     @Transactional
-    public TripRatingResponse rateTrip(UUID tripId, int score) {
+    public TripRatingResponse rateTrip(UUID tripId, int score, String comment) {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new RuntimeException("Trip not found with id: " + tripId));
 
@@ -58,6 +58,7 @@ public class RatingServiceImpl implements IRatingService {
                 .passengerId(trip.getPassengerId())
                 .driverId(trip.getDriverId())
                 .rating(score)
+                .comment(comment)
                 .createdAt(rating.getCreatedAt())
                 .build();
     }

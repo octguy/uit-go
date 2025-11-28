@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface IRatingService {
 
-    TripRatingResponse rateTrip(UUID tripId, int score);
+    TripRatingResponse rateTrip(UUID tripId, int score, String comment);
 
     List<Rating> getAllRatings();
 }

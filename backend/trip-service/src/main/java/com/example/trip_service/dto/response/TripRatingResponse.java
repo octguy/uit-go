@@ -18,5 +18,7 @@ public class TripRatingResponse {
 
     private int rating;
 
+    private String comment;
+
     private LocalDateTime createdAt;
 }
