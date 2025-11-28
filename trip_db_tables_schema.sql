@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SSjQcdk3Req9a7NHyScORlsAGpXsDlPXHrZFFVeBHF1c12tSRPgtZJQUUJ3dwfj
+\restrict XsJQvfTSsjhnMPbPcOvVEb3QgyjtoTgX0Lg0bGGRRYjV8DySoeX278N5y5fadaC
 
 -- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)
 -- Dumped by pg_dump version 15.15 (Debian 15.15-1.pgdg13+1)
@@ -97,5 +97,5 @@ ALTER TABLE ONLY public.rating
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SSjQcdk3Req9a7NHyScORlsAGpXsDlPXHrZFFVeBHF1c12tSRPgtZJQUUJ3dwfj
+\unrestrict XsJQvfTSsjhnMPbPcOvVEb3QgyjtoTgX0Lg0bGGRRYjV8DySoeX278N5y5fadaC
 
