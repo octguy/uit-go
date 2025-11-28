@@ -14,6 +14,12 @@ public class DriverController {
         this.driverStatusService = driverStatusService;
     }
 
+    @PostMapping("/online-all")
+    public ResponseEntity<Void> setAllDriversOnline() {
+        driverStatusService.setAllDriversOnline();
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/online")
     public ResponseEntity<Void> setOnline() {
         driverStatusService.setOnline();

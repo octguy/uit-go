@@ -1,4 +1,4 @@
-package com.example.driversimulator.dto;
+package com.example.driverservice.dto;
 
 import lombok.Getter;
 import lombok.Setter;

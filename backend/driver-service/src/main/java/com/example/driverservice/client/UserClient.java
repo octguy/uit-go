@@ -1,9 +1,12 @@
 package com.example.driverservice.client;
 
+import com.example.driverservice.dto.DriverResponse;
 import com.example.driverservice.dto.UserValidationResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+
+import java.util.List;
 
 @FeignClient(
         name = "user-service",
@@ -13,4 +16,7 @@ public interface UserClient {
 
     @GetMapping("/api/internal/auth/validate")
     UserValidationResponse validate(@RequestHeader("Authorization") String token);
+
+    @GetMapping("/api/internal/drivers")
+    List<DriverResponse> getAllDrivers();
 }

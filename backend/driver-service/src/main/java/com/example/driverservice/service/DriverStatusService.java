@@ -1,18 +1,32 @@
 package com.example.driverservice.service;
 
 import com.example.driverservice.aop.RequireDriver;
+import com.example.driverservice.client.UserClient;
+import com.example.driverservice.dto.DriverResponse;
 import com.example.driverservice.enums.DriverStatus;
 import com.example.driverservice.repository.RedisDriverRepository;
 import com.example.driverservice.utils.SecurityUtil;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class DriverStatusService {
 
     private final RedisDriverRepository redisDriverRepository;
 
-    public DriverStatusService(RedisDriverRepository redisDriverRepository) {
+    private final UserClient userClient;
+
+    public DriverStatusService(RedisDriverRepository redisDriverRepository, UserClient userClient) {
+        this.userClient = userClient;
         this.redisDriverRepository = redisDriverRepository;
+    }
+
+    public void setAllDriversOnline() {
+        List<DriverResponse> drivers = userClient.getAllDrivers();
+        for (DriverResponse driver : drivers) {
+            redisDriverRepository.setStatus(driver.getId().toString(), DriverStatus.ONLINE);
+        }
     }
 
     @RequireDriver
