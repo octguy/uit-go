@@ -10,7 +10,7 @@ Nice — I’ll lay out a concrete, actionable set of technologies, methods and 
   * **Trade-off**: adds eventual consistency and slightly higher end-to-end latency for booking flow; increases operational complexity (broker, delivery guarantees).
   * **Local alternative**: run RabbitMQ or NATS as a k8s deployment (Helm charts).
 
-* **Event-driven / CQRS pattern for driver search and location updates**:
+* **Event-driven / CQRS pattern for driver search and location updates**: (DONT UNDERSTAND YET)
 
   * Write location updates as events to a stream; materialize search index (in Redis or in-memory store) for quick lookups.
   * **Why**: separates reads (fast, read-optimized) from writes (durable, ordered), improves search throughput.
