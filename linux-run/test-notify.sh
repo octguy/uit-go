@@ -48,7 +48,7 @@ SIMULATE_RESPONSE=$(curl -s -X POST "http://localhost:8084/api/simulate/start-al
 echo "Response: $SIMULATE_RESPONSE"
 echo ""
 
-echo -e "${YELLOW}Waiting 20 seconds for drivers to start simulating...${NC}"
+echo -e "${YELLOW}Waiting 10 seconds for drivers to start simulating...${NC}"
 for i in {10..1}; do
     echo -ne "\r  ⏳ ${i} seconds remaining... "
     sleep 1
