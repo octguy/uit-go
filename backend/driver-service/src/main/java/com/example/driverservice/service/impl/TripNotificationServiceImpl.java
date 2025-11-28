@@ -35,40 +35,51 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
 
     @Override
     public void handleTripNotification(TripNotificationRequest notification) {
-        log.info("Received trip notification: tripId={}, passengerId={}, fare={}", 
-                notification.getTripId(), notification.getPassengerId(), notification.getEstimatedFare());
+        log.info("Received trip notification: tripId={}, passengerId={}, nearbyDrivers={}, fare={}", 
+                notification.getTripId(), notification.getPassengerId(), 
+                notification.getNearbyDriverIds(), notification.getEstimatedFare());
 
-        PendingTripNotification pending = PendingTripNotification.builder()
-                .tripId(notification.getTripId())
-                .passengerId(notification.getPassengerId())
-                .passengerName(notification.getPassengerName())
-                .pickupLatitude(notification.getPickupLatitude())
-                .pickupLongitude(notification.getPickupLongitude())
-                .destinationLatitude(notification.getDestinationLatitude())
-                .destinationLongitude(notification.getDestinationLongitude())
-                .estimatedFare(notification.getEstimatedFare())
-                .distanceKm(notification.getDistanceKm())
-                .notifiedAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusSeconds(NOTIFICATION_TIMEOUT_SECONDS))
-                .expired(false)
-                .accepted(false)
-                .build();
+        if (notification.getNearbyDriverIds() == null || notification.getNearbyDriverIds().isEmpty()) {
+            log.warn("No nearby drivers for trip {}, skipping notification storage", notification.getTripId());
+            return;
+        }
 
-        // Store in Redis with TTL of 15 seconds
-        String key = PENDING_TRIPS_KEY + notification.getTripId().toString();
-        redisTemplate.opsForValue().set(key, pending, NOTIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        // Store notification for each nearby driver
+        for (String driverId : notification.getNearbyDriverIds()) {
+            PendingTripNotification pending = PendingTripNotification.builder()
+                    .tripId(notification.getTripId())
+                    .passengerId(notification.getPassengerId())
+                    .passengerName(notification.getPassengerName())
+                    .pickupLatitude(notification.getPickupLatitude())
+                    .pickupLongitude(notification.getPickupLongitude())
+                    .destinationLatitude(notification.getDestinationLatitude())
+                    .destinationLongitude(notification.getDestinationLongitude())
+                    .estimatedFare(notification.getEstimatedFare())
+                    .distanceKm(notification.getDistanceKm())
+                    .notifiedAt(LocalDateTime.now())
+                    .expiresAt(LocalDateTime.now().plusSeconds(NOTIFICATION_TIMEOUT_SECONDS))
+                    .expired(false)
+                    .accepted(false)
+                    .build();
 
-        log.info("Stored pending trip notification in Redis: tripId={}, expiresAt={}", 
-                notification.getTripId(), pending.getExpiresAt());
+            // Store in Redis with TTL of 15 seconds, keyed by driver and trip
+            String key = PENDING_TRIPS_KEY + driverId + ":" + notification.getTripId().toString();
+            redisTemplate.opsForValue().set(key, pending, NOTIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            log.info("Stored pending trip notification for driver {}: tripId={}, expiresAt={}", 
+                    driverId, notification.getTripId(), pending.getExpiresAt());
+        }
+
+        log.info("Trip notification stored for {} drivers", notification.getNearbyDriverIds().size());
     }
 
     @Override
     public TripNotificationResponse acceptTrip(UUID tripId, UUID driverId) {
-        String key = PENDING_TRIPS_KEY + tripId.toString();
-        PendingTripNotification pending = (PendingTripNotification) redisTemplate.opsForValue().get(key);
-
-        if (pending == null) {
-            log.warn("Trip notification not found or expired: tripId={}", tripId);
+        String key = PENDING_TRIPS_KEY + driverId.toString() + ":" + tripId.toString();
+        Object value = redisTemplate.opsForValue().get(key);
+        
+        if (value == null) {
+            log.warn("Trip notification not found or expired for driver {}: tripId={}", driverId, tripId);
             return TripNotificationResponse.builder()
                     .tripId(tripId)
                     .driverId(driverId)
@@ -76,9 +87,22 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
                     .message("Trip notification not found or has expired")
                     .build();
         }
+        
+        PendingTripNotification pending;
+        if (value instanceof PendingTripNotification) {
+            pending = (PendingTripNotification) value;
+        } else {
+            log.error("Invalid data type in Redis for key {}: {}", key, value.getClass().getName());
+            return TripNotificationResponse.builder()
+                    .tripId(tripId)
+                    .driverId(driverId)
+                    .accepted(false)
+                    .message("Invalid notification data")
+                    .build();
+        }
 
         if (pending.isExpired() || LocalDateTime.now().isAfter(pending.getExpiresAt())) {
-            log.warn("Trip notification has expired: tripId={}", tripId);
+            log.warn("Trip notification has expired: tripId={}, driverId={}", tripId, driverId);
             redisTemplate.delete(key);
             return TripNotificationResponse.builder()
                     .tripId(tripId)
@@ -103,6 +127,9 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
         pending.setAccepted(true);
         pending.setAcceptedByDriverId(driverId);
         redisTemplate.opsForValue().set(key, pending, 60, TimeUnit.SECONDS); // Keep for 1 minute
+        
+        // Also delete notifications for other drivers
+        deleteOtherDriverNotifications(tripId, driverId);
 
         log.info("Driver {} accepted trip {}", driverId, tripId);
 
@@ -123,6 +150,19 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
                 .message("Trip accepted successfully")
                 .build();
     }
+    
+    private void deleteOtherDriverNotifications(UUID tripId, UUID acceptingDriverId) {
+        // Find and delete notifications for this trip from other drivers
+        Set<String> allKeys = redisTemplate.keys(PENDING_TRIPS_KEY + "*:" + tripId.toString());
+        if (allKeys != null) {
+            for (String key : allKeys) {
+                if (!key.contains(acceptingDriverId.toString())) {
+                    redisTemplate.delete(key);
+                    log.info("Deleted trip {} notification for other driver from key: {}", tripId, key);
+                }
+            }
+        }
+    }
 
     @Override
     public TripNotificationResponse declineTrip(UUID tripId, UUID driverId) {
@@ -139,28 +179,45 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
     @Override
     public Optional<PendingTripNotification> getPendingNotification(UUID tripId) {
         String key = PENDING_TRIPS_KEY + tripId.toString();
-        PendingTripNotification pending = (PendingTripNotification) redisTemplate.opsForValue().get(key);
-        return Optional.ofNullable(pending);
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value instanceof PendingTripNotification) {
+            return Optional.of((PendingTripNotification) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public List<PendingTripNotification> getPendingNotificationsForDriver(UUID driverId) {
-        // Get all pending trip keys
-        Set<String> keys = redisTemplate.keys(PENDING_TRIPS_KEY + "*");
+        // Get pending trip keys for this specific driver
+        String pattern = PENDING_TRIPS_KEY + driverId.toString() + ":*";
+        Set<String> keys = redisTemplate.keys(pattern);
         
         if (keys == null || keys.isEmpty()) {
+            log.info("No pending trips found for driver {}", driverId);
             return Collections.emptyList();
         }
 
         List<PendingTripNotification> pendingTrips = new ArrayList<>();
         for (String key : keys) {
-            PendingTripNotification pending = (PendingTripNotification) redisTemplate.opsForValue().get(key);
-            if (pending != null && !pending.isExpired() && !pending.isAccepted() 
-                    && LocalDateTime.now().isBefore(pending.getExpiresAt())) {
-                pendingTrips.add(pending);
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value != null) {
+                PendingTripNotification pending;
+                if (value instanceof PendingTripNotification) {
+                    pending = (PendingTripNotification) value;
+                } else {
+                    // Handle case where value is deserialized as LinkedHashMap
+                    log.warn("Value for key {} is not PendingTripNotification, skipping. Type: {}", key, value.getClass().getName());
+                    continue;
+                }
+                
+                if (!pending.isExpired() && !pending.isAccepted() 
+                        && LocalDateTime.now().isBefore(pending.getExpiresAt())) {
+                    pendingTrips.add(pending);
+                }
             }
         }
 
+        log.info("Found {} pending trips for driver {}", pendingTrips.size(), driverId);
         return pendingTrips;
     }
 
@@ -174,11 +231,14 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
         }
 
         for (String key : keys) {
-            PendingTripNotification pending = (PendingTripNotification) redisTemplate.opsForValue().get(key);
-            if (pending != null && LocalDateTime.now().isAfter(pending.getExpiresAt())) {
-                pending.setExpired(true);
-                redisTemplate.delete(key);
-                log.info("Expired trip notification: tripId={}", pending.getTripId());
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value instanceof PendingTripNotification) {
+                PendingTripNotification pending = (PendingTripNotification) value;
+                if (LocalDateTime.now().isAfter(pending.getExpiresAt())) {
+                    pending.setExpired(true);
+                    redisTemplate.delete(key);
+                    log.info("Expired trip notification: tripId={}", pending.getTripId());
+                }
             }
         }
     }

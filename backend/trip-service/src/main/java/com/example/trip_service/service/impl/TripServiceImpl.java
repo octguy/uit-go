@@ -90,7 +90,11 @@ public class TripServiceImpl implements ITripService {
             10
         );
         
-        log.info("Found {} nearby drivers for trip {}", nearbyDrivers.size(), tripResponse.getId());
+        // Get only the nearest driver (first in the list, sorted by distance)
+        List<String> nearbyDriverIds = nearbyDrivers.stream()
+            .limit(1)  // Only take the nearest driver
+            .map(NearbyDriverResponse::getDriverId)
+            .toList();
         
         // Calculate distance for notification
         EstimateFareRequest estimateFareRequest = new EstimateFareRequest();
@@ -104,7 +108,6 @@ public class TripServiceImpl implements ITripService {
         TripNotificationRequest notification = TripNotificationRequest.builder()
             .tripId(tripResponse.getId())
             .passengerId(tripResponse.getPassengerId())
-            .passengerName("Passenger") // We can enhance this later with actual passenger name
             .pickupLatitude(request.getPickupLatitude())
             .pickupLongitude(request.getPickupLongitude())
             .destinationLatitude(request.getDestinationLatitude())
@@ -112,11 +115,17 @@ public class TripServiceImpl implements ITripService {
             .estimatedFare(request.getEstimatedFare())
             .distanceKm(distanceKm)
             .requestedAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+            .nearbyDriverIds(nearbyDriverIds)
             .build();
-            
-        tripNotificationService.notifyNearbyDrivers(notification);
         
-        log.info("Trip {} created and notification sent to RabbitMQ", tripResponse.getId());
+        // Only send notification if there are nearby drivers
+        if (!nearbyDriverIds.isEmpty()) {
+            tripNotificationService.notifyNearbyDrivers(notification);
+            log.info("Trip {} created and notification sent to RabbitMQ for nearest driver: {}", 
+                tripResponse.getId(), nearbyDriverIds.get(0));
+        } else {
+            log.warn("Trip {} created but no drivers to notify", tripResponse.getId());
+        }
 
         return tripResponse;
     }
