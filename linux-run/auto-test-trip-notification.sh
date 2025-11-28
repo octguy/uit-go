@@ -49,7 +49,7 @@ echo "Response: $SIMULATE_RESPONSE"
 echo ""
 
 echo -e "${YELLOW}Waiting 20 seconds for drivers to start simulating...${NC}"
-for i in {20..1}; do
+for i in {10..1}; do
     echo -ne "\r  ⏳ ${i} seconds remaining... "
     sleep 1
 done
