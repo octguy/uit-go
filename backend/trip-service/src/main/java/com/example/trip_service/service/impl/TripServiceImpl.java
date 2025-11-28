@@ -185,25 +185,6 @@ public class TripServiceImpl implements ITripService {
     @Override
     @RequireDriver
     @Transactional
-    public TripResponse acceptTrip(UUID id) {
-        UUID driverId = SecurityUtil.getCurrentUserId();
-
-        Trip trip = tripRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
-
-        if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
-            throw new RuntimeException("Trip is not available for acceptance");
-        }
-
-        trip.setDriverId(driverId);
-        trip.setStatus(TripStatus.ACCEPTED);
-
-        return getTripResponse(trip);
-    }
-
-    @Override
-    @RequireDriver
-    @Transactional
     public TripResponse completeTrip(UUID id) {
         UUID driverId = SecurityUtil.getCurrentUserId();
 
@@ -243,6 +224,25 @@ public class TripServiceImpl implements ITripService {
 
         trip.setStatus(TripStatus.IN_PROGRESS);
         trip.setStartedAt(LocalDateTime.now());
+
+        return getTripResponse(trip);
+    }
+
+    @Override
+    @RequireDriver
+    @Transactional
+    public TripResponse acceptTrip(UUID id) {
+        UUID driverId = SecurityUtil.getCurrentUserId();
+
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trip not found with id: " + id));
+
+        if (trip.getStatus() != TripStatus.SEARCHING_DRIVER) {
+            throw new RuntimeException("Trip is not available for acceptance");
+        }
+
+        trip.setDriverId(driverId);
+        trip.setStatus(TripStatus.ACCEPTED);
 
         return getTripResponse(trip);
     }

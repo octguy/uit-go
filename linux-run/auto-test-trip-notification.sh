@@ -205,9 +205,8 @@ if [ -n "$FIRST_DRIVER_ID" ]; then
     echo -e "${YELLOW}Checking pending trips for nearest driver: $FIRST_DRIVER_ID${NC}"
     PENDING_TRIPS=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${FIRST_DRIVER_ID}")
     
-    # Check if response is valid JSON array
-    if echo "$PENDING_TRIPS" | jq -e 'type == "array"' > /dev/null 2>&1; then
-        PENDING_COUNT=$(echo "$PENDING_TRIPS" | jq 'length')
+    if echo "$PENDING_TRIPS" | jq -e '. | length' > /dev/null 2>&1; then
+        PENDING_COUNT=$(echo "$PENDING_TRIPS" | jq '. | length')
         if [ "$PENDING_COUNT" -gt 0 ]; then
             echo -e "${GREEN}  ✅ Nearest driver has $PENDING_COUNT pending trip(s)${NC}"
             echo "$PENDING_TRIPS" | jq -r '.[] | "    Trip ID: \(.tripId)\n    Fare: \(.estimatedFare) VND\n    Distance: \(.distanceKm) km\n    Expires at: \(.expiresAt)"'
@@ -215,8 +214,7 @@ if [ -n "$FIRST_DRIVER_ID" ]; then
             echo -e "${YELLOW}  ⚠️  No pending trips (may have expired after 15 seconds)${NC}"
         fi
     else
-        echo -e "${RED}  ❌ Error checking pending trips (invalid response)${NC}"
-        echo "  Response: $PENDING_TRIPS"
+        echo -e "${RED}  ❌ Error checking pending trips${NC}"
     fi
     echo ""
     
@@ -226,8 +224,8 @@ if [ -n "$FIRST_DRIVER_ID" ]; then
         OTHER_NOTIFIED=0
         echo "$NEARBY_DRIVERS" | jq -r '.[1:] | .[].driverId' | while read -r OTHER_DRIVER_ID; do
             PENDING=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${OTHER_DRIVER_ID}")
-            if echo "$PENDING" | jq -e 'type == "array"' > /dev/null 2>&1; then
-                COUNT=$(echo "$PENDING" | jq 'length')
+            if echo "$PENDING" | jq -e '. | length' > /dev/null 2>&1; then
+                COUNT=$(echo "$PENDING" | jq '. | length')
                 if [ "$COUNT" -gt 0 ]; then
                     echo -e "${RED}  ❌ Driver $OTHER_DRIVER_ID unexpectedly has $COUNT pending trip(s)${NC}"
                     OTHER_NOTIFIED=$((OTHER_NOTIFIED + 1))
