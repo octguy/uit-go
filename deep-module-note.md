@@ -4,7 +4,7 @@ Nice — I’ll lay out a concrete, actionable set of technologies, methods and 
 
 # High-level choices (what I recommend and why)
 
-* **Asynchronous communication between TripService ↔ DriverService**: use a lightweight message broker (RabbitMQ / NATS / Kafka).
+* **Asynchronous communication between TripService ↔ DriverService**: use a lightweight message broker (RabbitMQ / NATS / Kafka). (DONE: TripService send trip notification to Driver via RabbitMQ)
 
   * **Why**: absorbs traffic spikes, decouples services, prevents DriverService from being overwhelmed.
   * **Trade-off**: adds eventual consistency and slightly higher end-to-end latency for booking flow; increases operational complexity (broker, delivery guarantees).
@@ -16,9 +16,9 @@ Nice — I’ll lay out a concrete, actionable set of technologies, methods and 
   * **Why**: separates reads (fast, read-optimized) from writes (durable, ordered), improves search throughput.
   * **Trade-off**: complexity in synchronizing eventual consistent materialized view vs. strict consistency.
 
-* **In-memory caching for read-heavy data**: Redis (Helm).
+* **In-memory caching for read-heavy data**: Redis (Helm). (DONE: Driver location, Trip availability for driver)
 
-  * Cache driver availability, geo-tiles, and static metadata.
+  * Cache driver availability (NOT YET), geo-tiles, and static metadata.
   * **Trade-off**: stale reads unless TTLs or invalidation are used.
 
 * **Database strategy**:
