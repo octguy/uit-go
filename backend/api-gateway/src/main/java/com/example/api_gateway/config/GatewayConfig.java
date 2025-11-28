@@ -18,14 +18,6 @@ public class GatewayConfig {
                 // Trip Service Routes - Main trips API (no context path)
                 .route("trip-service", r -> r.path("/api/trips/**")
                         .uri("http://trip-service:8082"))
-
-                // Trip Service Routes - Payments API (specific path for payments)
-                .route("trip-service-payments", r -> r.path("/api/trip-service/payments/**")
-                        .uri("http://trip-service:8082"))
-                
-                // Trip Service Routes - Ratings API (specific path for ratings)
-                .route("trip-service-ratings", r -> r.path("/api/trip-service/ratings/**")
-                        .uri("http://trip-service:8082"))
                 
                 // Driver Service Routes (with path rewriting for context path)
                 .route("driver-service", r -> r.path("/api/drivers/**")

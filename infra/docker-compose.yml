@@ -144,6 +144,28 @@ services:
     networks:
       - microservices-network
 
+  api-gateway:
+    build: ../backend/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      user-service:
+        condition: service_healthy
+      trip-service:
+        condition: service_healthy
+      driver-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   user_db_data:
   trip_db_data:

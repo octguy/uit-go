@@ -1,6 +1,21 @@
 spring:
   application:
     name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: http://user-service:8081
+          predicates:
+            - Path=/api/users/**
+        - id: trip-service
+          uri: http://trip-service:8082
+          predicates:
+            - Path=/api/trips/**
+        - id: driver-service
+          uri: http://driver-service:8083
+          predicates:
+            - Path=/api/drivers/**
 
 server:
   port: 8080
