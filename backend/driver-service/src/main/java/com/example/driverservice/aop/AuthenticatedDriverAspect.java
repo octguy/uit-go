@@ -1,0 +1,21 @@
+package com.example.driverservice.aop;
+
+import com.example.driverservice.exception.UnauthorizedException;
+import com.example.driverservice.security.UserContext;
+import org.springframework.stereotype.Component;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import java.util.Objects;
+
+@Aspect
+@Component
+public class AuthenticatedDriverAspect {
+
+    @Before("@annotation(RequireDriver)")
+    public void ensureDriverAuthenticated() {
+        if (UserContext.getUserId() == null || !Objects.equals(UserContext.getUserRole(), "ROLE_DRIVER")) {
+            System.out.println("In Aspect, user id is null or role is not ROLE_DRIVER");
+            throw new UnauthorizedException("User not authenticated or does not have DRIVER role");
+        }
+    }
+}

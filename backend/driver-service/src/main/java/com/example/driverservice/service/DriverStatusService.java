@@ -1,7 +1,9 @@
 package com.example.driverservice.service;
 
+import com.example.driverservice.aop.RequireDriver;
 import com.example.driverservice.enums.DriverStatus;
 import com.example.driverservice.repository.RedisDriverRepository;
+import com.example.driverservice.utils.SecurityUtil;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,14 +15,19 @@ public class DriverStatusService {
         this.redisDriverRepository = redisDriverRepository;
     }
 
-    public void setOnline(String driverId) {
+    @RequireDriver
+    public void setOnline() {
+        String driverId = SecurityUtil.getCurrentUserId().toString();
         redisDriverRepository.setStatus(driverId, DriverStatus.ONLINE);
     }
 
-    public void setOffline(String driverId) {
+    @RequireDriver
+    public void setOffline() {
+        String driverId = SecurityUtil.getCurrentUserId().toString();
         redisDriverRepository.setStatus(driverId, DriverStatus.OFFLINE);
     }
 
+    @RequireDriver
     public void setBusy(String driverId) {
         redisDriverRepository.setStatus(driverId, DriverStatus.BUSY);
     }

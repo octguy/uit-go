@@ -57,15 +57,32 @@ public class RedisDriverRepository {
                 new Distance(radiusKm, Metrics.KILOMETERS)
         );
 
-        // Args để yêu cầu Redis trả về coordinates + distance
         RedisGeoCommands.GeoRadiusCommandArgs args =
                 RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs()
                         .includeCoordinates()
                         .includeDistance()
                         .sortAscending()
-                        .limit(limit);
+                        .limit(limit * 3L);  // Lấy nhiều hơn để lọc
 
-        return redisTemplate.opsForGeo()
+        // Lấy tất cả từ GEO
+        GeoResults<RedisGeoCommands.GeoLocation<String>> results = redisTemplate.opsForGeo()
                 .radius(GEO_KEY, within, args);
+
+        // Lọc status
+        assert results != null;
+
+        return new GeoResults<>(
+                results.getContent().stream()
+                        .filter(r -> {
+                            String driverId = r.getContent().getName();
+                            String status = getStatus(driverId);
+
+                            // Nếu status null => coi như offline
+                            return status != null && status.equals(DriverStatus.ONLINE.name());
+                        })
+                        .limit(limit)  // Giữ đúng số lượng limit yêu cầu
+                        .toList()
+        );
     }
+
 }
