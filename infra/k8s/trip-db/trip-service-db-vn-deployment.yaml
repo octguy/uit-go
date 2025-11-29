@@ -9,8 +9,6 @@ spec:
       app: trip-service-db-vn
   template:
     metadata:
-      annotations:
-        linkerd.io/inject: enabled
       labels:
         app: trip-service-db-vn
     spec:
@@ -29,6 +27,8 @@ spec:
           volumeMounts:
             - name: trip-db-vn-data
               mountPath: /var/lib/postgresql/data
+              subPath: postgres
       volumes:
         - name: trip-db-vn-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: infra_trip_db_vn_data

@@ -21,27 +21,6 @@ output "service_endpoints" {
   }
 }
 
-output "grpc_service_endpoints" {
-  description = "Endpoints for all gRPC services"
-  value = {
-    user_grpc_service = {
-      name = kubernetes_service.user_grpc_service.metadata.0.name
-      port = var.grpc_services.user-grpc.port
-      url  = "${kubernetes_service.user_grpc_service.metadata.0.name}:${var.grpc_services.user-grpc.port}"
-    }
-    trip_grpc_service = {
-      name = kubernetes_service.trip_grpc_service.metadata.0.name
-      port = var.grpc_services.trip-grpc.port
-      url  = "${kubernetes_service.trip_grpc_service.metadata.0.name}:${var.grpc_services.trip-grpc.port}"
-    }
-    driver_grpc_service = {
-      name = kubernetes_service.driver_grpc_service.metadata.0.name
-      port = var.grpc_services.driver-grpc.port
-      url  = "${kubernetes_service.driver_grpc_service.metadata.0.name}:${var.grpc_services.driver-grpc.port}"
-    }
-  }
-}
-
 output "database_endpoints" {
   description = "Database connection information"
   value = {

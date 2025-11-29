@@ -9,8 +9,6 @@ spec:
       app: user-service-db
   template:
     metadata:
-      annotations:
-        linkerd.io/inject: enabled
       labels:
         app: user-service-db
     spec:
@@ -29,6 +27,8 @@ spec:
           volumeMounts:
             - name: user-db-data
               mountPath: /var/lib/postgresql/data
+              subPath: postgres
       volumes:
         - name: user-db-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: infra_user_db_data

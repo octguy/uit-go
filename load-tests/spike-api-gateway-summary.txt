@@ -1,0 +1,20 @@
+     ✓ health check status is 200
+
+     checks.........................: 100.00% ✓ 334989      ✗ 0     
+     data_received..................: 313 MB  1.0 MB/s
+     data_sent......................: 29 MB   92 kB/s
+   ✓ errors.........................: 0.00%   ✓ 0           ✗ 0     
+     http_req_blocked...............: avg=19.89µs min=0s       med=0s    max=34.76ms  p(90)=0s    p(95)=0s     
+     http_req_connecting............: avg=13.51µs min=0s       med=0s    max=33.67ms  p(90)=0s    p(95)=0s     
+     http_req_duration..............: avg=1.36s   min=546.69µs med=1.16s max=6.21s    p(90)=2.76s p(95)=3.23s  
+     ✗ { expected_response:true }...: avg=1.36s   min=546.69µs med=1.16s max=6.21s    p(90)=2.76s p(95)=3.23s  
+   ✓ http_req_failed................: 0.00%   ✓ 0           ✗ 334989
+     http_req_receiving.............: avg=51.3µs  min=0s       med=0s    max=74.54ms  p(90)=0s    p(95)=526.4µs
+     http_req_sending...............: avg=22.15µs min=0s       med=0s    max=110.23ms p(90)=0s    p(95)=0s     
+     http_req_tls_handshaking.......: avg=0s      min=0s       med=0s    max=0s       p(90)=0s    p(95)=0s     
+     http_req_waiting...............: avg=1.36s   min=546.69µs med=1.16s max=6.21s    p(90)=2.76s p(95)=3.23s  
+     http_reqs......................: 334989  1080.547473/s
+     iteration_duration.............: avg=1.41s   min=50.72ms  med=1.21s max=6.26s    p(90)=2.82s p(95)=3.29s  
+     iterations.....................: 334989  1080.547473/s
+     vus............................: 12      min=0         max=3000
+     vus_max........................: 3000    min=2689      max=3000

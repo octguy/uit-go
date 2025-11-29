@@ -4,7 +4,6 @@
 # It includes all the necessary resources for the UIT-GO ride-sharing platform:
 # - PostgreSQL databases for each service
 # - REST API services (user, trip, driver)
-# - gRPC services for inter-service communication
 # - Kubernetes services and networking
 
 # The actual resource definitions are organized in separate files:
@@ -12,7 +11,6 @@
 # - variables.tf: All configurable variables and their defaults
 # - databases.tf: PostgreSQL database deployments and services
 # - services.tf: Main application services (REST APIs)
-# - grpc-services.tf: gRPC services for inter-service communication
 # - outputs.tf: Important information about deployed resources
 
 # To deploy this infrastructure:

@@ -9,8 +9,6 @@ spec:
       app: driver-service-db
   template:
     metadata:
-      annotations:
-        linkerd.io/inject: enabled
       labels:
         app: driver-service-db
     spec:
