@@ -9,6 +9,8 @@ spec:
       app: api-gateway
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         app: api-gateway
     spec:
@@ -44,4 +46,3 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "default"
-          

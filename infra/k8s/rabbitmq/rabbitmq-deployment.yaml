@@ -9,6 +9,8 @@ spec:
       app: rabbitmq
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         app: rabbitmq
     spec:

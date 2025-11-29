@@ -9,6 +9,8 @@ spec:
       app: trip-service-db-vn
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         app: trip-service-db-vn
     spec:

@@ -9,6 +9,8 @@ spec:
       app: user-service-db
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         app: user-service-db
     spec:

@@ -9,6 +9,8 @@ spec:
       app: user-service
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         app: user-service
     spec:
@@ -31,4 +33,3 @@ spec:
               value: "user_service_user"
             - name: DB_PASSWORD
               value: "user_service_pass"
-            

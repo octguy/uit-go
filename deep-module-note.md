@@ -44,18 +44,6 @@
 
 ---
 
-# Local replacements for cloud services
-
-| Cloud service          | Local replacement (k8s)                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------------------------- |
-| SQS                    | RabbitMQ / NATS / Kafka (Helm)                                                                     |
-| Elasticache (Redis)    | Redis Helm chart                                                                                   |
-| Auto Scaling Group     | k8s HPA + Cluster autoscaler (if using multi-node local cluster like kind/ k3d, you can add nodes) |
-| RDS read replicas      | Postgres primary + replicas via Patroni or simple dockerized replicas (StatefulSet)                |
-| Cloud IAM / managed LB | MetalLB + k8s RBAC for local LB & networking                                                       |
-
----
-
 # Concrete design decisions to **defend** (with short defensible statements you can include in the report)
 
 1. **Use asynchronous queue between TripService and DriverService**
@@ -192,13 +180,6 @@ export default function () {
 
 ---
 
-# Suggested step-by-step plan (2–4 week sprint style; local execution)
-
-**Phase 0 — Prep (1–2 days)**
-
-* Confirm local k8s tool (kind/k3d/microk8s). Install Helm, kubectl, metrics-server.
-* Create namespaces, RBAC, and basic app manifests.
-
 **Phase 1 — Baseline deploy (2–3 days)**
 
 * Deploy TripService, DriverService, DB (single primary), Redis (but not used yet), RabbitMQ (but not wired yet).
@@ -241,12 +222,3 @@ export default function () {
 
 * Local k8s cannot perfectly emulate cloud autoscaling or large-node clusters; use synthetic load and metric thresholds to simulate behavior and identify software bottlenecks.
 * When documenting numbers, present them as “observed on local cluster X nodes” and avoid extrapolating to cloud without further testing.
-
----
-
-If you want I can next:
-
-* produce a minimal set of **k8s manifests + Helm values** for TripService + RabbitMQ + Redis + Postgres + Prometheus so you can deploy baseline locally, **and**
-* write the **first k6 scripts** (driver search + spike) ready to run as a k8s job.
-
-Tell me which one you want me to deliver first (manifests or k6 scripts) and I’ll produce them right away.
