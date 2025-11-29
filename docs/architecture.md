@@ -1,1893 +1,987 @@
-# UIT-Go System Architecture
+# KIẾN TRÚC HỆ THỐNG UIT-GO
 
-## Executive Summary
+## Tổng quan
 
-**UIT-Go** is a production-ready ride-hailing microservices platform built with modern technologies and architectural patterns. The system handles real-time driver location tracking, trip matching, and user management with high performance and scalability.
+UIT-Go là một nền tảng đặt xe dựa trên kiến trúc microservices, được xây dựng bằng Spring Boot, sử dụng giao thức truyền thông hybrid (REST + gRPC), PostgreSQL, Redis và Docker.
 
-### Key Architectural Decisions
-
-- **Microservices Architecture**: Independent, scalable services with database-per-service pattern
-- **Hybrid Communication**: REST for CRUD operations, gRPC for high-frequency real-time updates
-- **Redis Geospatial**: Sub-10ms nearby driver queries using GEORADIUS
-- **JWT Authentication**: Stateless, scalable authentication with 24-hour token expiration
-- **Docker Compose**: Containerized deployment for consistent environments
-
-### System Capabilities
-
-- **Real-time Location Tracking**: 2,000 location updates/second with gRPC streaming
-- **Fast Driver Matching**: < 10ms nearby driver queries (3km radius)
-- **Scalable Architecture**: Independent service scaling with database isolation
-- **High Availability**: Health checks, retry mechanisms, circuit breakers
-
----
-
-## Project Overview
-
-UIT-Go is a ride-hailing microservices system built with Spring Boot 3.5.x, gRPC 1.76.0, Redis 7, PostgreSQL 15, and containerized with Docker.
-
-## System Architecture
-
-### High-Level Architecture
+## Sơ đồ Kiến trúc Tổng quan
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                          CLIENT LAYER                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Passenger    │  │ Driver       │  │ Admin        │  │ Third-Party  │  │
-│  │ Mobile App   │  │ Mobile App   │  │ Dashboard    │  │ Integrations │  │
-│  │ (REST/HTTP)  │  │ (gRPC Stream)│  │ (REST/HTTP)  │  │ (REST API)   │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
-└─────────┼──────────────────┼──────────────────┼──────────────────┼─────────┘
-          │                  │                  │                  │
-          │                  │                  │                  │
-┌─────────▼──────────────────▼──────────────────▼──────────────────▼─────────┐
-│                        API GATEWAY LAYER                                   │
-│  ┌────────────────────────────────────────────────────────────────────┐   │
-│  │           Spring Cloud Gateway (WebFlux - Port 8080)               │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │   │
-│  │  │ Rate Limiting│  │ JWT Validation│  │ Path Routing │             │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘             │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │   │
-│  │  │ Load Balance │  │ Circuit Break│  │ Request Log  │             │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘             │   │
-│  └────────────────────────────────────────────────────────────────────┘   │
-└────────────┬──────────────┬──────────────┬──────────────┬────────────────┘
-             │              │              │              │
-    ┌────────▼───────┐ ┌───▼────────┐ ┌───▼────────┐ ┌──▼──────────┐
-    │ /api/users/**  │ │/api/trips/**│ │/api/driver-│ │/api/drivers/│
-    │ Route to User  │ │Route to Trip│ │service/**  │ │nearby (gRPC)│
-    └────────┬───────┘ └───┬────────┘ └───┬────────┘ └──┬──────────┘
-             │              │              │              │
-┌────────────▼──────────────▼──────────────▼──────────────▼────────────────┐
-│                     MICROSERVICES LAYER                                   │
-│                                                                            │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
-│  │  User Service    │  │  Trip Service    │  │  Driver Service      │   │
-│  │  (Port 8081)     │  │  (Port 8082)     │  │  (Port 8083)         │   │
-│  │                  │  │                  │  │  gRPC: 9092          │   │
-│  │ ┌──────────────┐ │  │ ┌──────────────┐ │  │ ┌──────────────────┐ │   │
-│  │ │ REST API     │ │  │ │ REST API     │ │  │ │ REST API         │ │   │
-│  │ │ - Register   │ │  │ │ - Create Trip│ │  │ │ - Register Driver│ │   │
-│  │ │ - Login (JWT)│ │  │ │ - Get Trip   │ │  │ │ - Update Status  │ │   │
-│  │ │ - Get Profile│ │  │ │ - Cancel     │ │  │ │ - Get Nearby     │ │   │
-│  │ └──────────────┘ │  │ │ - History    │ │  │ └──────────────────┘ │   │
-│  │                  │  │ └──────────────┘ │  │                       │   │
-│  │ ┌──────────────┐ │  │                  │  │ ┌──────────────────┐ │   │
-│  │ │ JWT Utils    │ │  │ ┌──────────────┐ │  │ │ gRPC Service     │ │   │
-│  │ │ - Generate   │ │  │ │ OpenFeign    │ │  │ │ ────────────────  │   │
-│  │ │ - Validate   │ │  │ │ Clients:     │ │  │ │ Stream Location  │ │   │
-│  │ │ - Refresh    │ │  │ │ - UserClient │ │  │ │ 2000 updates/sec │ │   │
-│  │ └──────────────┘ │  │ │ - DriverClient│ │  │ │ 36 MB/hour      │ │   │
-│  │                  │  │ └──────────────┘ │  │ └──────────────────┘ │   │
-│  │ ┌──────────────┐ │  │                  │  │                       │   │
-│  │ │ BCrypt       │ │  │ ┌──────────────┐ │  │ ┌──────────────────┐ │   │
-│  │ │ Password Hash│ │  │ │ Trip Matching│ │  │ │ Redis Repository │ │   │
-│  │ └──────────────┘ │  │ │ Logic        │ │  │ │ ────────────────  │   │
-│  │                  │  │ └──────────────┘ │  │ │ GEOADD location  │ │   │
-│  │ Spring Security  │  │                  │  │ │ GEORADIUS search │ │   │
-│  │ + JWT Filter     │  │ Spring Boot      │  │ │ < 10ms queries   │ │   │
-│  └────────┬─────────┘  │ + OpenFeign      │  │ └──────────────────┘ │   │
-│           │            └────────┬─────────┘  │                       │   │
-│           │                     │            │ Spring Boot + gRPC    │   │
-└───────────┼─────────────────────┼────────────┴───────┬───────────────┘   │
-            │                     │                    │                    │
-┌───────────▼─────────────────────▼────────────────────▼───────────────────┐
-│                        DATA LAYER                                         │
-│                                                                            │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
-│  │ PostgreSQL       │  │ PostgreSQL       │  │ PostgreSQL + Redis   │   │
-│  │ user_service_db  │  │ trip_service_db  │  │ driver_service_db    │   │
-│  │ (Port 5435)      │  │ (Port 5433)      │  │ (Port 5434)          │   │
-│  │                  │  │                  │  │                       │   │
-│  │ ┌──────────────┐ │  │ ┌──────────────┐ │  │ ┌──────────────────┐ │   │
-│  │ │ users        │ │  │ │ trips        │ │  │ │ drivers          │ │   │
-│  │ │ - id (UUID)  │ │  │ │ - id (UUID)  │ │  │ │ - id (UUID)      │ │   │
-│  │ │ - email      │ │  │ │ - passenger  │ │  │ │ - license_no     │ │   │
-│  │ │ - password   │ │  │ │ - driver_id  │ │  │ │ - vehicle_model  │ │   │
-│  │ │ - name       │ │  │ │ - status     │ │  │ │ - plate_number   │ │   │
-│  │ │ - phone      │ │  │ │ - fare       │ │  │ │ - rating         │ │   │
-│  │ │ - user_type  │ │  │ │ - pickup_lat │ │  │ │ - status         │ │   │
-│  │ │ - created_at │ │  │ │ - pickup_lng │ │  │ │ - created_at     │ │   │
-│  │ │ - deleted_at │ │  │ │ - dest_lat   │ │  │ └──────────────────┘ │   │
-│  │ └──────────────┘ │  │ │ - dest_lng   │ │  │                       │   │
-│  │                  │  │ │ - created_at │ │  │ ┌──────────────────┐ │   │
-│  │                  │  │ │ - completed  │ │  │ │ Redis (Port 6379)│ │   │
-│  │                  │  │ └──────────────┘ │  │ │ ────────────────  │ │   │
-│  │                  │  │                  │  │ │ Geospatial Data: │ │   │
-│  │                  │  │ ┌──────────────┐ │  │ │ driver:locations │ │   │
-│  │                  │  │ │ payments     │ │  │ │ {lat,lng,id}     │ │   │
-│  │                  │  │ │ - trip_id    │ │  │ │                   │ │   │
-│  │                  │  │ │ - amount     │ │  │ │ GEOHASH Index    │ │   │
-│  │                  │  │ │ - status     │ │  │ │ Fast radius query│ │   │
-│  │                  │  │ └──────────────┘ │  │ └──────────────────┘ │   │
-│  │                  │  │                  │  │                       │   │
-│  │                  │  │ ┌──────────────┐ │  │                       │   │
-│  │                  │  │ │ ratings      │ │  │                       │   │
-│  │                  │  │ │ - trip_id    │ │  │                       │   │
-│  │                  │  │ │ - rating     │ │  │                       │   │
-│  │                  │  │ │ - review     │ │  │                       │   │
-│  │                  │  │ └──────────────┘ │  │                       │   │
-│  └──────────────────┘  └──────────────────┘  └──────────────────────┘   │
-└────────────────────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    ADDITIONAL COMPONENTS                                   │
-│                                                                            │
-│  ┌──────────────────────┐  ┌──────────────────────┐                      │
-│  │ Driver Simulator     │  │ Monitoring & Logging │                      │
-│  │ (Port 8084)          │  │ ────────────────────  │                      │
-│  │ ────────────────────  │  │ - Spring Actuator    │                      │
-│  │ - Simulates driver   │  │ - Health endpoints   │                      │
-│  │   location updates   │  │ - Metrics collection │                      │
-│  │ - gRPC client        │  │ - Docker logs        │                      │
-│  │ - Testing tool       │  │                       │                      │
-│  └──────────────────────┘  └──────────────────────┘                      │
-└────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENTS (Mobile/Web)                                    │
+│                         (Passengers & Drivers)                                       │
+└──────────────────────────────────┬──────────────────────────────────────────────────┘
+                                   │
+                                   │ HTTP/REST
+                                   │
+                    ┌──────────────▼──────────────┐
+                    │                             │
+                    │      API GATEWAY            │
+                    │   (Spring Cloud Gateway)    │
+                    │       Port: 8080            │
+                    │                             │
+                    └──────────────┬──────────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │              │              │
+          ┌─────────▼─────┐   ┌───▼──────┐   ┌──▼───────────┐
+          │               │   │          │   │              │
+          │ USER SERVICE  │   │  TRIP    │   │   DRIVER     │
+          │   Port: 8081  │   │ SERVICE  │   │   SERVICE    │
+          │               │   │ Port:8082│   │  Port: 8083  │
+          │               │   │          │   │  gRPC: 9092  │
+          └───────┬───────┘   └────┬─────┘   └──────┬───────┘
+                  │                │                 │
+                  │                │                 │
+         ┌────────▼────────┐       │       ┌────────▼────────┐
+         │   PostgreSQL    │       │       │     Redis       │
+         │   user_service  │       │       │  (Geospatial)   │
+         │   _db           │       │       │   Port: 6379    │
+         │   Port: 5435    │       │       └─────────────────┘
+         └─────────────────┘       │
+                                   │
+         ┌─────────────────────────┼──────────────────────────┐
+         │                         │                          │
+    ┌────▼──────────┐      ┌──────▼─────────┐      ┌────────▼────────┐
+    │ PostgreSQL    │      │  PostgreSQL    │      │   RabbitMQ      │
+    │ trip_service  │      │  trip_service  │      │                 │
+    │ _db-vn        │      │  _db-th        │      │   Exchange:     │
+    │ (Vietnam)     │      │  (Thailand)    │      │ trip.exchange   │
+    │ Port: 5433    │      │  Port: 5434    │      │                 │
+    └───────────────┘      └────────────────┘      │   Port: 5672    │
+                                                    │   Mgmt: 15672   │
+                                                    └─────────┬───────┘
+                                                              │
+                                                              │ AMQP
+                                   ┌──────────────────────────┼─────────┐
+                                   │                          │         │
+                              Subscribe                   Publish       │
+                                   │                          │         │
+                            ┌──────▼──────┐           ┌──────▼──────┐  │
+                            │   DRIVER    │           │    TRIP     │  │
+                            │   SERVICE   │           │   SERVICE   │  │
+                            │  Listener   │           │  Publisher  │  │
+                            └─────────────┘           └─────────────┘  │
+                                                                        │
+                                                              ┌─────────▼────────┐
+                                                              │  DRIVER          │
+                                                              │  SIMULATOR       │
+                                                              │  Port: 8084      │
+                                                              │                  │
+                                                              │  gRPC Client ────┼──────┐
+                                                              └──────────────────┘      │
+                                                                                        │
+                                                                             gRPC Stream│
+                                                                                        │
+                                                              ┌─────────────────────────▼───┐
+                                                              │    DRIVER SERVICE           │
+                                                              │    gRPC Server: 9092        │
+                                                              │ (DriverLocationService)     │
+                                                              └─────────────────────────────┘
 ```
 
-### Architecture Highlights
+## Các Thành phần Chính
 
-#### 1. **Client Layer**
+### 1. API Gateway (Port 8080)
 
-- **Passenger App**: REST API for trip requests, profile management
-- **Driver App**: gRPC streaming for continuous location updates (95% bandwidth savings)
-- **Admin Dashboard**: REST API for system monitoring and management
-- **Third-Party APIs**: OpenAPI/REST for external integrations
+**Công nghệ:** Spring Cloud Gateway (WebFlux)
 
-#### 2. **API Gateway Layer**
+**Chức năng:**
 
-- **Technology**: Spring Cloud Gateway with WebFlux (reactive, non-blocking)
-- **Responsibilities**:
-  - **Routing**: Path-based routing to microservices
-  - **Authentication**: JWT token validation before routing
-  - **Rate Limiting**: Protect services from overload
-  - **Load Balancing**: Distribute requests across service instances
-  - **Circuit Breaking**: Prevent cascade failures
-  - **Request Logging**: Centralized logging and monitoring
+- Điểm truy cập thống nhất cho tất cả các client
+- Định tuyến thông minh đến các microservices
+- Không có business logic, chỉ route requests
 
-#### 3. **Microservices Layer**
+**Routes:**
 
-- **User Service**: Authentication (JWT + BCrypt), user management
-- **Trip Service**: Trip lifecycle, fare calculation, OpenFeign inter-service calls
-- **Driver Service**: Dual interface (REST + gRPC), Redis geospatial queries
-- **Driver Simulator**: Testing tool for simulating real-time location streams
+- `/api/users/**` → User Service (8081)
+- `/api/trips/**` → Trip Service (8082)
+- `/api/drivers/**` → Driver Service (8083)
 
-#### 4. **Data Layer**
+**Dependencies chính:**
 
-- **Database-per-Service**: Each service has isolated PostgreSQL database
-- **Redis Geospatial**: Fast nearby driver queries (< 10ms for 3km radius)
-- **Port Isolation**: Different PostgreSQL ports for each service (5433-5435)
-
----
-
-## Project Structure
-
-```
-uit-go/
-├── README.md
-├── backend/                          # All Spring Boot microservices
-│   ├── api-gateway/                 # API Gateway (Port 8080)
-│   │   ├── src/main/
-│   │   │   ├── java/com/example/api_gateway/
-│   │   │   │   ├── ApiGatewayApplication.java
-│   │   │   │   ├── config/
-│   │   │   │   └── filter/
-│   │   │   └── resources/
-│   │   │       └── application.yml
-│   │   ├── pom.xml
-│   │   ├── Dockerfile
-│   │   ├── mvnw, mvnw.cmd
-│   │   ├── deps.txt
-│   │   └── mvc.txt
-│   │
-│   ├── user-service/                # User Service (Port 8081)
-│   │   ├── src/main/
-│   │   │   ├── java/com/example/user_service/
-│   │   │   │   ├── UserServiceApplication.java
-│   │   │   │   ├── controller/
-│   │   │   │   ├── service/
-│   │   │   │   ├── repository/
-│   │   │   │   ├── model/
-│   │   │   │   ├── dto/
-│   │   │   │   ├── config/
-│   │   │   │   │   ├── SecurityConfig.java
-│   │   │   │   │   └── JwtUtil.java
-│   │   │   │   └── filter/
-│   │   │   │       └── JwtAuthenticationFilter.java
-│   │   │   └── resources/
-│   │   │       └── application.yml
-│   │   ├── pom.xml
-│   │   ├── Dockerfile
-│   │   └── mvnw, mvnw.cmd
-│   │
-│   ├── trip-service/                # Trip Service (Port 8082)
-│   │   ├── src/main/
-│   │   │   ├── java/com/example/trip_service/
-│   │   │   │   ├── TripServiceApplication.java
-│   │   │   │   ├── controller/
-│   │   │   │   ├── service/
-│   │   │   │   ├── repository/
-│   │   │   │   ├── model/
-│   │   │   │   ├── dto/
-│   │   │   │   └── client/           # OpenFeign clients
-│   │   │   │       ├── UserClient.java
-│   │   │   │       └── DriverClient.java
-│   │   │   └── resources/
-│   │   │       └── application.yml
-│   │   ├── pom.xml
-│   │   ├── Dockerfile
-│   │   └── mvnw, mvnw.cmd
-│   │
-│   ├── driver-service/              # Driver Service (Port 8083, gRPC 9092)
-│   │   ├── src/main/
-│   │   │   ├── java/com/example/driverservice/
-│   │   │   │   ├── DriverServiceApplication.java
-│   │   │   │   ├── controller/       # REST controllers
-│   │   │   │   ├── service/
-│   │   │   │   ├── repository/
-│   │   │   │   │   ├── DriverRepository.java
-│   │   │   │   │   └── RedisDriverRepository.java  # Geospatial queries
-│   │   │   │   ├── model/
-│   │   │   │   ├── dto/
-│   │   │   │   ├── grpc/             # gRPC service implementation
-│   │   │   │   │   └── DriverLocationGrpcService.java
-│   │   │   │   └── config/
-│   │   │   │       └── RedisConfig.java
-│   │   │   ├── proto/                # Protocol Buffers definitions
-│   │   │   │   └── driver_location.proto
-│   │   │   └── resources/
-│   │   │       └── application.yml
-│   │   ├── target/                   # Generated gRPC code
-│   │   │   └── generated-sources/
-│   │   │       └── protobuf/
-│   │   ├── pom.xml
-│   │   ├── Dockerfile
-│   │   └── mvnw, mvnw.cmd
-│   │
-│   └── driver-simulator/            # Testing tool (Port 8084)
-│       ├── src/main/
-│       │   ├── java/com/example/driversimulator/
-│       │   │   ├── DriverSimulatorApplication.java
-│       │   │   ├── service/
-│       │   │   │   └── LocationSimulatorService.java  # gRPC client
-│       │   │   └── config/
-│       │   ├── proto/
-│       │   │   └── driver_location.proto
-│       │   └── resources/
-│       │       └── application.yml
-│       ├── pom.xml
-│       ├── Dockerfile
-│       └── mvnw, mvnw.cmd
-│
-├── infra/                           # Infrastructure configuration
-│   └── docker-compose.yml           # Docker orchestration
-│
-├── schema/                          # Database schemas
-│   ├── user-schema.sql              # User Service database
-│   └── trip-schema.sql              # Trip Service database
-│
-├── docs/                            # Documentation
-│   ├── ARCHITECTURE.md              # This file
-│   ├── architecture.md              # Legacy architecture doc
-│   ├── interfaces.md                # API interfaces
-│   ├── demo-batch-README.md
-│   ├── pattern2-implementation-status.md
-│   ├── pattern2-poc.md
-│   ├── pattern2-testing-guide.md
-│   └── redis-grpc-testing-commands.md
-│   └── ADR/                         # Architectural Decision Records
-│       ├── 001-redis-vs-dynamodb-for-geospatial.md
-│       ├── 002-grpc-vs-rest-for-location-updates.md
-│       └── 003-rest-vs-grpc-for-crud-operations.md
-│
-├── linux-run/                       # Linux deployment scripts
-│   ├── start.sh
-│   └── stop.sh
-│
-└── win-run/                         # Windows deployment scripts
-    ├── build-sequential.bat
-    ├── demo-service-integration.bat
-    ├── rebuild-all.bat
-    └── restart-docker.bat
-```
-
-## Service Details
-
-### API Gateway (Port 8080)
-
-**Technology Stack**:
-
+- `spring-cloud-starter-gateway-server-webflux`
 - Spring Boot 3.5.7
-- Spring Cloud Gateway (WebFlux - Reactive, non-blocking)
-- Spring Security
-- Reactor Netty
+- Spring Cloud 2025.0.0
 
-**Purpose**: Centralized entry point for all client requests with routing, authentication, and cross-cutting concerns.
+### 2. User Service (Port 8081)
 
-**Package**: `com.example.api_gateway`
+**Công nghệ:** Spring Boot, Spring Security, JWT
 
-**Key Responsibilities**:
+**Chức năng:**
 
-1. **Request Routing**
+- Quản lý người dùng (Passenger và Driver)
+- Xác thực và phân quyền
+- Đăng ký, đăng nhập, quản lý hồ sơ
 
-   ```yaml
-   spring:
-     cloud:
-       gateway:
-         routes:
-           - id: user-service
-             uri: http://user-service:8081
-             predicates:
-               - Path=/api/users/**
-             filters:
-               - RewritePath=/api/users/(?<segment>.*), /$\{segment}
+**Endpoints chính:**
 
-           - id: trip-service
-             uri: http://trip-service:8082
-             predicates:
-               - Path=/api/trips/**
-             filters:
-               - RewritePath=/api/trips/(?<segment>.*), /$\{segment}
+- `POST /api/users/register` - Đăng ký passenger
+- `POST /api/users/register-driver` - Đăng ký driver
+- `POST /api/users/login` - Đăng nhập (trả về JWT token)
+- `GET /api/users/profile` - Lấy thông tin người dùng
+- `PUT /api/users/profile` - Cập nhật hồ sơ
 
-           - id: driver-service
-             uri: http://driver-service:8083
-             predicates:
-               - Path=/api/driver-service/**
-   ```
+**Database:**
 
-2. **JWT Authentication Filter**
+- PostgreSQL: `user_service_db` (Port 5435)
+- Tables: `user` với các trường id, email, password, role, created_at
+- Roles: PASSENGER, DRIVER
 
-   - Extract JWT from `Authorization: Bearer <token>` header
-   - Validate token signature and expiration
-   - Add userId to request context for downstream services
-   - Return 401 Unauthorized for invalid/missing tokens
+**Security:**
 
-3. **Rate Limiting**
+- JWT Authentication với secret key
+- Token expiration: 24 giờ
+- BCrypt password encoding
+- Spring Security với JWT Filter
 
-   - Prevent abuse and DDoS attacks
-   - Per-IP or per-user rate limits
-   - Configurable limits per endpoint
+**Dependencies chính:**
 
-4. **Circuit Breaker Pattern**
+- `spring-boot-starter-data-jpa`
+- `spring-boot-starter-security`
+- `spring-boot-starter-web`
+- `jjwt` (JWT library)
+- `postgresql` driver
+- `spring-cloud-starter-openfeign`
 
-   - Fail fast when downstream services are unavailable
-   - Prevent cascade failures
-   - Automatic recovery when services are back online
+### 3. Trip Service (Port 8082)
 
-5. **Request/Response Logging**
-   - Centralized logging for all API requests
-   - Performance monitoring (response times)
-   - Error tracking and debugging
+**Công nghệ:** Spring Boot, JPA, OpenFeign, RabbitMQ
 
-**Configuration**:
+**Chức năng:**
 
-```yaml
-# application.yml
-server:
-  port: 8080
+- Quản lý chuyến đi (tạo, hủy, chấp nhận, bắt đầu, hoàn thành)
+- Tính toán giá cước dự kiến
+- Tìm kiếm tài xế gần nhất (qua Driver Service)
+- Gửi thông báo chuyến đi đến tài xế qua RabbitMQ
+- Lịch sử chuyến đi
 
-spring:
-  application:
-    name: api-gateway
-  cloud:
-    gateway:
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin
-      globalcors:
-        corsConfigurations:
-          "[/**]":
-            allowedOrigins: "*"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-            allowedHeaders: "*"
+**Endpoints chính:**
 
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty: INFO
+- `POST /api/trips/estimate-fare` - Ước tính giá cước
+- `POST /api/trips/create` - Tạo chuyến đi mới
+- `POST /api/trips/{id}/cancel` - Hủy chuyến đi
+- `POST /api/trips/{id}/accept` - Chấp nhận chuyến đi (driver)
+- `POST /api/trips/{id}/start` - Bắt đầu chuyến đi
+- `POST /api/trips/{id}/complete` - Hoàn thành chuyến đi
+- `POST /api/trips/{id}/rate` - Đánh giá chuyến đi
+- `GET /api/trips/history` - Lịch sử chuyến đi
+
+**Database Sharding:**
+Trip Service sử dụng **Database Sharding theo địa lý** với 2 database PostgreSQL:
+
+1. **Vietnam Database** (Port 5433):
+
+   - Phục vụ các chuyến đi có `pickupLongitude >= 102.0`
+   - Database: `trip_service_db`
+
+2. **Thailand Database** (Port 5434):
+   - Phục vụ các chuyến đi có `pickupLongitude < 102.0`
+   - Database: `trip_service_db`
+
+**Cơ chế Routing:**
+
+- Sử dụng `AbstractRoutingDataSource` để định tuyến động
+- `DbContextHolder` (ThreadLocal) lưu trữ shard key ("VN" hoặc "TH")
+- Quyết định shard dựa trên tọa độ pickup khi tạo trip
+
+**Trip States:**
+
+- `SEARCHING_DRIVER` - Đang tìm tài xế
+- `DRIVER_ASSIGNED` - Đã có tài xế nhận
+- `IN_PROGRESS` - Đang di chuyển
+- `COMPLETED` - Hoàn thành
+- `CANCELLED` - Đã hủy
+
+**Pricing Logic:**
+
+- Tính khoảng cách dựa trên công thức Haversine
+- Base fare + per-km rate
+- Kết quả trả về dưới dạng BigDecimal (cents)
+
+**Communication Patterns:**
+
+- **REST API** cho client-facing endpoints
+- **OpenFeign Client** để gọi Driver Service (tìm tài xế gần)
+- **RabbitMQ Publisher** để gửi thông báo chuyến đi
+
+**Dependencies chính:**
+
+- `spring-boot-starter-data-jpa`
+- `spring-boot-starter-web`
+- `spring-boot-starter-amqp` (RabbitMQ)
+- `spring-cloud-starter-openfeign`
+- `postgresql` driver
+
+### 4. Driver Service (Port 8083, gRPC: 9092)
+
+**Công nghệ:** Spring Boot, Redis, gRPC, RabbitMQ
+
+**Chức năng:**
+
+- Quản lý vị trí tài xế real-time (Redis Geospatial)
+- Tìm kiếm tài xế gần nhất
+- Quản lý trạng thái tài xế (AVAILABLE, BUSY, OFFLINE)
+- Nhận thông báo chuyến đi từ RabbitMQ
+- Quản lý thông báo chuyến đi pending (in-memory)
+- Cập nhật vị trí tài xế qua gRPC streaming
+
+**REST Endpoints:**
+
+- `GET /api/drivers/nearby` - Tìm tài xế gần vị trí (internal)
+- `POST /api/drivers/notifications/{tripId}/accept` - Chấp nhận chuyến đi
+- `GET /api/drivers/notifications` - Lấy danh sách thông báo
+- `POST /api/drivers/status` - Cập nhật trạng thái tài xế
+- `GET /api/internal/drivers/nearby` - API nội bộ cho Trip Service
+
+**gRPC Service:**
+
+- Service: `DriverLocationService`
+- Method: `SendLocation(stream LocationRequest) returns (LocationResponse)`
+- Port: 9092
+- Protocol: Client streaming - tài xế gửi vị trí liên tục
+
+**Protobuf Schema:**
+
+```proto
+message LocationRequest {
+  string driverId = 1;
+  double latitude = 2;
+  double longitude = 3;
+  int64 timestamp = 4;
+}
 ```
 
-**Performance**:
+**Redis Geospatial:**
 
-- Reactive, non-blocking I/O with Project Reactor
-- Handles thousands of concurrent requests
-- Low latency overhead (< 5ms routing time)
+- Key: `drivers:locations`
+- Commands sử dụng:
+  - `GEOADD` - Thêm/cập nhật vị trí tài xế
+  - `GEORADIUS` / `GEOSEARCH` - Tìm tài xế trong bán kính
+  - `GEOPOS` - Lấy vị trí tài xế
+  - `GEODIST` - Tính khoảng cách
 
----
+**Trip Notification Flow:**
 
-### User Service (Port 8081)
+1. Trip Service publish notification đến RabbitMQ
+2. Driver Service subscribe và nhận notification
+3. Lưu vào in-memory store với TTL (thời gian hết hạn)
+4. Driver có thể accept hoặc để notification hết hạn
+5. Khi accept, gọi lại Trip Service qua OpenFeign
 
-**Technology Stack**:
+**In-Memory Notification Store:**
 
-- Spring Boot 3.5.7
-- Spring Data JPA
-- Spring Security
-- PostgreSQL 15
-- JWT (io.jsonwebtoken 0.11.5)
-- BCrypt password hashing
+- Entity: `PendingTripNotification`
+- Chứa: tripId, passengerId, pickup/destination coordinates, fare, expiry time
+- Quản lý bởi `TripNotificationService`
 
-**Purpose**: User authentication, authorization, and profile management for both passengers and drivers.
+**Dependencies chính:**
 
-**Package**: `com.example.user_service`
+- `spring-boot-starter-data-redis`
+- `spring-boot-starter-web`
+- `spring-grpc-server-spring-boot-starter`
+- `spring-boot-starter-amqp` (RabbitMQ)
+- `spring-cloud-starter-openfeign`
+- `grpc-services`, `grpc-protobuf`, `grpc-netty-shaded`
 
-**Context Path**: `/` (root)
+### 5. Driver Simulator (Port 8084)
 
-**Database**: `user_service_db` (Port 5435)
+**Công nghệ:** Spring Boot, gRPC Client
 
+**Chức năng:**
 
+- Mô phỏng vị trí di chuyển của nhiều tài xế
+- Gửi location updates đến Driver Service qua gRPC streaming
+- Hỗ trợ testing và demo
 
-**Performance Metrics**:
+**Features:**
 
-- Registration: ~80ms (BCrypt hashing is intentionally slow for security)
-- Login: ~45ms (BCrypt verification + JWT generation)
-- Profile retrieval: ~25ms
+- Lấy danh sách tất cả drivers từ Driver Service
+- Tạo path di chuyển ngẫu nhiên cho mỗi driver với offset
+- Multi-threaded simulation (mỗi driver 1 thread)
+- Gửi location updates mỗi vài giây
 
----
+**gRPC Client:**
 
-### Trip Service (Port 8082)
+- Kết nối đến Driver Service gRPC server (port 9092)
+- Sử dụng client streaming để gửi location updates
 
-**Technology Stack**:
+**Path Generation:**
 
-- Spring Boot 3.5.8
-- Spring Data JPA
-- OpenFeign (Spring Cloud OpenFeign 4.2.0)
-- PostgreSQL 15
+- Base path được tạo ngẫu nhiên
+- Mỗi driver có offset ngẫu nhiên 1-3 km từ base path
+- Tạo hiệu ứng nhiều tài xế di chuyển trong khu vực
 
-**Purpose**: Core trip management functionality including creation, status tracking, fare calculation, and trip history.
+**Dependencies chính:**
 
-**Package**: `com.example.trip_service`
+- `spring-grpc-client-spring-boot-starter`
+- `spring-boot-starter-web`
+- `spring-cloud-starter-openfeign`
 
-**Context Path**: `/` (root)
+### 6. PostgreSQL Databases
 
-**Database**: `trip_service_db` (Port 5433)
+#### User Service Database (Port 5435)
 
-**Performance Metrics**:
+- Database: `user_service_db`
+- User: `user_service_user`
+- Schema: `user` table với JWT authentication support
 
-- Trip creation: ~65ms
-  - User validation: 10ms
-  - Nearby drivers query: 8ms
-  - Fare calculation: 2ms
-  - Database insert: 8ms
+#### Trip Service Databases (Sharded)
 
----
+- **Vietnam Shard** (Port 5433):
+  - Database: `trip_service_db`
+  - User: `trip_service_user`
+  - Longitude >= 102.0
+- **Thailand Shard** (Port 5434):
+  - Database: `trip_service_db`
+  - User: `trip_service_user`
+  - Longitude < 102.0
 
-### Driver Service (Port 8083, gRPC Port 9092)
+**Trip Table Schema:**
 
-**Technology Stack**:
+- id (UUID, PK)
+- passenger_id (UUID)
+- driver_id (UUID, nullable)
+- status (ENUM)
+- pickup_latitude, pickup_longitude
+- destination_latitude, destination_longitude
+- fare (BigDecimal)
+- requested_at, started_at, completed_at, cancelled_at (timestamps)
 
-- Spring Boot 3.5.7
-- Spring Data JPA
-- Spring Data Redis
-- gRPC Spring Boot Starter 0.12.0
-- Protocol Buffers 4.32.1
-- PostgreSQL 15
-- Redis 7
+### 7. Redis (Port 6379)
 
-**Purpose**: Dual-interface service (REST + gRPC) for driver management and real-time location tracking.
+**Công nghệ:** Redis 7 Alpine
 
-**Package**: `com.example.driverservice`
+**Chức năng:**
 
-**Context Path**: `/api/driver-service`
+- Lưu trữ vị trí tài xế real-time
+- Geospatial queries cho tìm kiếm tài xế gần
 
-**Databases**:
+**Geospatial Operations:**
 
-- PostgreSQL `driver_service_db` (Port 5434) - Persistent driver data
-- Redis (Port 6379) - Geospatial location cache
+- Sorted Set với GEOHASH encoding
+- Độ phức tạp: O(log(N)) cho radius queries
+- Sub-10ms query time cho 10,000+ drivers
 
-**Performance Metrics**:
+**Data Structure:**
 
-- **Location Update (gRPC)**:
-  - Latency: < 8ms per update
-  - Throughput: 2,000 concurrent streams
-  - Bandwidth: 36 MB/hour per driver
-- **Nearby Drivers Query**:
+- Key: `drivers:locations`
+- Member: driverId
+- Score: GEOHASH của (latitude, longitude)
 
-  - Redis GEORADIUS: 5-8ms (3km radius, 10,000+ drivers)
-  - PostgreSQL enrichment: 12ms (fetch driver details)
-  - Total: < 25ms
+**Why Redis:**
 
-- **Driver Registration**: ~60ms
-- **Status Update**: ~35ms
+- In-memory performance (< 10ms queries)
+- Native geospatial support
+- Dễ scale và maintain
+- Chi phí thấp hơn DynamoDB cho use case này
 
----
+### 8. RabbitMQ (Port 5672, Management: 15672)
 
-### API Gateway (Port 8080)
+**Công nghệ:** RabbitMQ 3.13 Management Alpine
 
-- **Purpose**: Entry point for all client requests
-- **Technology**: Spring Cloud Gateway
-- **Package**: `com.example.api_gateway`
-- **Responsibilities**:
-  - Route requests to appropriate microservices
-  - Handle authentication and authorization
-  - Load balancing and circuit breaking
-  - API rate limiting
-  - Path rewriting for different service context paths
+**Chức năng:**
 
-### User Service (Port 8081)
+- Message broker cho async communication
+- Gửi thông báo chuyến đi từ Trip Service đến Driver Service
 
-- **Purpose**: Manage passenger and driver user accounts
-- **Technology**: Spring Boot + PostgreSQL
-- **Package**: `com.example.user_service`
-- **Context Path**: `/` (root)
-- **Responsibilities**:
-  - User registration and authentication
-  - Profile management
-  - Session management
-  - User role management (passenger/driver)
+**Configuration:**
 
-### Trip Service (Port 8082)
+- **Exchange:** `trip.exchange` (TopicExchange)
+- **Queue:** `trip.notification.queue` (Durable)
+- **Routing Key:** `trip.notification`
+- **Binding:** Queue ← Exchange (via routing key)
 
-- **Purpose**: Core trip management functionality
-- **Technology**: Spring Boot + PostgreSQL
-- **Package**: `com.example.trip_service`
-- **Context Path**: `/` (root)
-- **Responsibilities**:
-  - Trip creation and management
-  - Trip status tracking (requested, matched, ongoing, completed, cancelled)
-  - Fare calculation and estimation
-  - Trip history and location tracking
-  - Payment processing integration
-  - Rating and review system
+**Message Flow:**
 
-### Driver Service (Port 8083)
+1. Trip Service tạo trip mới với status SEARCHING_DRIVER
+2. Tìm nearby drivers qua Driver Service REST API
+3. Publish `TripNotificationRequest` đến RabbitMQ exchange
+4. RabbitMQ route message đến queue
+5. Driver Service listener consume message
+6. Lưu notification vào in-memory store cho drivers
 
-- **Purpose**: Driver-specific operations
-- **Technology**: Spring Boot + PostgreSQL + Redis
-- **Package**: `com.example.driverservice`
-- **Context Path**: `/api/driver-service`
-- **Responsibilities**:
-  - Driver registration and verification
-  - Driver availability status management
-  - Real-time location tracking with geospatial queries
-  - Trip acceptance/rejection
-  - Driver ratings and reviews
-  - Vehicle information management
+**Message Format:**
 
-### gRPC Services
-
-- **User gRPC Service (Port 50051)**: Direct gRPC communication for user operations
-- **Trip gRPC Service (Port 50052)**: Direct gRPC communication for trip operations
-- **Driver gRPC Service (Port 50053)**: Direct gRPC communication for driver operations
-- **Technology**: Go + gRPC
-- **Purpose**: High-performance inter-service communication and external gRPC client support
-
-## Communication Patterns
-
-### Request Flow Diagrams
-
-#### 1. User Registration & Authentication Flow
-
-```
-┌──────────┐                ┌─────────────┐              ┌──────────────┐              ┌──────────────┐
-│ Mobile   │                │ API Gateway │              │ User Service │              │ PostgreSQL   │
-│ App      │                │ (Port 8080) │              │ (Port 8081)  │              │ (Port 5435)  │
-└────┬─────┘                └──────┬──────┘              └──────┬───────┘              └──────┬───────┘
-     │                             │                             │                             │
-     │ 1. POST /api/users/register │                             │                             │
-     │ {email, password, name}     │                             │                             │
-     │────────────────────────────>│                             │                             │
-     │                             │                             │                             │
-     │                             │ 2. Route to User Service    │                             │
-     │                             │────────────────────────────>│                             │
-     │                             │                             │                             │
-     │                             │                             │ 3. Hash Password (BCrypt)   │
-     │                             │                             │    Strength: 10 rounds      │
-     │                             │                             │                             │
-     │                             │                             │ 4. INSERT user              │
-     │                             │                             │ {id, email, hashedPwd,...}  │
-     │                             │                             │────────────────────────────>│
-     │                             │                             │                             │
-     │                             │                             │ 5. User ID (UUID)           │
-     │                             │                             │<────────────────────────────│
-     │                             │                             │                             │
-     │                             │ 6. {id, email, name}        │                             │
-     │                             │<────────────────────────────│                             │
-     │                             │                             │                             │
-     │ 7. 201 Created              │                             │                             │
-     │ {id, email, name}           │                             │                             │
-     │<────────────────────────────│                             │                             │
-     │                             │                             │                             │
-     │ 8. POST /api/users/login    │                             │                             │
-     │ {email, password}           │                             │                             │
-     │────────────────────────────>│                             │                             │
-     │                             │                             │                             │
-     │                             │ 9. Route to User Service    │                             │
-     │                             │────────────────────────────>│                             │
-     │                             │                             │                             │
-     │                             │                             │ 10. SELECT user WHERE email │
-     │                             │                             │────────────────────────────>│
-     │                             │                             │                             │
-     │                             │                             │ 11. User data               │
-     │                             │                             │<────────────────────────────│
-     │                             │                             │                             │
-     │                             │                             │ 12. Verify Password         │
-     │                             │                             │     BCrypt.matches()        │
-     │                             │                             │                             │
-     │                             │                             │ 13. Generate JWT Token      │
-     │                             │                             │     Payload: {userId, email}│
-     │                             │                             │     Expiry: 24 hours        │
-     │                             │                             │     Secret: HS256           │
-     │                             │                             │                             │
-     │                             │ 14. {token, expiresIn}      │                             │
-     │                             │<────────────────────────────│                             │
-     │                             │                             │                             │
-     │ 15. 200 OK                  │                             │                             │
-     │ {token, expiresIn: 86400}   │                             │                             │
-     │<────────────────────────────│                             │                             │
-     │                             │                             │                             │
-     │ 16. Store token locally     │                             │                             │
-     │     Use in Authorization    │                             │                             │
-     │     header for future calls │                             │                             │
-     │                             │                             │                             │
+```java
+TripNotificationRequest {
+  UUID tripId;
+  UUID passengerId;
+  String passengerName;
+  Double pickupLatitude;
+  Double pickupLongitude;
+  Double destinationLatitude;
+  Double destinationLongitude;
+  BigDecimal estimatedFare;
+  Double distanceKm;
+  List<String> nearbyDriverIds;
+}
 ```
 
-**Performance Metrics**:
+**Message Converter:**
 
-- Registration: ~80ms (includes BCrypt hashing)
-- Login: ~45ms (includes BCrypt verification + JWT generation)
-- Password Hashing: 10 BCrypt rounds (~70ms for security vs speed balance)
+- Jackson2JsonMessageConverter
+- Serialize/deserialize Java objects to JSON
 
----
+## Patterns Giao tiếp
 
-#### 2. Trip Request & Driver Matching Flow
+### 1. REST API (Synchronous)
 
-```
-┌──────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────┐
-│Passenger │   │ API Gateway │   │ Trip Service │   │ Driver       │   │ User Service │   │ Redis    │
-│ App      │   │ (Port 8080) │   │ (Port 8082)  │   │ Service      │   │ (Port 8081)  │   │(Port 6379│
-└────┬─────┘   └──────┬──────┘   └──────┬───────┘   │ (Port 8083)  │   └──────┬───────┘   └────┬─────┘
-     │                │                  │           └──────┬───────┘          │                │
-     │ 1. POST /api/trips/request        │                  │                  │                │
-     │ Authorization: Bearer <JWT>       │                  │                  │                │
-     │ {pickupLat, pickupLng,            │                  │                  │                │
-     │  destLat, destLng, destName}      │                  │                  │                │
-     │──────────────────────────────────>│                  │                  │                │
-     │                │                  │                  │                  │                │
-     │                │ 2. Validate JWT  │                  │                  │                │
-     │                │ Extract userId   │                  │                  │                │
-     │                │                  │                  │                  │                │
-     │                │ 3. Route to Trip Service            │                  │                │
-     │                │─────────────────>│                  │                  │                │
-     │                │                  │                  │                  │                │
-     │                │                  │ 4. Validate passenger (OpenFeign)   │                │
-     │                │                  │ GET /api/internal/users/{userId}    │                │
-     │                │                  │────────────────────────────────────>│                │
-     │                │                  │                  │                  │                │
-     │                │                  │ 5. User data (200 OK)               │                │
-     │                │                  │<────────────────────────────────────│                │
-     │                │                  │                  │                  │                │
-     │                │                  │ 6. Find nearby drivers (OpenFeign)  │                │
-     │                │                  │ GET /api/internal/drivers/nearby    │                │
-     │                │                  │ ?lat=10.762622&lng=106.660172       │                │
-     │                │                  │ &radiusKm=3.0&limit=5               │                │
-     │                │                  │─────────────────>│                  │                │
-     │                │                  │                  │                  │                │
-     │                │                  │                  │ 7. GEORADIUS query              │
-     │                │                  │                  │ Key: "driver:locations"         │
-     │                │                  │                  │ Radius: 3km, Unit: km           │
-     │                │                  │                  │ WITHDIST WITHCOORD ASC LIMIT 5  │
-     │                │                  │                  │────────────────────────────────>│
-     │                │                  │                  │                  │                │
-     │                │                  │                  │ 8. Nearby drivers (< 10ms)      │
-     │                │                  │                  │ [{id, distance, lat, lng}...]   │
-     │                │                  │                  │<────────────────────────────────│
-     │                │                  │                  │                  │                │
-     │                │                  │                  │ 9. Enrich driver details        │
-     │                │                  │                  │ SELECT * FROM drivers           │
-     │                │                  │                  │ WHERE id IN (...)               │
-     │                │                  │                  │ [PostgreSQL query]              │
-     │                │                  │                  │                  │                │
-     │                │                  │ 10. List of nearby drivers          │                │
-     │                │                  │ [{id, name, rating,                 │                │
-     │                │                  │   vehicle, distance}...]            │                │
-     │                │                  │<─────────────────│                  │                │
-     │                │                  │                  │                  │                │
-     │                │                  │ 11. Calculate estimated fare        │                │
-     │                │                  │ Distance-based pricing:             │                │
-     │                │                  │ Base: 10,000 VND                    │                │
-     │                │                  │ + distance * 5,000 VND/km           │                │
-     │                │                  │                  │                  │                │
-     │                │                  │ 12. Create trip in database         │                │
-     │                │                  │ INSERT INTO trips                   │                │
-     │                │                  │ {passenger_id, status: REQUESTED,   │                │
-     │                │                  │  pickup_lat, pickup_lng,            │                │
-     │                │                  │  destination_lat, destination_lng,  │                │
-     │                │                  │  estimated_fare}                    │                │
-     │                │                  │ [PostgreSQL insert]                 │                │
-     │                │                  │                  │                  │                │
-     │                │                  │ 13. Notify nearby drivers           │                │
-     │                │                  │ [Future: Push notification/WebSocket]               │
-     │                │                  │                  │                  │                │
-     │                │ 14. Trip created │                  │                  │                │
-     │                │ {id, status: REQUESTED,             │                  │                │
-     │                │  estimatedFare, nearbyDrivers}      │                  │                │
-     │                │<─────────────────│                  │                  │                │
-     │                │                  │                  │                  │                │
-     │ 15. 201 Created│                  │                  │                  │                │
-     │ {tripId, status, fare, drivers}   │                  │                  │                │
-     │<──────────────────────────────────│                  │                  │                │
-     │                │                  │                  │                  │                │
+**Sử dụng cho:**
+
+- Client-to-Gateway communication
+- CRUD operations
+- Request-response patterns
+
+**Services:**
+
+- API Gateway ↔ Clients
+- All microservices expose REST endpoints
+
+**Framework:**
+
+- Spring MVC (`spring-boot-starter-web`)
+- Jackson for JSON serialization
+
+### 2. gRPC (Synchronous, High-Performance)
+
+**Sử dụng cho:**
+
+- High-frequency location updates
+- Low latency requirements
+- Binary protocol efficiency
+
+**Implementation:**
+
+- Driver Simulator → Driver Service (client streaming)
+- Protocol Buffers for serialization
+- HTTP/2 transport
+
+**Advantages:**
+
+- 95% nhỏ hơn về bandwidth so với REST
+- ~50 bytes/update vs ~945 bytes/update (REST)
+- Persistent connection với streaming
+- Type-safe với Protobuf
+
+### 3. OpenFeign (Declarative HTTP Client)
+
+**Sử dụng cho:**
+
+- Service-to-service REST communication
+- Declarative client definitions
+
+**Implementations:**
+
+- Trip Service → Driver Service (find nearby drivers)
+- Trip Service → User Service (validate users)
+- Driver Service → Trip Service (accept trip)
+- Driver Service → User Service (validate drivers)
+
+**Configuration:**
+
+```java
+@FeignClient(name = "driver-service", url = "http://driver-service:8083")
 ```
 
-**Performance Metrics**:
+### 4. RabbitMQ (Asynchronous Messaging)
 
-- Total trip creation: ~65ms
-  - JWT validation: 5ms
-  - User validation (OpenFeign): 10ms
-  - GEORADIUS query: 5-8ms
-  - Driver enrichment: 12ms
-  - Fare calculation: 2ms
-  - Database insert: 8ms
-  - Response serialization: 3ms
+**Sử dụng cho:**
 
----
+- Async event notifications
+- Decoupling services
+- Fire-and-forget patterns
 
-#### 3. Driver Location Streaming Flow (gRPC)
+**Implementation:**
 
-```
-┌──────────┐                          ┌──────────────────┐                        ┌──────────┐
-│ Driver   │                          │ Driver Service   │                        │ Redis    │
-│ Simulator│                          │ gRPC Server      │                        │(Port 6379│
-└────┬─────┘                          │ (Port 9092)      │                        └────┬─────┘
-     │                                └────────┬─────────┘                             │
-     │                                         │                                       │
-     │ 1. Open gRPC channel                    │                                       │
-     │ grpc.insecure_channel(                  │                                       │
-     │   'driver-service:9092')                │                                       │
-     │────────────────────────────────────────>│                                       │
-     │                                         │                                       │
-     │ 2. Client Stream RPC                    │                                       │
-     │ SendLocation(stream)                    │                                       │
-     │────────────────────────────────────────>│                                       │
-     │                                         │                                       │
-     │ 3. Send location updates (continuous)   │                                       │
-     │ LocationRequest {                       │                                       │
-     │   driverId: "uuid",                     │                                       │
-     │   latitude: 10.762622,                  │                                       │
-     │   longitude: 106.660172,                │                                       │
-     │   timestamp: 1637654321000              │                                       │
-     │ }                                       │                                       │
-     │────────────────────────────────────────>│                                       │
-     │                                         │                                       │
-     │ (Every 5 seconds)                       │ 4. GEOADD to Redis                    │
-     │                                         │ Key: "driver:locations"               │
-     │                                         │ Member: driverId                      │
-     │                                         │ Longitude: 106.660172                 │
-     │                                         │ Latitude: 10.762622                   │
-     │                                         │──────────────────────────────────────>│
-     │                                         │                                       │
-     │                                         │ 5. Success (< 2ms)                    │
-     │                                         │<──────────────────────────────────────│
-     │                                         │                                       │
-     │ 4. Next update (5 sec later)            │                                       │
-     │ LocationRequest {                       │                                       │
-     │   driverId: "uuid",                     │                                       │
-     │   latitude: 10.762800,                  │                                       │
-     │   longitude: 106.660300,                │                                       │
-     │   timestamp: 1637654326000              │                                       │
-     │ }                                       │                                       │
-     │────────────────────────────────────────>│                                       │
-     │                                         │                                       │
-     │                                         │ 6. GEOADD (update position)           │
-     │                                         │──────────────────────────────────────>│
-     │                                         │                                       │
-     │                                         │ 7. Success                            │
-     │                                         │<──────────────────────────────────────│
-     │                                         │                                       │
-     │ (Continues streaming...)                │                                       │
-     │                                         │                                       │
-     │ N. Stream complete/disconnect           │                                       │
-     │────────────────────────────────────────>│                                       │
-     │                                         │                                       │
-     │                                         │ N+1. Acknowledge                      │
-     │<────────────────────────────────────────│                                       │
-     │                                         │                                       │
+- Trip Service (Publisher) → Driver Service (Subscriber)
+- Topic Exchange with routing keys
+- Durable queues for reliability
+
+**Advantages:**
+
+- Non-blocking communication
+- Retry mechanisms
+- Service decoupling
+- Load distribution
+
+## Kiến trúc Dữ liệu
+
+### Database Per Service Pattern
+
+Mỗi microservice có database riêng:
+
+- **User Service:** PostgreSQL (user_service_db)
+- **Trip Service:** 2x PostgreSQL sharded (trip_service_db-vn, trip_service_db-th)
+- **Driver Service:** Redis (geospatial data)
+
+**Lợi ích:**
+
+- Loose coupling
+- Independent scaling
+- Technology diversity
+- Fault isolation
+
+### Database Sharding (Trip Service)
+
+**Sharding Strategy:** Geographic sharding theo longitude
+
+**Implementation:**
+
+- `AbstractRoutingDataSource` với `determineCurrentLookupKey()`
+- ThreadLocal context holder (`DbContextHolder`)
+- Automatic routing tại application layer
+
+**Routing Logic:**
+
+```java
+if (pickupLongitude >= 102.0) {
+    DbContextHolder.setDbType("VN"); // Vietnam
+} else {
+    DbContextHolder.setDbType("TH"); // Thailand
+}
 ```
 
-**Performance Metrics**:
+**Benefits:**
 
-- Bandwidth: 36 MB/hour (vs 680 MB/hour with REST) = **95% savings**
-- Latency: 8ms per update (vs 45ms with REST) = **82% faster**
-- Battery usage: 1.8%/hour (vs 4.2%/hour with REST) = **57% savings**
-- Update frequency: Every 5 seconds (720 updates/hour)
-- Concurrent drivers supported: 2,000+ simultaneous streams
+- Geographic data locality
+- Reduced latency cho users ở từng region
+- Horizontal scaling
+- Isolation cho từng market
 
-**Protocol Comparison**:
+### Redis Geospatial Indexing
 
-```
-gRPC (Protobuf):
-  message LocationRequest {
-    string driverId = 1;    // 36 bytes
-    double latitude = 2;    // 8 bytes
-    double longitude = 3;   // 8 bytes
-    int64 timestamp = 4;    // 8 bytes
-  }
-  Total: ~60 bytes
+**Data Structure:**
 
-REST (JSON):
-  {
-    "driverId": "550e8400-e29b-41d4-a716-446655440000",
-    "latitude": 10.762622,
-    "longitude": 106.660172,
-    "timestamp": 1637654321000
-  }
-  Total: ~150 bytes + HTTP headers (~800 bytes) = ~950 bytes
-```
+- Sorted Sets với GEOHASH scoring
+- Key: `drivers:locations`
+- Members: driver IDs
+- Scores: Geohash của coordinates
 
----
+**Operations:**
 
-Detailed interface specifications are documented in [`docs/interfaces.md`](interfaces.md), including:
+```java
+// Add/Update location
+GEOADD drivers:locations 106.660172 10.762622 driver1
 
-- REST API endpoints for each service
-- gRPC service definitions and protobuf schemas
-- Database entity models and repository interfaces
-- Message queue event contracts
-- Shared DTOs and common configurations
+// Find nearby (5km radius, limit 10)
+GEORADIUS drivers:locations 106.660172 10.762622 5 km
+          WITHDIST WITHCOORD COUNT 10 ASC
 
-### Service Communication
-
-- **REST APIs**: External client communication via API Gateway
-- **gRPC**: Inter-service synchronous communication and direct client access
-- **RabbitMQ**: Asynchronous event-driven messaging
-- **Context Path Handling**: API Gateway handles different service context paths with path rewriting
-
-### Port Configuration
-
-| Service          | HTTP Port | gRPC Port | Database Port     | Context Path          |
-| ---------------- | --------- | --------- | ----------------- | --------------------- |
-| API Gateway      | 8080      | -         | -                 | `/`                   |
-| User Service     | 8081      | -         | 5435 (PostgreSQL) | `/`                   |
-| Trip Service     | 8082      | -         | 5433 (PostgreSQL) | `/`                   |
-| Driver Service   | 8083      | 9092      | 5434 (PostgreSQL) | `/api/driver-service` |
-| Driver Simulator | 8084      | -         | -                 | `/`                   |
-| Redis            | -         | -         | 6379              | -                     |
-
----
-
-## Technology Stack
-
-### Backend Frameworks
-
-| Technology                 | Version     | Usage                        | Key Benefits                                           |
-| -------------------------- | ----------- | ---------------------------- | ------------------------------------------------------ |
-| **Spring Boot**            | 3.5.7-3.5.8 | Microservices framework      | Production-ready, auto-configuration, embedded servers |
-| **Spring Cloud Gateway**   | WebFlux     | API Gateway                  | Reactive, non-blocking, high throughput                |
-| **Spring Data JPA**        | 3.x         | Database ORM                 | Simplified database access, repository pattern         |
-| **Spring Data Redis**      | 3.x         | Redis integration            | Geospatial queries, caching                            |
-| **Spring Security**        | 6.x         | Authentication/Authorization | JWT, BCrypt, filter chains                             |
-| **Spring Cloud OpenFeign** | 4.2.0       | Inter-service HTTP calls     | Declarative REST clients                               |
-
-### gRPC & Protocol Buffers
-
-| Technology                   | Version | Usage                        | Key Benefits                                 |
-| ---------------------------- | ------- | ---------------------------- | -------------------------------------------- |
-| **gRPC**                     | 1.76.0  | Real-time location streaming | 95% bandwidth savings, 82% latency reduction |
-| **Protocol Buffers**         | 4.32.1  | Binary serialization         | Compact, type-safe, language-agnostic        |
-| **gRPC Spring Boot Starter** | 0.12.0  | gRPC integration             | Easy Spring Boot integration                 |
-
-### Databases
-
-| Technology     | Version | Usage              | Key Features                                |
-| -------------- | ------- | ------------------ | ------------------------------------------- |
-| **PostgreSQL** | 15      | Primary data store | ACID compliance, UUID support, JSON columns |
-| **Redis**      | 7       | Geospatial cache   | GEORADIUS queries (< 10ms), TTL support     |
-
-### Security
-
-| Technology | Version                | Usage                    | Key Features                      |
-| ---------- | ---------------------- | ------------------------ | --------------------------------- |
-| **JWT**    | io.jsonwebtoken 0.11.5 | Stateless authentication | HS256 signing, 24-hour expiration |
-| **BCrypt** | Spring Security BCrypt | Password hashing         | 10 rounds, salt generation        |
-
-### Build & Deployment
-
-| Technology         | Version | Usage            | Key Features                                 |
-| ------------------ | ------- | ---------------- | -------------------------------------------- |
-| **Maven**          | 3.x     | Build tool       | Multi-module projects, dependency management |
-| **Docker**         | Latest  | Containerization | Multi-stage builds, layer caching            |
-| **Docker Compose** | v2      | Orchestration    | Service dependencies, health checks          |
-
-### Development Tools
-
-| Technology          | Usage                    | Key Features                           |
-| ------------------- | ------------------------ | -------------------------------------- |
-| **Maven Wrapper**   | Consistent Maven version | `mvnw` scripts for reproducible builds |
-| **Protoc Compiler** | Generate gRPC code       | Java stubs from .proto files           |
-
----
-
-## Deployment Architecture
-
-### Docker Compose Configuration
-
-**docker-compose.yml** (Simplified):
-
-```yaml
-version: "3.8"
-
-services:
-  # Databases
-  user-db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: user_service_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5435:5432"
-    volumes:
-      - user-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  trip-db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: trip_service_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
-    volumes:
-      - trip-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  driver-db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: driver_service_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5434:5432"
-    volumes:
-      - driver-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Microservices
-  api-gateway:
-    build:
-      context: ./backend/api-gateway
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      user-service:
-        condition: service_healthy
-      trip-service:
-        condition: service_healthy
-      driver-service:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  user-service:
-    build:
-      context: ./backend/user-service
-      dockerfile: Dockerfile
-    ports:
-      - "8081:8081"
-    depends_on:
-      user-db:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/user_service_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  trip-service:
-    build:
-      context: ./backend/trip-service
-      dockerfile: Dockerfile
-    ports:
-      - "8082:8082"
-    depends_on:
-      trip-db:
-        condition: service_healthy
-      user-service:
-        condition: service_healthy
-      driver-service:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://trip-db:5432/trip_service_db
-      USER_SERVICE_URL: http://user-service:8081
-      DRIVER_SERVICE_URL: http://driver-service:8083
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  driver-service:
-    build:
-      context: ./backend/driver-service
-      dockerfile: Dockerfile
-    ports:
-      - "8083:8083"
-      - "9092:9092" # gRPC port
-    depends_on:
-      driver-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://driver-db:5432/driver_service_db
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      GRPC_SERVER_PORT: 9092
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  driver-simulator:
-    build:
-      context: ./backend/driver-simulator
-      dockerfile: Dockerfile
-    ports:
-      - "8084:8084"
-    depends_on:
-      driver-service:
-        condition: service_healthy
-    environment:
-      DRIVER_SERVICE_GRPC_HOST: driver-service
-      DRIVER_SERVICE_GRPC_PORT: 9092
-      SIMULATOR_DRIVERS_COUNT: 10
-      SIMULATOR_UPDATE_INTERVAL: 5s
-
-volumes:
-  user-db-data:
-  trip-db-data:
-  driver-db-data:
-  redis-data:
-
-networks:
-  default:
-    name: uitgo-network
+// Get specific location
+GEOPOS drivers:locations driver1
 ```
 
-### Service Dependencies Graph
+**Performance:**
 
-```
-                    ┌─────────────────┐
-                    │  API Gateway    │
-                    │  (Port 8080)    │
-                    └────────┬────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          │                  │                  │
-          ▼                  ▼                  ▼
-  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-  │ User Service  │  │ Trip Service  │  │Driver Service │
-  │ (Port 8081)   │  │ (Port 8082)   │  │ (Port 8083)   │
-  └───────┬───────┘  └───────┬───────┘  │ gRPC: 9092    │
-          │                  │           └───────┬───────┘
-          │                  │                   │
-          │         ┌────────┴────┐              │
-          │         │             │              │
-          ▼         ▼             ▼              ▼
-  ┌───────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐
-  │PostgreSQL │  │PostgreSQL│  │PostgreSQL│  │  Redis  │
-  │ (5435)    │  │ (5433)   │  │ (5434)   │  │ (6379)  │
-  └───────────┘  └──────────┘  └──────────┘  └─────────┘
-```
-
-**Startup Order**:
-
-1. Databases (PostgreSQL instances, Redis)
-2. User Service (no dependencies on other services)
-3. Driver Service (depends on Redis)
-4. Trip Service (depends on User & Driver services via OpenFeign)
-5. API Gateway (depends on all microservices)
-6. Driver Simulator (depends on Driver Service gRPC)
-
----
-
-## Database Design
-
-### Database per Service Pattern
-
-Each service has its own PostgreSQL database:
-
-- **user_service_db**: User accounts and profiles
-- **trip_service_db**: Trip data and history
-- **driver_service_db**: Driver information and status
-
-### Database Structure
-
-```
-PostgreSQL Instances:
-├── user-service-db (Port 5432)
-│   ├── users table (id, email, name, password, user_type, phone, created_at, deleted_at)
-│   └── user_profiles table (profile management)
-├── trip-service-db (Port 5432)
-│   ├── trips table (id, passenger_id, driver_id, status, pickup/destination details, fare, timestamps)
-│   ├── payments table (payment processing records)
-│   └── ratings table (trip ratings and reviews)
-└── driver-service-db (Port 5432)
-    ├── drivers table (driver_id, user_id, license_number, vehicle_model, vehicle_plate, rating, status)
-    ├── driver_locations table (real-time location tracking with geospatial support)
-    └── driver_sessions table (session management)
-
-Redis Instance:
-└── Driver location cache and session storage
-```
-
-### Database Migration Strategy
-
-- Flyway or Liquibase for schema versioning
-- Independent migration scripts per service
-- Environment-specific migration configurations
-
-## Infrastructure
-
-### Containerization
-
-- **Docker**: Each service containerized with individual Dockerfiles
-- **Docker Compose**: Local development environment orchestration
+- < 10ms cho radius queries
+- O(log(N)) complexity
+- Scales đến 100K+ drivers
 
 ## Security
 
-### Authentication & Authorization
+### JWT Authentication
 
-- JWT tokens for session management
-- Role-based access control (RBAC)
-- API Gateway-level authentication
+**Flow:**
 
-### Network Security
+1. User đăng nhập qua User Service
+2. User Service xác thực credentials
+3. Tạo JWT token với user ID và role
+4. Client gửi token trong Authorization header
+5. Services validate token và extract user context
 
-- Docker network isolation
-- Service-to-service communication via gRPC
-- Database access restricted to service containers
+**Implementation:**
 
-## Monitoring & Observability
+- Secret key: Configured trong User Service
+- Expiration: 24 hours
+- Algorithm: HS256
+- Claims: userId (subject), issued time, expiration
 
-### Application Monitoring
-
-- Spring Boot Actuator endpoints for health checks
-- Service-level metrics and logging
-- Container health monitoring via Docker
-
-## Development Workflow
-
-### Build Process
-
-1. Maven builds each service independently with Maven Wrapper
-2. Docker images created for each service using multi-stage builds
-3. gRPC services built with Go and containerized separately
-4. Local development and testing with Docker Compose
-5. Automated build scripts for development workflow
-
-### Build Scripts
-
-- `rebuild-all.bat/.sh`: Complete system rebuild and restart
-- `build-grpc-only.bat/.sh`: Build only gRPC services
-- `build-sequential.bat/.sh`: Sequential service builds
-- `restart-docker.bat/.sh`: Docker environment restart
-
-### Demo Scripts
-
-- `demo-service-integration.bat`: Complete end-to-end ride scenario demonstration
-- `demo-ride-complete.bat`: Ride completion workflow demonstration
-- `demo-grpc.bat`: gRPC service communication testing
-- `demo-rabbitmq.bat`: Message queue functionality testing
-- `debug-trip.bat`: Trip service debugging and testing
-
-### Development Strategy
-
-- Local development with Docker Compose
-- Continuous integration with automated builds
-- Service-independent deployment capabilities
-- Real-time testing with comprehensive demo scenarios
-- Dynamic entity creation for testing (no pre-seeded data required)
-
----
-
-## Architectural Patterns & Best Practices
-
-### 1. Microservices Patterns
-
-#### **Database-per-Service Pattern**
-
-✅ **Implementation**: Each service has its own PostgreSQL database
-
-- User Service: `user_service_db` (Port 5435)
-- Trip Service: `trip_service_db` (Port 5433)
-- Driver Service: `driver_service_db` (Port 5434)
-
-**Benefits**:
-
-- Service independence and autonomy
-- Technology diversity (can use different databases per service)
-- Easier scaling (scale databases independently)
-- Data isolation and security
-
-**Trade-offs**:
-
-- Distributed transactions complexity (handled via eventual consistency)
-- Data duplication (driver name cached in Trip Service responses)
-
----
-
-#### **API Gateway Pattern**
-
-✅ **Implementation**: Spring Cloud Gateway as single entry point
-
-**Responsibilities**:
-
-- **Routing**: Path-based routing (`/api/users/**` → User Service)
-- **Authentication**: JWT validation before routing
-- **Cross-cutting concerns**: Rate limiting, logging, CORS
-- **Protocol translation**: HTTP to gRPC (future enhancement)
-
-**Benefits**:
-
-- Simplified client interaction (single endpoint)
-- Centralized security enforcement
-- Reduced client-side complexity
-- Backend service abstraction
-
----
-
-#### **Hybrid Communication Pattern**
-
-✅ **Implementation**: REST + gRPC based on use case
-
-**Decision Matrix**:
+**Token Structure:**
 
 ```
-REST API:
-  - User registration/login (< 100 req/sec)
-  - Trip CRUD operations (< 200 req/sec)
-  - Admin operations
-  - Browser-based clients
-
-gRPC Streaming:
-  - Driver location updates (2,000 updates/sec)
-  - Real-time data streams
-  - Service-to-service calls (future)
-```
-
-**Performance Comparison**:
-| Metric | REST (Location) | gRPC (Location) | Improvement |
-|--------|----------------|-----------------|-------------|
-| Bandwidth | 680 MB/hour | 36 MB/hour | **95% savings** |
-| Latency | 45ms | 8ms | **82% faster** |
-| Battery (mobile) | 4.2%/hour | 1.8%/hour | **57% savings** |
-
----
-
-### 2. Data Management Patterns
-
-#### **Redis Geospatial Indexing**
-
-✅ **Implementation**: Redis GEORADIUS for nearby driver queries
-
-**Data Structure**:
-
-```
-Key: "driver:locations"
-Type: Sorted Set (ZSET) with geospatial index
-Commands:
-  - GEOADD driver:locations <longitude> <latitude> <driverId>
-  - GEORADIUS driver:locations <long> <lat> 3 km WITHDIST WITHCOORD ASC LIMIT 5
-```
-
-**Performance**:
-
-- Query time: 5-8ms for 3km radius with 10,000+ drivers
-- Time complexity: O(N+log(M)) where N = result size, M = total drivers
-- Memory usage: ~100 bytes per driver location
-
-**Alternative Considered**: PostgreSQL PostGIS
-
-- Rejected due to 50-100ms query latency vs Redis's 5-8ms
-- See ADR-001 for detailed analysis
-
----
-
-#### **Soft Delete Pattern**
-
-✅ **Implementation**: `deleted_at` timestamp instead of hard deletes
-
-```java
-@Entity
-public class User {
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-}
-
-// Query only non-deleted users
-@Query("SELECT u FROM User u WHERE u.deletedAt IS NULL")
-List<User> findAllActive();
-```
-
-**Benefits**:
-
-- Data recovery capability
-- Audit trail preservation
-- Referential integrity maintained
-- Historical data analysis
-
----
-
-### 3. Security Patterns
-
-#### **JWT Stateless Authentication**
-
-✅ **Implementation**: JWT with 24-hour expiration
-
-**Token Structure**:
-
-```json
-Header:
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}
-
-Payload:
-{
-  "sub": "550e8400-e29b-41d4-a716-446655440000",  // userId
-  "email": "john@example.com",
-  "iat": 1637654321,  // issued at
-  "exp": 1637740721   // expires at (24 hours)
-}
-
+Header: {"alg": "HS256", "typ": "JWT"}
+Payload: {"sub": "user-uuid", "iat": ..., "exp": ...}
 Signature: HMACSHA256(base64(header) + "." + base64(payload), secret)
 ```
 
-**Security Features**:
+### Authorization
 
-- Secret key: Environment-specific (not in source code)
-- Algorithm: HS256 (HMAC with SHA-256)
-- Expiration: 24 hours (configurable)
-- Validation: Signature verification + expiration check
+**AOP-based Authorization:**
 
-**Token Flow**:
+- `@RequireUser` - Yêu cầu user đã đăng nhập
+- `@RequirePassenger` - Yêu cầu role PASSENGER
+- `@RequireDriver` - Yêu cầu role DRIVER
 
-1. User logs in → User Service generates JWT
-2. Client stores token (localStorage/secure cookie)
-3. Client sends token in `Authorization: Bearer <token>` header
-4. API Gateway validates token before routing
-5. Services extract userId from validated token
+**Implementation:**
 
----
+- Aspect interceptors kiểm tra SecurityContext
+- Throw UnauthorizedException nếu không đủ quyền
 
-#### **BCrypt Password Hashing**
+### Cross-Service Authentication
 
-✅ **Implementation**: BCrypt with 10 rounds
+**Pattern:** Token propagation via Feign
 
-```java
-@Bean
-public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(10);  // 10 rounds
-}
-```
+**Implementation:**
 
-**Security Properties**:
+- Services gửi Authorization header qua Feign clients
+- Receiving service validate token
+- Extract user context từ token
 
-- **Rounds**: 10 (2^10 = 1,024 iterations)
-- **Salt**: Automatically generated per password
-- **Hashing time**: ~70ms (intentionally slow to prevent brute force)
-- **Output length**: 60 characters
+## Deployment
 
-**Comparison**:
-| Rounds | Time | Security | Use Case |
-|--------|------|----------|----------|
-| 4 | ~5ms | Low | Not recommended |
-| 10 | ~70ms | **Good** | **Production (our choice)** |
-| 12 | ~280ms | High | High-security applications |
-| 15 | ~2.2s | Very High | Excessive for most use cases |
+### Docker Compose (Local Development)
 
----
+**Services:**
 
-### 4. Performance Optimization Patterns
+- 5 Application services (Gateway, User, Trip, Driver, Simulator)
+- 4 Infrastructure services (Redis, RabbitMQ, 3x PostgreSQL)
 
-#### **Connection Pooling**
+**Networks:**
 
-✅ **Implementation**: HikariCP (default in Spring Boot)
+- Single bridge network: `microservices-network`
+- Service discovery via DNS (container names)
 
-```yaml
-spring:
-  datasource:
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-```
+**Health Checks:**
 
-**Benefits**:
+- All databases: `pg_isready`
+- Redis: `redis-cli PING`
+- RabbitMQ: `rabbitmq-diagnostics ping`
+- Applications: `/actuator/health` endpoint
 
-- Reduced connection overhead (reuse connections)
-- Concurrent request handling (pool of 10 connections)
-- Automatic connection management (idle timeout, max lifetime)
+**Startup Order:**
 
----
+1. Infrastructure services (databases, Redis, RabbitMQ)
+2. Core services (User, Driver, Trip)
+3. Gateway
+4. Simulator
 
-#### **gRPC HTTP/2 Multiplexing**
-
-✅ **Implementation**: Single TCP connection for all streams
-
-**Comparison**:
-
-```
-REST (HTTP/1.1):
-  - 1 connection per request
-  - 1000 drivers × 720 updates/hour = 720,000 connections/hour
-  - TCP overhead: 3-way handshake per connection
-
-gRPC (HTTP/2):
-  - 1 persistent connection per driver
-  - 1000 drivers × 1 connection = 1,000 connections total
-  - Stream multiplexing: 720 streams per connection
-```
-
-**Performance Gain**:
-
-- Connection overhead: 99.86% reduction (720,000 → 1,000)
-- Latency: 82% reduction (45ms → 8ms)
-- Bandwidth: 95% reduction (680 MB/hour → 36 MB/hour)
-
----
-
-#### **Indexing Strategy**
-
-✅ **Implementation**: Strategic database indexes
-
-**User Service**:
-
-```sql
-CREATE INDEX idx_users_email ON users(email);  -- Login queries
-CREATE INDEX idx_users_phone ON users(phone);  -- Unique constraint
-CREATE INDEX idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NULL;  -- Active users
-```
-
-**Trip Service**:
-
-```sql
-CREATE INDEX idx_trips_passenger_id ON trips(passenger_id);  -- Trip history by passenger
-CREATE INDEX idx_trips_driver_id ON trips(driver_id);  -- Trip history by driver
-CREATE INDEX idx_trips_status ON trips(status);  -- Filter by status
-CREATE INDEX idx_trips_created_at ON trips(created_at DESC);  -- Recent trips first
-```
-
-**Driver Service**:
-
-```sql
-CREATE INDEX idx_drivers_user_id ON drivers(user_id);  -- Join with User Service
-CREATE INDEX idx_drivers_status ON drivers(status);  -- Filter online drivers
-CREATE INDEX idx_drivers_rating ON drivers(rating DESC);  -- Top-rated drivers
-```
-
----
-
-### 5. Inter-Service Communication Patterns
-
-#### **OpenFeign for REST Calls**
-
-✅ **Implementation**: Declarative REST clients
-
-**Benefits**:
-
-- Declarative interface (no manual HTTP client code)
-- Load balancing support (with Eureka/Ribbon)
-- Automatic JSON serialization/deserialization
-- Retry and circuit breaker integration (with Resilience4j)
-
-**Example**:
-
-```java
-@FeignClient(name = "user-service", url = "http://user-service:8081")
-public interface UserClient {
-    @GetMapping("/api/internal/users/{id}")
-    UserResponse getUserById(@PathVariable UUID id);
-}
-
-// Usage
-UserResponse user = userClient.getUserById(passengerId);
-```
-
----
-
-#### **Service Discovery (Future Enhancement)**
-
-🔄 **Planned**: Eureka Service Registry
-
-**Current**: Hard-coded service URLs in Docker Compose
+**Dependencies:**
 
 ```yaml
-USER_SERVICE_URL: http://user-service:8081
-DRIVER_SERVICE_URL: http://driver-service:8083
+depends_on:
+  service:
+    condition: service_healthy
 ```
 
-**Future**: Dynamic service discovery
+### Kubernetes (Production-Ready)
 
-```yaml
-eureka:
-  client:
-    service-url:
-      defaultZone: http://eureka-server:8761/eureka/
-```
+**Components:**
 
-**Benefits**:
+- Deployments cho mỗi service
+- Services (ClusterIP) cho internal communication
+- Databases với persistent volumes
 
-- Dynamic service registration/deregistration
-- Load balancing across multiple instances
-- Health checks and automatic failover
-- No hard-coded URLs
+**Configuration:**
 
----
+- Environment-based configuration
+- ConfigMaps cho app settings
+- Secrets cho credentials
 
-### 6. Resilience Patterns
+**Scaling:**
 
-#### **Health Checks**
+- Horizontal Pod Autoscaling cho app services
+- StatefulSets cho databases
 
-✅ **Implementation**: Spring Boot Actuator + Docker health checks
+## Monitoring & Observability
 
-**Spring Boot Actuator**:
+### Spring Boot Actuator
+
+**Endpoints:**
+
+- `/actuator/health` - Health checks
+- `/actuator/info` - Application info
+
+**Exposed Endpoints:**
 
 ```yaml
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
-  endpoint:
-    health:
-      show-details: always
+        include: health,info
 ```
 
-**Docker Health Check**:
+**Health Indicators:**
 
-```yaml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-```
+- Database connectivity
+- Redis connectivity
+- RabbitMQ connectivity
+- Disk space
+- Custom health checks
 
-**Health Check Response**:
+## API Flow Examples
 
-```json
-{
-  "status": "UP",
-  "components": {
-    "db": {
-      "status": "UP",
-      "details": {
-        "database": "PostgreSQL",
-        "validationQuery": "isValid()"
-      }
-    },
-    "diskSpace": {
-      "status": "UP",
-      "details": {
-        "total": 250685575168,
-        "free": 100325408768,
-        "threshold": 10485760
-      }
-    }
-  }
-}
-```
-
----
-
-#### **Circuit Breaker (Future Enhancement)**
-
-🔄 **Planned**: Resilience4j Circuit Breaker
-
-**Use Case**: Prevent cascade failures when downstream services are down
-
-**Example Configuration**:
-
-```java
-@CircuitBreaker(name = "driverService", fallbackMethod = "findNearbyDriversFallback")
-public List<NearbyDriverResponse> findNearbyDrivers(Double lat, Double lng) {
-    return driverClient.getNearbyDrivers(lat, lng, 3.0, 5);
-}
-
-public List<NearbyDriverResponse> findNearbyDriversFallback(Double lat, Double lng, Exception e) {
-    logger.warn("Driver service unavailable, returning empty list");
-    return Collections.emptyList();
-}
-```
-
----
-
-### 7. Testing Patterns
-
-#### **Driver Simulator for Load Testing**
-
-✅ **Implementation**: Dedicated service simulating multiple drivers
-
-**Purpose**:
-
-- Test gRPC streaming under load (10-1000 concurrent drivers)
-- Validate Redis geospatial query performance
-- Stress test Driver Service gRPC server
-
-**Configuration**:
-
-```yaml
-simulator:
-  drivers:
-    count: 10 # Number of simulated drivers
-    update-interval: 5s # Location update frequency
-  location:
-    center-lat: 10.762622
-    center-lng: 106.660172
-    radius-km: 5.0 # Drivers distributed within 5km radius
-```
-
----
-
-## Performance Benchmarks Summary
-
-### Latency Metrics (P50 / P99)
-
-| Operation              | Latency (P50) | Latency (P99) | SLA Target |
-| ---------------------- | ------------- | ------------- | ---------- |
-| User Registration      | 78ms          | 145ms         | < 500ms ✅ |
-| User Login             | 42ms          | 85ms          | < 500ms ✅ |
-| Trip Creation          | 62ms          | 128ms         | < 500ms ✅ |
-| Trip Retrieval         | 28ms          | 58ms          | < 500ms ✅ |
-| Nearby Drivers Query   | 20ms          | 45ms          | < 100ms ✅ |
-| Location Update (gRPC) | 8ms           | 15ms          | < 50ms ✅  |
-
-### Throughput Metrics
-
-| Service               | Current Load      | Max Tested        | Target Capacity    |
-| --------------------- | ----------------- | ----------------- | ------------------ |
-| User Service          | 10 req/sec        | 100 req/sec       | 500 req/sec        |
-| Trip Service          | 20 req/sec        | 200 req/sec       | 1,000 req/sec      |
-| Driver Service (REST) | 30 req/sec        | 300 req/sec       | 1,500 req/sec      |
-| Driver Service (gRPC) | 2,000 updates/sec | 5,000 updates/sec | 10,000 updates/sec |
-
-### Resource Usage (per service instance)
-
-| Service        | CPU   | Memory | Storage                 |
-| -------------- | ----- | ------ | ----------------------- |
-| API Gateway    | < 10% | 512 MB | Minimal                 |
-| User Service   | < 15% | 768 MB | 1 GB (database)         |
-| Trip Service   | < 20% | 1 GB   | 5 GB (database)         |
-| Driver Service | < 25% | 1 GB   | 2 GB (database + Redis) |
-
----
-
-## Scalability Roadmap
-
-### Current Architecture (Single Instance)
+### 1. Tạo Chuyến Đi (Create Trip)
 
 ```
-API Gateway (1) → User Service (1) → PostgreSQL (1)
-                → Trip Service (1) → PostgreSQL (1)
-                → Driver Service (1) → PostgreSQL (1) + Redis (1)
+1. Client → API Gateway
+   POST /api/trips/create
+   Headers: Authorization: Bearer <jwt-token>
+   Body: {
+     pickupLatitude, pickupLongitude,
+     destinationLatitude, destinationLongitude,
+     estimatedFare
+   }
+
+2. API Gateway → Trip Service
+   POST /api/trips/create
+
+3. Trip Service:
+   - Xác định shard (VN/TH) dựa trên pickupLongitude
+   - Set DbContextHolder
+   - Tạo Trip entity với status SEARCHING_DRIVER
+   - Save to appropriate database
+
+4. Trip Service → Driver Service (Feign)
+   GET /api/internal/drivers/nearby?lat=...&lng=...&radiusKm=3&limit=5
+
+5. Driver Service → Redis
+   GEORADIUS drivers:locations lat lng 3 km COUNT 5
+
+6. Driver Service → Trip Service
+   Return: List<NearbyDriverResponse>
+
+7. Trip Service → RabbitMQ
+   Publish TripNotificationRequest to trip.exchange
+
+8. Trip Service → Client
+   Return: TripResponse with trip details
+
+9. RabbitMQ → Driver Service
+   Deliver message to trip.notification.queue
+
+10. Driver Service:
+    - Consume message
+    - Store PendingTripNotification in-memory
+    - Drivers can fetch via GET /api/drivers/notifications
 ```
 
-**Limitations**:
-
-- Single point of failure
-- Limited throughput (< 1,000 req/sec total)
-- No horizontal scaling
-
----
-
-### Phase 1: Database Scaling (Read Replicas)
+### 2. Cập nhật Vị trí Tài xế (Driver Location Update)
 
 ```
-Driver Service → PostgreSQL Primary (writes)
-              → PostgreSQL Replica 1 (reads)
-              → PostgreSQL Replica 2 (reads)
+1. Driver Simulator → Driver Service (gRPC)
+   SendLocation(stream LocationRequest)
+   Stream: {driverId, latitude, longitude, timestamp}
+
+2. Driver Service → Redis
+   GEOADD drivers:locations longitude latitude driverId
+
+3. Driver Service → Driver Simulator (gRPC)
+   Return: LocationResponse {status: "Location updated successfully"}
 ```
 
-**Benefits**:
-
-- 3x read capacity
-- Reduced primary database load
-- High availability for reads
-
-**Implementation**:
-
-```yaml
-spring:
-  datasource:
-    write:
-      url: jdbc:postgresql://driver-db-primary:5432/driver_service_db
-    read:
-      - url: jdbc:postgresql://driver-db-replica1:5432/driver_service_db
-      - url: jdbc:postgresql://driver-db-replica2:5432/driver_service_db
-```
-
----
-
-### Phase 2: Service Scaling (Multiple Instances)
+### 3. Chấp nhận Chuyến đi (Accept Trip)
 
 ```
-API Gateway → Load Balancer → [User Service 1, User Service 2, User Service 3]
-                            → [Trip Service 1, Trip Service 2, Trip Service 3]
-                            → [Driver Service 1, Driver Service 2, Driver Service 3]
+1. Driver Client → API Gateway
+   POST /api/drivers/notifications/{tripId}/accept
+   Headers: Authorization: Bearer <driver-jwt-token>
+
+2. API Gateway → Driver Service
+   POST /api/drivers/notifications/{tripId}/accept
+
+3. Driver Service:
+   - Lấy notification từ in-memory store
+   - Validate chưa expired và chưa accepted
+   - Mark as accepted
+
+4. Driver Service → Trip Service (Feign)
+   POST /api/trips/{tripId}/accept
+   Body: {driverId}
+
+5. Trip Service:
+   - Route đến correct shard
+   - Update trip: driverId, status = DRIVER_ASSIGNED
+   - Save to database
+
+6. Trip Service → Driver Service
+   Return: Success response
+
+7. Driver Service → Client
+   Return: Acceptance confirmation
 ```
 
-**Benefits**:
+## Architectural Decisions
 
-- 3x throughput per service
-- High availability (instance failures tolerated)
-- Rolling deployments (zero downtime)
+Hệ thống sử dụng các Architecture Decision Records (ADR) để document các quyết định kiến trúc quan trọng:
 
-**Implementation**: Kubernetes or Docker Swarm
+### ADR-001: Redis vs DynamoDB for Geospatial Queries
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: driver-service
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: driver-service
-```
+**Decision:** Chọn Redis
 
----
+**Reasons:**
 
-### Phase 3: Redis Cluster (Geospatial Sharding)
+- Sub-10ms query performance (vs 50-100ms DynamoDB)
+- Native geospatial commands (GEOADD, GEORADIUS)
+- Đơn giản hơn (không cần custom geohashing)
+- Cost-effective hơn cho workload này
+- In-memory performance
 
-```
-Driver Locations → Redis Cluster (3 primary + 3 replica)
-  - Shard 1: Driver IDs 0-999
-  - Shard 2: Driver IDs 1000-1999
-  - Shard 3: Driver IDs 2000-2999
-```
+**Trade-offs:**
 
-**Benefits**:
+- Không persistence by default (có thể enable RDB/AOF)
+- Single-point-of-failure (giải quyết bằng Redis Sentinel/Cluster)
 
-- 3x geospatial query capacity
-- Data distribution across nodes
-- High availability (automatic failover)
+### ADR-002: gRPC vs REST for Location Updates
 
----
+**Decision:** Chọn gRPC với client streaming
 
-## Architectural Decision Records (ADRs)
+**Reasons:**
 
-Detailed architectural decisions are documented in `/docs/ADR/`:
+- Bandwidth efficiency: ~50 bytes vs ~945 bytes per update
+- HTTP/2 multiplexing
+- Persistent connection giảm overhead
+- Binary Protocol Buffers
+- Battery efficiency cho mobile
 
-1. **[ADR-001: Redis vs DynamoDB for Geospatial Queries](ADR/001-redis-vs-dynamodb-for-geospatial.md)**
+**Use Case:**
 
-   - Decision: Redis GEORADIUS
-   - Performance: 5-8ms vs 50-100ms (DynamoDB)
-   - Cost: $144/month vs $260/month (40-50% cheaper)
+- 10,000 drivers × 0.2 updates/sec = 2,000 updates/sec
+- Tiết kiệm ~1.7 MB/sec bandwidth
 
-2. **[ADR-002: gRPC vs REST for Location Updates](ADR/002-grpc-vs-rest-for-location-updates.md)**
+### ADR-003: REST vs gRPC for CRUD Operations
 
-   - Decision: gRPC client streaming
-   - Bandwidth: 36 MB/hour vs 680 MB/hour (95% savings)
-   - Latency: 8ms vs 45ms (82% faster)
+**Decision:** Sử dụng cả hai, hybrid approach
 
-3. **[ADR-003: REST vs gRPC for CRUD Operations](ADR/003-rest-vs-grpc-for-crud-operations.md)**
-   - Decision: REST for simplicity and developer experience
-   - Trade-off: 20% slower but adequate for < 500ms SLA
-   - Browser support, human-readable debugging
+**REST cho:**
 
----
+- Client-facing APIs (human-readable, debug-friendly)
+- CRUD operations
+- Compatibility với web browsers
+
+**gRPC cho:**
+
+- High-frequency real-time data (location updates)
+- Internal service-to-service (có thể mở rộng sau)
+
+## Technology Stack Summary
+
+| Component        | Technology                  | Version                       |
+| ---------------- | --------------------------- | ----------------------------- |
+| Language         | Java                        | 17                            |
+| Framework        | Spring Boot                 | 3.5.7 - 3.5.8                 |
+| Spring Cloud     | Spring Cloud                | 2025.0.0                      |
+| API Gateway      | Spring Cloud Gateway        | 2025.0.0                      |
+| ORM              | Spring Data JPA / Hibernate | (Spring Boot managed)         |
+| Database         | PostgreSQL                  | 15                            |
+| Cache/Geospatial | Redis                       | 7 Alpine                      |
+| Message Broker   | RabbitMQ                    | 3.13 Alpine                   |
+| RPC Framework    | gRPC / Spring gRPC          | 1.76.0 / 0.12.0               |
+| Serialization    | Protocol Buffers            | 4.32.1                        |
+| Build Tool       | Maven                       | 3.6+                          |
+| Containerization | Docker & Docker Compose     | 20.10+                        |
+| Orchestration    | Kubernetes                  | (Optional, configs available) |
+| HTTP Client      | OpenFeign                   | Spring Cloud 2025.0.0         |
+| Security         | Spring Security + JWT       | Spring Boot managed           |
+| JWT Library      | jjwt                        | 0.11.5                        |
+| Monitoring       | Spring Boot Actuator        | Spring Boot managed           |
+
+## Ports Summary
+
+| Service          | HTTP Port | gRPC Port | Database Port             |
+| ---------------- | --------- | --------- | ------------------------- |
+| API Gateway      | 8080      | -         | -                         |
+| User Service     | 8081      | -         | 5435 (PostgreSQL)         |
+| Trip Service     | 8082      | -         | 5433 (VN), 5434 (TH)      |
+| Driver Service   | 8083      | 9092      | -                         |
+| Driver Simulator | 8084      | -         | -                         |
+| Redis            | -         | -         | 6379                      |
+| RabbitMQ         | -         | -         | 5672 (AMQP), 15672 (Mgmt) |
+
+## Scaling Considerations
+
+### Horizontal Scaling
+
+**Stateless Services:**
+
+- API Gateway, User Service, Trip Service, Driver Service
+- Có thể scale bằng replicas
+- Load balancing qua Kubernetes Services
+
+**Stateful Services:**
+
+- Redis: Redis Cluster hoặc Sentinel
+- RabbitMQ: Clustering
+- PostgreSQL: Read replicas, sharding (đã implement cho Trip Service)
+
+### Vertical Scaling
+
+**Memory-Intensive:**
+
+- Redis (in-memory store)
+- Driver Service (in-memory notifications)
+
+**CPU-Intensive:**
+
+- Trip Service (distance calculations, fare estimates)
+- Driver Service (geospatial queries)
+
+### Database Scaling
+
+**Current:**
+
+- Geographic sharding cho Trip Service (VN/TH)
+
+**Future Options:**
+
+- Thêm shards cho regions khác
+- Read replicas cho User Service
+- Caching layer (Redis) cho frequently accessed data
 
 ## Future Enhancements
 
-### Short-term (Next 3 months)
+### Potential Improvements
 
-- [ ] **Circuit Breaker Pattern**: Resilience4j for fault tolerance
-- [ ] **Distributed Tracing**: Zipkin/Jaeger for request tracing
-- [ ] **Centralized Logging**: ELK Stack (Elasticsearch, Logstash, Kibana)
-- [ ] **API Documentation**: Swagger/OpenAPI for REST APIs
+1. **Service Mesh:** Istio hoặc Linkerd cho advanced traffic management
+2. **Distributed Tracing:** Jaeger/Zipkin cho request tracing
+3. **Centralized Logging:** ELK Stack (Elasticsearch, Logstash, Kibana)
+4. **API Documentation:** OpenAPI/Swagger specs
+5. **Rate Limiting:** Gateway-level rate limiting
+6. **Circuit Breaker:** Resilience4j cho fault tolerance
+7. **Event Sourcing:** Cho trip state changes
+8. **CQRS:** Tách read/write models cho Trip Service
+9. **WebSocket:** Real-time updates cho passengers/drivers
+10. **GraphQL Gateway:** Alternative API cho flexible querying
 
-### Medium-term (3-6 months)
+### Performance Optimizations
 
-- [ ] **Service Mesh**: Istio for advanced traffic management
-- [ ] **Event-Driven Architecture**: Kafka for asynchronous events
-- [ ] **Caching Layer**: Redis for trip details, user profiles
-- [ ] **WebSocket**: Real-time trip status updates to passengers
+1. **Caching:**
 
-### Long-term (6-12 months)
+   - User profiles cache (Redis)
+   - Driver status cache
+   - Fare calculation cache
 
-- [ ] **Kubernetes Deployment**: Production-grade orchestration
-- [ ] **Multi-Region Deployment**: Geographic redundancy
-- [ ] **Machine Learning**: Demand prediction, dynamic pricing
-- [ ] **GraphQL Gateway**: Flexible client queries
+2. **Database:**
 
----
+   - Connection pooling tuning
+   - Query optimization
+   - Indexes trên frequently queried fields
+
+3. **Message Queue:**
+
+   - Batch processing
+   - Priority queues cho urgent notifications
+
+4. **Network:**
+   - gRPC cho thêm internal communications
+   - HTTP/2 everywhere
+   - CDN cho static content
 
 ## Conclusion
 
-The UIT-Go architecture demonstrates production-ready microservices design with:
+UIT-Go là một hệ thống microservices được thiết kế tốt với:
 
-✅ **Clear Separation of Concerns**: Database-per-service, domain-driven design  
-✅ **Performance Optimization**: Redis geospatial (< 10ms), gRPC streaming (95% bandwidth savings)  
-✅ **Security Best Practices**: JWT authentication, BCrypt hashing (10 rounds)  
-✅ **Scalability Foundation**: Stateless services, horizontal scaling ready  
-✅ **Developer Experience**: REST for CRUD, comprehensive ADRs, Docker Compose for local dev
+- **Separation of Concerns:** Mỗi service có trách nhiệm rõ ràng
+- **Technology Diversity:** Sử dụng đúng công nghệ cho đúng use case
+- **Scalability:** Horizontal và vertical scaling options
+- **Resilience:** Async messaging, health checks, retry mechanisms
+- **Performance:** gRPC cho high-frequency, Redis cho geospatial
+- **Security:** JWT-based authentication và authorization
+- **Observability:** Actuator endpoints, health checks
 
-**Key Metrics**:
+Kiến trúc hybrid với REST + gRPC + RabbitMQ cung cấp sự cân bằng tốt giữa:
 
-- **Latency**: All operations < 500ms SLA (most < 100ms)
-- **Throughput**: 2,000 location updates/sec, 100 trips/sec capacity
-- **Availability**: Health checks, retry mechanisms, graceful degradation
-- **Cost Efficiency**: Redis 40-50% cheaper than DynamoDB for geospatial
-
-**Architecture Philosophy**:
-
-> "Choose the right tool for the job" - Hybrid REST/gRPC based on use case, Redis for geospatial queries, PostgreSQL for transactional data, JWT for stateless auth.
-
----
-
-**Document Version**: 2.0  
-**Last Updated**: November 25, 2025  
-**Maintainers**: UIT-Go Development Team  
-**Related Documents**:
-
-- [README.md](../README.md) - Getting started guide
-- [ADR Directory](ADR/) - Architectural decision records
-- [Interfaces Documentation](interfaces.md) - API specifications
+- Developer experience (REST)
+- Performance (gRPC)
+- Decoupling (RabbitMQ)
