@@ -1,11 +1,4 @@
-# ADR-001: Chọn Redis cho Tìm kiếm Tài xế Gần nhất
-
-**Trạng thái**: Đã chấp nhận  
-**Ngày**: 25/11/2025  
-**Người quyết định**: Nhóm phát triển UIT-Go  
-**Tags**: #lưu-trữ-dữ-liệu #địa-lý #hiệu-suất
-
----
+# ADR-001: Chọn Redis cho nghiệp vụ Tìm kiếm Tài xế Gần nhất
 
 ## Bối cảnh
 
@@ -32,7 +25,7 @@ Nền tảng đặt xe UIT-Go cần khả năng tìm kiếm tài xế gần vị
 
 ## Quyết định
 
-**Chúng tôi chọn Redis với Geospatial Commands** để lưu trữ vị trí tài xế và truy vấn tài xế gần nhất.
+**Nhóm em chọn Redis với Geospatial Commands** để lưu trữ vị trí tài xế và truy vấn tài xế gần nhất.
 
 ---
 
@@ -409,7 +402,7 @@ Docker Redis (mặc định): Đủ cho hàng triệu tài xế
 
 ## Xem xét lại các phương án
 
-Chúng tôi sẽ **xem xét lại quyết định này** nếu:
+Nhóm em sẽ **xem xét lại quyết định này** nếu:
 
 1. **Khối lượng dữ liệu vượt quá khả năng Redis** (> 1 triệu tài xế hoạt động)
    - Giải pháp: Redis Cluster với sharding
@@ -505,15 +498,6 @@ redis-cli --latency GEORADIUS drivers:locations 106.66 10.76 5 km COUNT 10
 
 ---
 
-## Tài liệu tham khảo
-
-- [Redis Geospatial Commands Documentation](https://redis.io/commands#geo)
-- [Giải thích thuật toán GEOHASH](https://en.wikipedia.org/wiki/Geohash)
-- [Spring Data Redis Documentation](https://docs.spring.io/spring-data/redis/docs/current/reference/html/)
-- [Redis Best Practices](https://redis.io/docs/manual/patterns/)
-
----
-
 ## Phụ lục: Chi tiết Benchmark
 
 ### Môi trường test
@@ -563,26 +547,11 @@ GET driver:driver1:status
 
 ### So sánh với các công nghệ khác
 
-| Tiêu chí              | Redis                  | PostgreSQL+PostGIS      | MongoDB           | Elasticsearch   |
-| --------------------- | ---------------------- | ----------------------- | ----------------- | --------------- |
-| **Setup Complexity**  | ⭐⭐⭐⭐⭐ Rất dễ      | ⭐⭐⭐ Trung bình       | ⭐⭐⭐ Trung bình | ⭐⭐ Phức tạp   |
-| **Query Performance** | ⭐⭐⭐⭐⭐ < 10ms      | ⭐⭐⭐ ~100ms           | ⭐⭐⭐ ~50ms      | ⭐⭐⭐⭐ ~20ms  |
-| **Write Performance** | ⭐⭐⭐⭐⭐ < 1ms       | ⭐⭐ ~10ms              | ⭐⭐⭐ ~5ms       | ⭐⭐⭐ ~5ms     |
-| **Memory Usage**      | ⭐⭐⭐⭐⭐ Rất thấp    | ⭐⭐⭐ Trung bình       | ⭐⭐⭐ Trung bình | ⭐⭐ Cao        |
-| **Learning Curve**    | ⭐⭐⭐⭐⭐ Dễ học      | ⭐⭐⭐ Cần biết SQL+GIS | ⭐⭐⭐⭐ Dễ học   | ⭐⭐ Khó        |
-| **Documentation**     | ⭐⭐⭐⭐⭐ Xuất sắc    | ⭐⭐⭐⭐ Tốt            | ⭐⭐⭐⭐ Tốt      | ⭐⭐⭐⭐ Tốt    |
-| **Student Friendly**  | ⭐⭐⭐⭐⭐ Rất phù hợp | ⭐⭐⭐ Phù hợp          | ⭐⭐⭐⭐ Phù hợp  | ⭐⭐ Ít phù hợp |
-
-### Lợi ích cho sinh viên
-
-1. **Học được công nghệ thực tế**: Redis được sử dụng rộng rãi trong industry
-2. **Đơn giản triển khai**: Docker image sẵn có, setup nhanh chóng
-3. **Documentation tốt**: Nhiều tài liệu và tutorial
-4. **Debugging dễ dàng**: Redis CLI giúp inspect data trực tiếp
-5. **Performance insights**: Hiểu được in-memory vs disk-based storage
-6. **Scalability concepts**: Học về caching và data structures
-
----
-
-**Cập nhật lần cuối**: 25/11/2025  
-**Ngày xem xét lại**: 01/03/2026
+| Tiêu chí              | Redis               | PostgreSQL+PostGIS      | MongoDB           | Elasticsearch  |
+| --------------------- | ------------------- | ----------------------- | ----------------- | -------------- |
+| **Setup Complexity**  | ⭐⭐⭐⭐⭐ Rất dễ   | ⭐⭐⭐ Trung bình       | ⭐⭐⭐ Trung bình | ⭐⭐ Phức tạp  |
+| **Query Performance** | ⭐⭐⭐⭐⭐ < 10ms   | ⭐⭐⭐ ~100ms           | ⭐⭐⭐ ~50ms      | ⭐⭐⭐⭐ ~20ms |
+| **Write Performance** | ⭐⭐⭐⭐⭐ < 1ms    | ⭐⭐ ~10ms              | ⭐⭐⭐ ~5ms       | ⭐⭐⭐ ~5ms    |
+| **Memory Usage**      | ⭐⭐⭐⭐⭐ Rất thấp | ⭐⭐⭐ Trung bình       | ⭐⭐⭐ Trung bình | ⭐⭐ Cao       |
+| **Learning Curve**    | ⭐⭐⭐⭐⭐ Dễ học   | ⭐⭐⭐ Cần biết SQL+GIS | ⭐⭐⭐⭐ Dễ học   | ⭐⭐ Khó       |
+| **Documentation**     | ⭐⭐⭐⭐⭐ Xuất sắc | ⭐⭐⭐⭐ Tốt            | ⭐⭐⭐⭐ Tốt      | ⭐⭐⭐⭐ Tốt   |

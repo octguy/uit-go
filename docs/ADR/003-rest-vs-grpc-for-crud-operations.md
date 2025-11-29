@@ -1,10 +1,5 @@
 # ADR-003: Lựa chọn REST thay vì gRPC cho các thao tác CRUD và API hướng người dùng
 
-**Trạng thái**: Đã chấp nhận  
-**Ngày**: 25/11/2025  
-**Người quyết định**: Nhóm phát triển UIT-Go  
-**Tags**: #giao-tiếp #thiết-kế-api #rest #đơn-giản
-
 ---
 
 ## Bối cảnh
@@ -273,75 +268,6 @@ Xem xét GraphQL nếu:
 
 ---
 
-## Bài học kinh nghiệm
-
-### Cho sinh viên
-
-**1. Học REST trước:**
-
-- REST là foundation của web APIs
-- Dễ hiểu concepts: resources, HTTP methods, status codes
-- Debugging đơn giản với browser tools
-- Abundant learning resources
-
-**2. Hiểu khi nào dùng gRPC:**
-
-- Không phải lúc nào cũng "faster is better"
-- Trade-offs giữa performance và simplicity
-- Evaluate based on actual requirements
-
-**3. Thực hành API design:**
-
-- RESTful principles
-- Consistent naming conventions
-- Proper error handling
-- Documentation quan trọng
-
-**4. Testing và monitoring:**
-
-- Test APIs với Postman/curl
-- Monitor response times
-- Log requests/responses
-- Handle errors gracefully
-
-### Cho dự án
-
-**1. Start simple:**
-
-- Bắt đầu với REST cho mọi thứ
-- Chỉ optimize khi cần thiết
-- Premature optimization is root of evil
-
-**2. Measure before optimizing:**
-
-- Benchmark actual performance
-- Identify real bottlenecks
-- Don't guess, measure
-
-**3. Consider team skills:**
-
-- Team familiar với REST
-- Learning curve cho gRPC
-- Maintenance burden
-
-**4. Think about integration:**
-
-- API Gateway compatibility
-- Third-party integrations
-- Browser support requirements
-
----
-
-## Tài liệu tham khảo
-
-- [REST API Design Best Practices](https://restfulapi.net/)
-- [Spring Boot REST Documentation](https://spring.io/guides/gs/rest-service/)
-- [OpenFeign Documentation](https://spring.io/projects/spring-cloud-openfeign)
-- [HTTP Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
-- [RESTful API Versioning](https://restfulapi.net/versioning/)
-
----
-
 ## Phụ lục: Chi tiết Performance Benchmark
 
 ### Môi trường Test
@@ -395,12 +321,3 @@ Quyết định sử dụng REST cho CRUD operations và gRPC chỉ cho high-fre
 - **Right tool for the job**: Mỗi protocol cho use case phù hợp
 - **Learning opportunity**: Sinh viên học cả hai technologies
 - **Scalable**: Có thể thêm gRPC cho services khác nếu cần
-
-### Thông điệp chính:
-
-> "Choose simplicity by default, optimize when necessary, and always consider the team's capabilities and project requirements."
-
----
-
-**Cập nhật lần cuối**: 25/11/2025  
-**Ngày review tiếp theo**: 01/03/2026

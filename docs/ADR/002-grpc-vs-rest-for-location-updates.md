@@ -1,10 +1,5 @@
 # ADR-002: Lựa chọn gRPC thay vì REST cho Cập nhật Vị trí Tài xế Liên tục
 
-**Trạng thái**: Đã chấp nhận  
-**Ngày**: 25/11/2025  
-**Người quyết định**: Nhóm phát triển UIT-Go  
-**Tags**: #giao-tiếp #hiệu-suất #thời-gian-thực #grpc
-
 ---
 
 ## Bối cảnh
@@ -42,7 +37,7 @@ Tỷ lệ cập nhật: 1,000 tài xế × 0.2 cập nhật/giây = 200 cập nh
 
 ## Quyết định
 
-**Chúng tôi chọn gRPC với Client Streaming** cho việc cập nhật vị trí tài xế.
+**Nhóm em chọn gRPC với Client Streaming** cho việc cập nhật vị trí tài xế.
 
 ---
 
@@ -540,16 +535,6 @@ Trong dự án UIT-Go, file Protocol Buffers (`driver_location.proto`) định n
 
 ---
 
-## Tài liệu tham khảo
-
-- [gRPC Official Documentation](https://grpc.io/docs/)
-- [Protocol Buffers Language Guide](https://protobuf.dev/programming-guides/proto3/)
-- [HTTP/2 Specification](https://http2.github.io/)
-- [Spring gRPC Documentation](https://docs.spring.io/spring-framework/reference/integration/grpc.html)
-- [HPACK Header Compression](https://http2.github.io/http2-spec/compression.html)
-
----
-
 ## Phụ lục: Giải thích kỹ thuật
 
 ### Tại sao Protocol Buffers nhỏ hơn JSON?
@@ -609,8 +594,3 @@ Quyết định sử dụng gRPC cho location updates trong UIT-Go là lựa ch�
 5. **Scalable**: Xử lý được hàng nghìn tài xế đồng thời
 
 Mặc dù có đường cong học tập, nhưng lợi ích về hiệu suất và tính giáo dục vượt trội so với các lựa chọn khác.
-
----
-
-**Cập nhật lần cuối**: 25/11/2025  
-**Ngày review tiếp theo**: 01/03/2026
