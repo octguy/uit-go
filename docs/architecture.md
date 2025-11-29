@@ -6,79 +6,7 @@ UIT-Go là một nền tảng đặt xe dựa trên kiến trúc microservices, 
 
 ## Sơ đồ Kiến trúc Tổng quan
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                              CLIENTS (Mobile/Web)                                    │
-│                         (Passengers & Drivers)                                       │
-└──────────────────────────────────┬──────────────────────────────────────────────────┘
-                                   │
-                                   │ HTTP/REST
-                                   │
-                    ┌──────────────▼──────────────┐
-                    │                             │
-                    │      API GATEWAY            │
-                    │   (Spring Cloud Gateway)    │
-                    │       Port: 8080            │
-                    │                             │
-                    └──────────────┬──────────────┘
-                                   │
-                    ┌──────────────┼──────────────┐
-                    │              │              │
-          ┌─────────▼─────┐   ┌───▼──────┐   ┌──▼───────────┐
-          │               │   │          │   │              │
-          │ USER SERVICE  │   │  TRIP    │   │   DRIVER     │
-          │   Port: 8081  │   │ SERVICE  │   │   SERVICE    │
-          │               │   │ Port:8082│   │  Port: 8083  │
-          │               │   │          │   │  gRPC: 9092  │
-          └───────┬───────┘   └────┬─────┘   └──────┬───────┘
-                  │                │                 │
-                  │                │                 │
-         ┌────────▼────────┐       │       ┌────────▼────────┐
-         │   PostgreSQL    │       │       │     Redis       │
-         │   user_service  │       │       │  (Geospatial)   │
-         │   _db           │       │       │   Port: 6379    │
-         │   Port: 5435    │       │       └─────────────────┘
-         └─────────────────┘       │
-                                   │
-         ┌─────────────────────────┼──────────────────────────┐
-         │                         │                          │
-    ┌────▼──────────┐      ┌──────▼─────────┐      ┌────────▼────────┐
-    │ PostgreSQL    │      │  PostgreSQL    │      │   RabbitMQ      │
-    │ trip_service  │      │  trip_service  │      │                 │
-    │ _db-vn        │      │  _db-th        │      │   Exchange:     │
-    │ (Vietnam)     │      │  (Thailand)    │      │ trip.exchange   │
-    │ Port: 5433    │      │  Port: 5434    │      │                 │
-    └───────────────┘      └────────────────┘      │   Port: 5672    │
-                                                    │   Mgmt: 15672   │
-                                                    └─────────┬───────┘
-                                                              │
-                                                              │ AMQP
-                                   ┌──────────────────────────┼─────────┐
-                                   │                          │         │
-                              Subscribe                   Publish       │
-                                   │                          │         │
-                            ┌──────▼──────┐           ┌──────▼──────┐  │
-                            │   DRIVER    │           │    TRIP     │  │
-                            │   SERVICE   │           │   SERVICE   │  │
-                            │  Listener   │           │  Publisher  │  │
-                            └─────────────┘           └─────────────┘  │
-                                                                        │
-                                                              ┌─────────▼────────┐
-                                                              │  DRIVER          │
-                                                              │  SIMULATOR       │
-                                                              │  Port: 8084      │
-                                                              │                  │
-                                                              │  gRPC Client ────┼──────┐
-                                                              └──────────────────┘      │
-                                                                                        │
-                                                                             gRPC Stream│
-                                                                                        │
-                                                              ┌─────────────────────────▼───┐
-                                                              │    DRIVER SERVICE           │
-                                                              │    gRPC Server: 9092        │
-                                                              │ (DriverLocationService)     │
-                                                              └─────────────────────────────┘
-```
+![Architecture Diagram](./images/architecture-diagram.png)
 
 ## Các Thành phần Chính
 
@@ -119,8 +47,6 @@ UIT-Go là một nền tảng đặt xe dựa trên kiến trúc microservices, 
 - `POST /api/users/register` - Đăng ký passenger
 - `POST /api/users/register-driver` - Đăng ký driver
 - `POST /api/users/login` - Đăng nhập (trả về JWT token)
-- `GET /api/users/profile` - Lấy thông tin người dùng
-- `PUT /api/users/profile` - Cập nhật hồ sơ
 
 **Database:**
 
@@ -165,7 +91,6 @@ UIT-Go là một nền tảng đặt xe dựa trên kiến trúc microservices, 
 - `POST /api/trips/{id}/start` - Bắt đầu chuyến đi
 - `POST /api/trips/{id}/complete` - Hoàn thành chuyến đi
 - `POST /api/trips/{id}/rate` - Đánh giá chuyến đi
-- `GET /api/trips/history` - Lịch sử chuyến đi
 
 **Database Sharding:**
 Trip Service sử dụng **Database Sharding theo địa lý** với 2 database PostgreSQL:
@@ -395,7 +320,7 @@ message LocationRequest {
 **Message Flow:**
 
 1. Trip Service tạo trip mới với status SEARCHING_DRIVER
-2. Tìm nearby drivers qua Driver Service REST API
+2. Tìm nearby drivers trong Redis thông qua REST API gọi Driver Service
 3. Publish `TripNotificationRequest` đến RabbitMQ exchange
 4. RabbitMQ route message đến queue
 5. Driver Service listener consume message
@@ -801,59 +726,6 @@ management:
 7. Driver Service → Client
    Return: Acceptance confirmation
 ```
-
-## Architectural Decisions
-
-Hệ thống sử dụng các Architecture Decision Records (ADR) để document các quyết định kiến trúc quan trọng:
-
-### ADR-001: Redis vs DynamoDB for Geospatial Queries
-
-**Decision:** Chọn Redis
-
-**Reasons:**
-
-- Sub-10ms query performance (vs 50-100ms DynamoDB)
-- Native geospatial commands (GEOADD, GEORADIUS)
-- Đơn giản hơn (không cần custom geohashing)
-- Cost-effective hơn cho workload này
-- In-memory performance
-
-**Trade-offs:**
-
-- Không persistence by default (có thể enable RDB/AOF)
-- Single-point-of-failure (giải quyết bằng Redis Sentinel/Cluster)
-
-### ADR-002: gRPC vs REST for Location Updates
-
-**Decision:** Chọn gRPC với client streaming
-
-**Reasons:**
-
-- Bandwidth efficiency: ~50 bytes vs ~945 bytes per update
-- HTTP/2 multiplexing
-- Persistent connection giảm overhead
-- Binary Protocol Buffers
-- Battery efficiency cho mobile
-
-**Use Case:**
-
-- 10,000 drivers × 0.2 updates/sec = 2,000 updates/sec
-- Tiết kiệm ~1.7 MB/sec bandwidth
-
-### ADR-003: REST vs gRPC for CRUD Operations
-
-**Decision:** Sử dụng cả hai, hybrid approach
-
-**REST cho:**
-
-- Client-facing APIs (human-readable, debug-friendly)
-- CRUD operations
-- Compatibility với web browsers
-
-**gRPC cho:**
-
-- High-frequency real-time data (location updates)
-- Internal service-to-service (có thể mở rộng sau)
 
 ## Technology Stack Summary
 
