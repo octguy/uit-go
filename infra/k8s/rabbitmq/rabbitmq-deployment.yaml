@@ -28,4 +28,16 @@ spec:
               mountPath: /var/lib/rabbitmq
       volumes:
         - name: rabbitmq-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: rabbitmq-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

@@ -56,19 +56,19 @@ if %ERRORLEVEL% neq 0 (
 docker build -t driver-service:latest .
 cd ..\..
 
-REM API Gateway (if needed)
-REM echo Building API Gateway...
-REM cd backend\api-gateway
-REM call mvnw clean package -DskipTests
-REM if %ERRORLEVEL% neq 0 (
-REM     echo ERROR: Failed to build api-gateway
-REM     exit /b 1
-REM )
-REM docker build -t api-gateway:latest .
-REM cd ..\..
+echo Building API Gateway...
+cd backend\api-gateway
+call mvnw clean package -DskipTests
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Failed to build api-gateway
+    exit /b 1
+)
+docker build -t api-gateway:latest .
+cd ..\..
 
 echo All Spring Boot services built successfully!
 echo Images created:
+echo - api-gateway:latest
 echo - user-service:latest
 echo - trip-service:latest  
 echo - driver-service:latest
