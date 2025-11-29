@@ -1,19 +1,36 @@
-@echo off
-echo Applying all services to Kubernetes...
+REM ================================
+REM Deploy Infrastructure
+REM ================================
+echo Deploying Infrastructure...
+
+kubectl apply -f infra\k8s\rabbitmq\rabbitmq-deployment.yaml
+kubectl apply -f infra\k8s\rabbitmq\rabbitmq-service.yaml
+
+kubectl apply -f infra\k8s\redis\redis-deployment.yaml
+kubectl apply -f infra\k8s\redis\redis-service.yaml
+
+kubectl apply -f infra\k8s\api-gateway\api-gateway-deployment.yaml
+kubectl apply -f infra\k8s\api-gateway\api-gateway-service.yaml
+
+echo Waiting for infrastructure to be ready...
+timeout /t 10 /nobreak
 
 REM ================================
 REM Deploy Databases first
 REM ================================
 echo Deploying databases...
 
-kubectl apply -f infra\k8s\user-service-db-deployment.yaml
-kubectl apply -f infra\k8s\user-service-db-service.yaml
+kubectl apply -f infra\k8s\user-db\user-service-db-deployment.yaml
+kubectl apply -f infra\k8s\user-db\user-service-db-service.yaml
 
-kubectl apply -f infra\k8s\trip-service-db-deployment.yaml
-kubectl apply -f infra\k8s\trip-service-db-service.yaml
+kubectl apply -f infra\k8s\trip-db\trip-service-db-vn-deployment.yaml
+kubectl apply -f infra\k8s\trip-db\trip-service-db-vn-service.yaml
 
-kubectl apply -f infra\k8s\driver-service-db-deployment.yaml
-kubectl apply -f infra\k8s\driver-service-db-service.yaml
+kubectl apply -f infra\k8s\trip-db\trip-service-db-th-deployment.yaml
+kubectl apply -f infra\k8s\trip-db\trip-service-db-th-service.yaml
+
+kubectl apply -f infra\k8s\driver-service\driver-service-db-deployment.yaml
+kubectl apply -f infra\k8s\driver-service\driver-service-db-service.yaml
 
 echo Waiting for databases to be ready...
 timeout /t 10 /nobreak
@@ -23,33 +40,17 @@ REM Deploy Spring Boot Services
 REM ================================
 echo Deploying Spring Boot services...
 
-kubectl apply -f infra\k8s\user-service-deployment.yaml
-kubectl apply -f infra\k8s\user-service-service.yaml
+kubectl apply -f infra\k8s\user-service\user-service-deployment.yaml
+kubectl apply -f infra\k8s\user-service\user-service-service.yaml
 
-kubectl apply -f infra\k8s\trip-service-deployment.yaml
-kubectl apply -f infra\k8s\trip-service-service.yaml
+kubectl apply -f infra\k8s\trip-service\trip-service-deployment.yaml
+kubectl apply -f infra\k8s\trip-service\trip-service-service.yaml
 
-kubectl apply -f infra\k8s\driver-service-deployment.yaml
-kubectl apply -f infra\k8s\driver-service-service.yaml
+kubectl apply -f infra\k8s\driver-service\driver-service-deployment.yaml
+kubectl apply -f infra\k8s\driver-service\driver-service-service.yaml
 
 echo Waiting for services to be ready...
 timeout /t 15 /nobreak
-
-REM ================================
-REM Deploy gRPC Services
-REM ================================
-echo Deploying gRPC services...
-
-kubectl apply -f infra\k8s\user-grpc-service-deployment.yaml
-kubectl apply -f infra\k8s\user-grpc-service-service.yaml
-
-kubectl apply -f infra\k8s\trip-grpc-service-deployment.yaml
-kubectl apply -f infra\k8s\trip-grpc-service-service.yaml
-
-kubectl apply -f infra\k8s\driver-grpc-service-deployment.yaml
-kubectl apply -f infra\k8s\driver-grpc-service-service.yaml
-
-echo All services deployed successfully!
 
 REM ================================
 REM Check deployment status
