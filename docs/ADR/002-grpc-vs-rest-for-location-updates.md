@@ -1,715 +1,616 @@
-# ADR-002: Choose gRPC over REST for Continuous Driver Location Updates
+# ADR-002: Lựa chọn gRPC thay vì REST cho Cập nhật Vị trí Tài xế Liên tục
 
-**Status**: Accepted  
-**Date**: 2025-11-25  
-**Decision Makers**: UIT-Go Development Team  
-**Tags**: #communication #performance #real-time #grpc
+**Trạng thái**: Đã chấp nhận  
+**Ngày**: 25/11/2025  
+**Người quyết định**: Nhóm phát triển UIT-Go  
+**Tags**: #giao-tiếp #hiệu-suất #thời-gian-thực #grpc
 
 ---
 
-## Context
+## Bối cảnh
 
-The UIT-Go platform requires real-time tracking of driver locations to enable accurate nearby driver searches and trip matching. Active drivers continuously update their GPS coordinates (typically every 5 seconds) while they're online and available for trips.
+Nền tảng UIT-Go yêu cầu theo dõi vị trí tài xế theo thời gian thực để cho phép tìm kiếm tài xế gần đúng và ghép cặp chuyến đi chính xác. Các tài xế đang hoạt động liên tục cập nhật tọa độ GPS của họ (thường là mỗi 5 giây) khi họ trực tuyến và sẵn sàng nhận chuyến.
 
-### Requirements
+### Yêu cầu
 
-1. **High Frequency**: Support 1 update every 5 seconds per driver
-2. **Low Latency**: Process location updates with minimal overhead
-3. **Scalability**: Handle 10,000+ active drivers simultaneously (2,000+ updates/second)
-4. **Bandwidth Efficiency**: Minimize data transfer for mobile drivers
-5. **Connection Persistence**: Reduce connection overhead for frequent updates
-6. **Battery Efficiency**: Minimize power consumption on mobile devices
+1. **Tần suất cao**: Hỗ trợ 1 lần cập nhật mỗi 5 giây cho mỗi tài xế
+2. **Độ trễ thấp**: Xử lý cập nhật vị trí với overhead tối thiểu
+3. **Khả năng mở rộng**: Xử lý 10,000+ tài xế hoạt động đồng thời (2,000+ cập nhật/giây)
+4. **Hiệu quả băng thông**: Giảm thiểu truyền dữ liệu cho tài xế di động
+5. **Kết nối bền vững**: Giảm overhead kết nối cho các cập nhật thường xuyên
+6. **Tiết kiệm pin**: Giảm thiểu mức tiêu thụ năng lượng trên thiết bị di động
 
-### Current Scale
+### Quy mô hiện tại
 
 ```
-Active Drivers: 1,000 (current) → 10,000 (6 months) → 50,000 (1 year)
-Update Frequency: Every 5 seconds
-Update Rate: 1,000 drivers × 0.2 updates/sec = 200 updates/sec (current)
-             10,000 drivers × 0.2 updates/sec = 2,000 updates/sec (6 months)
+Tài xế hoạt động: 1,000 (hiện tại) → 10,000 (6 tháng) → 50,000 (1 năm)
+Tần suất cập nhật: Mỗi 5 giây
+Tỷ lệ cập nhật: 1,000 tài xế × 0.2 cập nhật/giây = 200 cập nhật/giây (hiện tại)
+                10,000 tài xế × 0.2 cập nhật/giây = 2,000 cập nhật/giây (6 tháng)
 ```
 
-### Options Considered
+### Các phương án được xem xét
 
-1. **gRPC with Client Streaming**
-2. **REST API with HTTP/1.1**
-3. **REST API with HTTP/2**
-4. **WebSocket with JSON**
+1. **gRPC với Client Streaming**
+2. **REST API với HTTP/1.1**
+3. **REST API với HTTP/2**
+4. **WebSocket với JSON**
 5. **Server-Sent Events (SSE)**
 6. **MQTT Protocol**
 
 ---
 
-## Decision
+## Quyết định
 
-**We chose gRPC with Client Streaming** for driver location updates.
+**Chúng tôi chọn gRPC với Client Streaming** cho việc cập nhật vị trí tài xế.
 
 ---
 
-## Rationale
+## Lý do lựa chọn
 
-### gRPC Advantages
+### Ưu điểm của gRPC
 
-#### 1. **Bandwidth Efficiency**
+#### 1. **Hiệu quả băng thông**
 
-**Payload Size Comparison** (single location update):
+**So sánh kích thước dữ liệu** (một lần cập nhật vị trí):
 
-```
-REST (JSON/HTTP1.1):
-{
-  "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "latitude": 10.762622,
-  "longitude": 106.660172,
-  "timestamp": 1732567890000
-}
+**REST (JSON/HTTP1.1):**
 
-JSON Payload: ~145 bytes
-HTTP/1.1 Headers:
-  POST /api/drivers/location HTTP/1.1
-  Host: driver-service:8083
-  Content-Type: application/json
-  Content-Length: 145
-  Authorization: Bearer eyJhbGc....(~500 bytes)
-  User-Agent: UIT-Go-Driver/1.0
-  Accept: */*
-  Connection: keep-alive
-Total Headers: ~800 bytes
-Total per Request: ~945 bytes
-```
+- Dữ liệu JSON chứa thông tin tài xế, vị trí, timestamp: ~145 bytes
+- HTTP/1.1 Headers (bao gồm Authorization, Content-Type, User-Agent, v.v.): ~800 bytes
+- **Tổng mỗi request: ~945 bytes**
 
-```
-gRPC (Protocol Buffers/HTTP2):
-message LocationRequest {
-  string driverId = 1;    // "a1b2c3d4..."
-  double latitude = 2;    // 10.762622
-  double longitude = 3;   // 106.660172
-  int64 timestamp = 4;    // 1732567890000
-}
+**gRPC (Protocol Buffers/HTTP2):**
 
-Protobuf Payload: ~50 bytes
-HTTP/2 Headers (with HPACK compression):
-  :method POST
-  :path /driver.DriverLocationService/SendLocation
-  :authority driver-service:9092
-  content-type application/grpc
-Total Headers: ~40 bytes (compressed, reused across stream)
-Total per Update (in stream): ~50 bytes
-Initial Connection: ~90 bytes
-```
+- Protobuf Payload nhị phân: ~50 bytes
+- HTTP/2 Headers (với HPACK compression, được tái sử dụng): ~40 bytes
+- **Tổng mỗi cập nhật (trong stream): ~50 bytes**
+- Kết nối ban đầu: ~90 bytes (chỉ một lần)
 
-**Data Transfer Calculation** (1,000 drivers, 1 hour):
+**Tính toán truyền dữ liệu** (1,000 tài xế, 1 giờ):
 
-| Protocol         | Per Update | Updates/Hour | Total Traffic   |
-| ---------------- | ---------- | ------------ | --------------- |
-| REST (HTTP/1.1)  | 945 bytes  | 720,000      | **680 MB/hour** |
-| gRPC (Streaming) | 50 bytes   | 720,000      | **36 MB/hour**  |
+| Giao thức        | Mỗi cập nhật | Số cập nhật/Giờ | Tổng lưu lượng |
+| ---------------- | ------------ | --------------- | -------------- |
+| REST (HTTP/1.1)  | 945 bytes    | 720,000         | **680 MB/giờ** |
+| gRPC (Streaming) | 50 bytes     | 720,000         | **36 MB/giờ**  |
 
-**Bandwidth Savings: 95%** 🎯
+**Tiết kiệm băng thông: 95%** 🎯
 
-#### 2. **Connection Efficiency**
+**Tại sao tiết kiệm được nhiều đến vậy:**
+
+- **Protocol Buffers**: Định dạng nhị phân hiệu quả hơn JSON
+- **HTTP/2 Header Compression**: HPACK nén headers và tái sử dụng chúng
+- **Streaming**: Kết nối được duy trì, không cần gửi headers mới mỗi lần
+
+#### 2. **Hiệu quả kết nối**
 
 **REST (HTTP/1.1)**:
 
-```
-Timeline for 12 updates (1 minute):
+- Cần thiết lập kết nối cho mỗi request hoặc duy trì keep-alive
+- Keep-alive thường timeout sau 30-60 giây
+- Với cập nhật mỗi 5 giây, connection có thể timeout giữa các cập nhật
+- Phải thiết lập lại TCP handshake nhiều lần
+- Mỗi request-response cycle có overhead riêng
 
-0s:  [TCP Handshake] → [POST] → [Response] → [Connection kept alive]
-5s:  [POST] → [Response]
-10s: [POST] → [Response]
-15s: [POST] → [Response]
-20s: [POST] → [Response]
-25s: [POST] → [Response]
-30s: [Connection timeout, close]
-30s: [TCP Handshake] → [POST] → [Response] → [Keep-alive]
-35s: [POST] → [Response]
-40s: [POST] → [Response]
-45s: [POST] → [Response]
-50s: [POST] → [Response]
-55s: [POST] → [Response]
+**Ví dụ Timeline trong 1 phút (12 lần cập nhật):**
 
-Connections established: 2
-TCP handshakes: 2 × 3 packets = 6 packets
-HTTP overhead: 12 requests × 800 bytes headers = 9.6 KB
-```
+- Connections established: 2-3 lần
+- TCP handshakes: 6-9 packets
+- HTTP overhead: 12 requests × 800 bytes headers = 9.6 KB
 
 **gRPC (Client Streaming)**:
 
-```
-Timeline for 12 updates (1 minute):
+- **Một kết nối duy nhất** được mở và duy trì trong suốt session
+- Stream liên tục gửi dữ liệu qua kết nối này
+- Không cần thiết lập lại connection
+- TCP handshake chỉ thực hiện **một lần duy nhất**
+- Overhead chỉ ~90 bytes cho toàn bộ session
 
-0s:  [TCP Handshake] → [HTTP/2 Connection] → [Stream Open]
-0s:  [LocationUpdate #1]
-5s:  [LocationUpdate #2]
-10s: [LocationUpdate #3]
-15s: [LocationUpdate #4]
-20s: [LocationUpdate #5]
-25s: [LocationUpdate #6]
-30s: [LocationUpdate #7]
-35s: [LocationUpdate #8]
-40s: [LocationUpdate #9]
-45s: [LocationUpdate #10]
-50s: [LocationUpdate #11]
-55s: [LocationUpdate #12]
-...
-(Stream remains open while driver is active)
+**Ví dụ Timeline trong 1 phút (12 lần cập nhật):**
 
-Connections established: 1
-TCP handshakes: 1 × 3 packets = 3 packets
-HTTP/2 overhead: 1 × 90 bytes (initial) = 90 bytes
-```
+- Connections established: 1
+- TCP handshakes: 3 packets (chỉ một lần)
+- HTTP/2 overhead: 90 bytes (initial setup)
 
-**Connection Overhead Reduction: 98%** 🎯
+**Giảm overhead kết nối: 98%** 🎯
 
-#### 3. **Latency Comparison**
+#### 3. **So sánh độ trễ**
 
-**Benchmark Results** (AWS Singapore region, 1000 drivers):
+**Kết quả benchmark** (môi trường test với 1000 tài xế):
 
-| Metric           | REST (HTTP/1.1) | REST (HTTP/2) | gRPC (Streaming) |
-| ---------------- | --------------- | ------------- | ---------------- |
-| Avg Latency      | 45ms            | 28ms          | **8ms**          |
-| P95 Latency      | 85ms            | 52ms          | **15ms**         |
-| P99 Latency      | 120ms           | 78ms          | **22ms**         |
-| Processing Time  | 2ms             | 2ms           | **< 1ms**        |
-| Network Overhead | 43ms            | 26ms          | **7ms**          |
+| Thông số          | REST (HTTP/1.1) | REST (HTTP/2) | gRPC (Streaming) |
+| ----------------- | --------------- | ------------- | ---------------- |
+| Độ trễ trung bình | 45ms            | 28ms          | **8ms**          |
+| Độ trễ P95        | 85ms            | 52ms          | **15ms**         |
+| Độ trễ P99        | 120ms           | 78ms          | **22ms**         |
+| Thời gian xử lý   | 2ms             | 2ms           | **< 1ms**        |
+| Network Overhead  | 43ms            | 26ms          | **7ms**          |
 
-**Why gRPC is Faster:**
+**Tại sao gRPC nhanh hơn:**
 
-- **Persistent Connection**: No repeated TCP handshakes
-- **Binary Protocol**: Faster serialization/deserialization
-- **HTTP/2 Multiplexing**: Multiple streams on single connection
-- **Header Compression**: HPACK reduces header size by 80-90%
-- **No Request/Response Cycle**: Unidirectional streaming
+- **Kết nối bền vững**: Không cần thiết lập lại TCP handshakes
+- **Giao thức nhị phân**: Serialization/deserialization nhanh hơn
+- **HTTP/2 Multiplexing**: Nhiều streams trên một kết nối
+- **Nén Header**: HPACK giảm kích thước header 80-90%
+- **Không có chu trình Request/Response**: Streaming một chiều
 
-#### 4. **Battery Efficiency (Mobile Devices)**
+#### 4. **Tiết kiệm pin cho thiết bị di động**
 
-**Power Consumption Comparison** (1-hour test on iPhone 13):
+**So sánh tiêu thụ năng lượng** (test 1 giờ trên thiết bị smartphone):
 
-| Protocol         | Connections/Hour | Data Transfer | Power Consumed |
-| ---------------- | ---------------- | ------------- | -------------- |
-| REST (HTTP/1.1)  | 12-24            | 680 MB        | 4.2% battery   |
-| gRPC (Streaming) | 1                | 36 MB         | 1.8% battery   |
+| Giao thức        | Kết nối/Giờ | Truyền dữ liệu | Tiêu thụ pin |
+| ---------------- | ----------- | -------------- | ------------ |
+| REST (HTTP/1.1)  | 12-24       | 680 MB         | 4.2% pin     |
+| gRPC (Streaming) | 1           | 36 MB          | 1.8% pin     |
 
-**Battery Savings: 57%** 🎯
+**Tiết kiệm pin: 57%** 🎯
 
-**Why gRPC Saves Battery:**
+**Tại sao gRPC tiết kiệm pin:**
 
-- **Fewer Radio State Transitions**: Single connection vs multiple requests
-- **Less Data Transfer**: 95% less data = less radio active time
-- **Connection Keepalive**: Efficient TCP keepalive vs repeated connections
+- **Ít chuyển trạng thái Radio hơn**: Một kết nối so với nhiều requests
+- **Truyền ít dữ liệu hơn**: 95% ít hơn = ít thời gian radio hoạt động hơn
+- **Connection Keepalive hiệu quả**: Keepalive tối ưu so với việc thiết lập kết nối lại
 
-#### 5. **Type Safety & Code Generation**
+**Giải thích về Radio States:**
 
-**gRPC (Protocol Buffers)**:
+- Thiết bị di động có 3 trạng thái radio: HIGH (hoạt động), MEDIUM (chờ), LOW (nghỉ)
+- Mỗi lần gửi HTTP request, radio chuyển sang HIGH, gửi dữ liệu, sau đó chờ response
+- Radio không chuyển ngay sang LOW mà có "tail time" (5-10 giây)
+- gRPC với streaming giữ kết nối ổn định, giảm số lần chuyển trạng thái
 
-```protobuf
-// Define once in .proto file
-message LocationRequest {
-  string driverId = 1;
-  double latitude = 2;
-  double longitude = 3;
-  int64 timestamp = 4;
-}
+#### 5. **Type Safety và tự động sinh code**
 
-service DriverLocationService {
-  rpc SendLocation(stream LocationRequest) returns (LocationResponse);
-}
-```
+**gRPC sử dụng Protocol Buffers (.proto files)**:
 
-**Auto-generated Code**:
+- Định nghĩa schema một lần trong file .proto
+- Công cụ tự động sinh code cho nhiều ngôn ngữ (Java, Swift, Kotlin, Python, v.v.)
+- Schema định nghĩa message và service interface
 
-```java
-// Server side (Java)
-public class DriverLocationGrpcService
-    extends DriverLocationServiceGrpc.DriverLocationServiceImplBase {
+**Lợi ích:**
 
-    @Override
-    public StreamObserver<LocationRequest> sendLocation(
-        StreamObserver<LocationResponse> responseObserver) {
-        // Type-safe implementation
-    }
-}
+- **Kiểm tra kiểu tại compile-time**: Phát hiện lỗi trước khi chạy chương trình
+- **Tương thích đa ngôn ngữ**: Cùng một file .proto cho Java (backend), Swift (iOS), Kotlin (Android)
+- **Tự động serialization**: Không cần parse JSON thủ công
+- **Tương thích ngược**: Hệ thống đánh số field trong Protobuf đảm bảo compatibility khi cập nhật
 
-// Client side (Swift for iOS)
-let stream = client.sendLocation { response in
-    print("Status: \(response.status)")
-}
-stream.send(LocationRequest.with {
-    $0.driverID = "abc123"
-    $0.latitude = 10.762622
-    $0.longitude = 106.660172
-    $0.timestamp = Date().timeIntervalSince1970
-})
-```
+**Trong dự án UIT-Go:**
 
-**Benefits:**
-
-- **Compile-time Type Checking**: Catch errors before runtime
-- **Cross-language Compatibility**: Same .proto for Java, Swift, Kotlin
-- **Automatic Serialization**: No manual JSON parsing
-- **Backward Compatibility**: Protobuf field numbering ensures compatibility
+- File `driver_location.proto` định nghĩa LocationRequest và LocationResponse
+- Công cụ protoc tự động sinh code Java cho server
+- Công cụ protoc tự động sinh code cho client (driver simulator)
+- Đảm bảo cả hai bên luôn sử dụng cùng định nghĩa dữ liệu
 
 ---
 
-### Why Not REST?
+### Tại sao không chọn REST?
 
-#### 1. **Request/Response Overhead**
+#### 1. **Overhead từ Request/Response**
 
-REST requires a full request/response cycle for each update:
+REST yêu cầu một chu trình request/response đầy đủ cho mỗi cập nhật:
 
-```
-Driver → [HTTP Request] → Server
-Driver ← [HTTP Response] ← Server
+**Vấn đề:**
 
-Overhead per update:
-- TCP connection management (if not keep-alive)
-- HTTP headers (800+ bytes)
-- Request/response cycle latency
-- JSON serialization/deserialization
-```
+- Mỗi cập nhật vị trí = 1 HTTP request mới
+- Server phải gửi response cho mỗi request
+- Overhead từ quản lý kết nối TCP (nếu không dùng keep-alive)
+- HTTP headers lặp lại mỗi lần (~800+ bytes)
+- Chi phí serialization/deserialization JSON cao
 
-#### 2. **Inefficient for High-Frequency Updates**
+**Ví dụ:** Với 1,000 tài xế trong 1 giờ:
 
-```
-Problem: HTTP is designed for request/response, not continuous streams
-
-Example (1,000 drivers, 1 hour):
 - 720,000 HTTP requests
 - 720,000 HTTP responses
-- 680 MB data transfer
-- 1,440,000 packets sent
-```
+- 680 MB truyền dữ liệu
+- 1,440,000 packets được gửi
 
-#### 3. **Connection Churn**
+#### 2. **Không hiệu quả cho cập nhật tần suất cao**
 
-Even with HTTP keep-alive:
+**Vấn đề cốt lõi:** HTTP được thiết kế cho request/response, không phải continuous streams
 
-```
-Typical keep-alive timeout: 30-60 seconds
-Update frequency: 5 seconds
-Result: Connections often timeout between updates
-Impact: Repeated TCP handshakes, increased latency
-```
+**So sánh:**
 
-#### 4. **Mobile Battery Drain**
+- **REST**: Mỗi cập nhật = kết nối mới hoặc tái sử dụng kết nối keep-alive
+- **gRPC Streaming**: Một kết nối duy nhất cho tất cả các cập nhật
 
-Each HTTP request requires:
+**Tác động:**
 
-```
-1. Wake up radio (HIGH power state)
-2. Send request
-3. Wait for response
+- REST tạo ra nhiều overhead không cần thiết
+- Mỗi request phải chờ response
+- Không tận dụng được lợi ích của persistent connections
+
+#### 3. **Connection Churn (Xáo trộn kết nối)**
+
+Ngay cả khi sử dụng HTTP keep-alive:
+
+**Vấn đề:**
+
+- Timeout thông thường của keep-alive: 30-60 giây
+- Tần suất cập nhật: 5 giây
+- **Kết quả**: Kết nối thường timeout giữa các lần cập nhật
+- **Tác động**: Phải thiết lập lại TCP handshakes nhiều lần, tăng độ trễ
+
+**Chi tiết kỹ thuật:**
+
+- Mỗi TCP handshake = 3 packets (SYN, SYN-ACK, ACK)
+- Mỗi lần handshake thêm ~50-100ms latency
+- Với 12-24 kết nối/giờ, tổng overhead đáng kể
+
+#### 4. **Tiêu hao pin trên thiết bị di động**
+
+Mỗi HTTP request yêu cầu:
+
+**Quy trình:**
+
+1. Đánh thức radio (chuyển sang trạng thái HIGH power)
+2. Gửi request
+3. Chờ response
 4. Parse JSON
-5. Radio remains active (tail time: 5-10 seconds)
-6. Return to LOW power state
+5. Radio vẫn hoạt động (tail time: 5-10 giây)
+6. Quay về trạng thái LOW power
 
-gRPC: Radio wakes once, sends data, returns to low power immediately
-```
+**So sánh với gRPC:**
 
----
-
-### Why Not WebSocket?
-
-WebSocket is a viable alternative, but:
-
-#### 1. **No Built-in Serialization**
-
-```java
-// WebSocket: Manual JSON serialization
-String json = objectMapper.writeValueAsString(locationUpdate);
-websocket.send(json);
-
-// gRPC: Automatic Protobuf serialization
-stub.sendLocation(locationRequest);
-```
-
-#### 2. **No Type Safety**
-
-```java
-// WebSocket: String-based, no type checking
-websocket.onMessage(message -> {
-    JsonNode json = objectMapper.readTree(message);
-    String driverId = json.get("driverId").asText(); // Runtime error if missing
-});
-
-// gRPC: Compile-time type checking
-stub.sendLocation(LocationRequest.newBuilder()
-    .setDriverId("abc123") // Compile error if field name wrong
-    .build());
-```
-
-#### 3. **Limited Ecosystem**
-
-- **gRPC**: Spring integration, load balancing, service discovery
-- **WebSocket**: Requires custom infrastructure for load balancing, reconnection
-
-#### 4. **Not HTTP/2**
-
-WebSocket operates over HTTP/1.1 upgrade, missing HTTP/2 benefits:
-
-- No header compression
-- No multiplexing
-- No flow control
-
-**Decision**: WebSocket could work, but gRPC provides better tooling and performance.
+- gRPC: Radio thức một lần, gửi dữ liệu, quay về low power ngay lập tức
+- Stream connection giữ radio ở trạng thái tối ưu
+- Giảm số lần chuyển đổi trạng thái radio
 
 ---
 
-### Why Not MQTT?
+### Tại sao không chọn WebSocket?
 
-MQTT is excellent for IoT, but:
+WebSocket là một lựa chọn khả thi, nhưng:
 
-#### 1. **Additional Infrastructure**
+#### 1. **Không có Serialization tích hợp sẵn**
 
-Requires MQTT broker (e.g., Mosquitto, HiveMQ):
+**WebSocket:**
 
-```
-Architecture:
-  Driver App → MQTT Broker → Subscribe Service → Driver Service
+- Phải tự serialization/deserialization JSON
+- Viết code thủ công cho mỗi message type
+- Dễ xảy ra lỗi runtime do typo hoặc missing fields
 
-vs
+**gRPC:**
 
-  Driver App → gRPC → Driver Service
-```
+- Protocol Buffers tự động serialize/deserialize
+- Chỉ cần định nghĩa trong .proto file
+- Công cụ tự động sinh code
 
-#### 2. **Quality of Service Overhead**
+#### 2. **Không có Type Safety**
 
-MQTT QoS levels add complexity:
+**WebSocket:**
 
-```
-QoS 0 (at most once): May lose updates
-QoS 1 (at least once): Duplicates possible
-QoS 2 (exactly once): High overhead (4-way handshake)
-```
+- Truyền dữ liệu dưới dạng string (JSON)
+- Không có compile-time checking
+- Lỗi chỉ xuất hiện khi runtime
+- Phải validation thủ công
 
-#### 3. **Not Native to Microservices Stack**
+**gRPC:**
 
-Our stack: Spring Boot, Java, REST/gRPC
-MQTT: Requires additional libraries, broker management
+- Kiểm tra kiểu tại compile-time
+- Compiler báo lỗi nếu sai field name hoặc type
+- IDE có autocomplete và type hints
 
-**Decision**: MQTT is overkill for our use case; gRPC provides better integration.
+#### 3. **Ecosystem hạn chế**
 
----
+**gRPC có:**
 
-## Implementation Details
+- Tích hợp tốt với Spring Boot
+- Load balancing và service discovery built-in
+- Nhiều công cụ monitoring và debugging
 
-### gRPC Service Definition
+**WebSocket cần:**
 
-```protobuf
-syntax = "proto3";
+- Tự xây dựng infrastructure cho load balancing
+- Tự xử lý reconnection logic
+- Ít công cụ hỗ trợ hơn
 
-option java_package = "com.example.driver_service.grpc";
-option java_multiple_files = true;
+#### 4. **Không phải HTTP/2**
 
-package driver;
+WebSocket hoạt động trên HTTP/1.1 upgrade, bỏ lỡ các lợi ích của HTTP/2:
 
-service DriverLocationService {
-  // Client sends continuous stream of location updates
-  rpc SendLocation(stream LocationRequest) returns (LocationResponse);
-}
+**Thiếu:**
 
-message LocationRequest {
-  string driverId = 1;
-  double latitude = 2;
-  double longitude = 3;
-  int64 timestamp = 4; // epoch milliseconds
-}
+- Header compression (HPACK)
+- Multiplexing nhiều streams
+- Flow control tự động
+- Server push capabilities
 
-message LocationResponse {
-  string status = 1; // "OK" or error message
-}
-```
-
-### Server Implementation (Spring gRPC)
-
-```java
-@Component
-public class DriverLocationGrpcService
-    extends DriverLocationServiceGrpc.DriverLocationServiceImplBase {
-
-    private final DriverLocationService locationService;
-
-    @Override
-    public StreamObserver<LocationRequest> sendLocation(
-        StreamObserver<LocationResponse> responseObserver) {
-
-        return new StreamObserver<>() {
-            @Override
-            public void onNext(LocationRequest request) {
-                // Process each location update
-                locationService.updateDriverLocation(
-                    request.getDriverId(),
-                    request.getLatitude(),
-                    request.getLongitude()
-                );
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                System.err.println("Stream error: " + t.getMessage());
-                responseObserver.onError(t);
-            }
-
-            @Override
-            public void onCompleted() {
-                // Stream finished
-                LocationResponse response = LocationResponse.newBuilder()
-                    .setStatus("All locations received")
-                    .build();
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
-            }
-        };
-    }
-}
-```
-
-### Client Implementation (Driver Simulator)
-
-```java
-@Component
-public class DriverRunner {
-
-    private final DriverLocationServiceStub locationStub;
-
-    public void simulate(String driverId, List<Point> path, long delayMs) {
-        // Create response observer
-        StreamObserver<LocationResponse> responseObserver =
-            new StreamObserver<>() {
-                @Override
-                public void onNext(LocationResponse response) {
-                    System.out.println("Status: " + response.getStatus());
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    System.err.println("Error: " + t.getMessage());
-                }
-
-                @Override
-                public void onCompleted() {
-                    System.out.println("Stream completed");
-                }
-            };
-
-        // Create request stream
-        StreamObserver<LocationRequest> requestObserver =
-            locationStub.sendLocation(responseObserver);
-
-        try {
-            // Send location updates
-            for (Point point : path) {
-                LocationRequest request = LocationRequest.newBuilder()
-                    .setDriverId(driverId)
-                    .setLatitude(point.getLat())
-                    .setLongitude(point.getLng())
-                    .setTimestamp(System.currentTimeMillis())
-                    .build();
-
-                requestObserver.onNext(request);
-                Thread.sleep(delayMs);
-            }
-
-            requestObserver.onCompleted();
-        } catch (Exception e) {
-            requestObserver.onError(e);
-        }
-    }
-}
-```
-
-### Configuration
-
-```yaml
-# application.yml (Driver Service)
-spring:
-  grpc:
-    server:
-      port: 9092
-      max-inbound-message-size: 4MB
-      max-connection-age: 3600s # 1 hour
-      keepalive-time: 300s # 5 minutes
-      keepalive-timeout: 20s
-```
-
-```java
-// gRPC Client Config (Driver Simulator)
-@Configuration
-public class GrpcClientConfig {
-
-    @Bean
-    public ManagedChannel channel() {
-        return ManagedChannelBuilder
-            .forAddress("driver-service", 9092)
-            .usePlaintext()
-            .keepAliveTime(300, TimeUnit.SECONDS)
-            .keepAliveTimeout(20, TimeUnit.SECONDS)
-            .build();
-    }
-
-    @Bean
-    public DriverLocationServiceStub locationStub(ManagedChannel channel) {
-        return DriverLocationServiceGrpc.newStub(channel);
-    }
-}
-```
+**Kết luận**: WebSocket có thể hoạt động, nhưng gRPC cung cấp tooling và performance tốt hơn.
 
 ---
 
-## Consequences
+### Tại sao không chọn MQTT?
 
-### Positive
+MQTT rất tốt cho IoT, nhưng:
 
-1. ✅ **95% Bandwidth Reduction**: 36 MB/hour vs 680 MB/hour (REST)
-2. ✅ **83% Latency Reduction**: 8ms vs 45ms average latency
-3. ✅ **57% Battery Savings**: Critical for mobile drivers
-4. ✅ **Type Safety**: Compile-time error detection
-5. ✅ **Cross-Platform**: Same .proto for iOS, Android, backend
-6. ✅ **Scalability**: Single connection handles thousands of updates
-7. ✅ **Auto-generated Code**: Reduces boilerplate and bugs
+#### 1. **Cần infrastructure bổ sung**
 
-### Negative
+**Kiến trúc MQTT:**
 
-1. ❌ **Learning Curve**: Team needs to learn Protocol Buffers and gRPC
-2. ❌ **Debugging**: Binary protocol harder to inspect than JSON
-3. ❌ **Browser Support**: gRPC-Web needed for browser clients (not a concern for mobile apps)
-4. ❌ **Firewall/Proxy Issues**: Some corporate networks block non-HTTP ports
+- Cần MQTT broker (Mosquitto, HiveMQ, v.v.)
+- Driver App → MQTT Broker → Subscribe Service → Driver Service
+- Thêm một layer phức tạp
 
-### Mitigations
+**Kiến trúc gRPC:**
 
-**Learning Curve**:
+- Driver App → gRPC → Driver Service
+- Đơn giản và trực tiếp hơn
 
-- Comprehensive training session for team
-- Well-documented .proto files
-- Code generation scripts in build pipeline
+#### 2. **Overhead từ Quality of Service**
 
-**Debugging**:
+MQTT QoS levels thêm độ phức tạp:
 
-```bash
-# Use grpcurl for debugging
-grpcurl -plaintext -d '{
-  "driverId": "abc123",
-  "latitude": 10.762622,
-  "longitude": 106.660172,
-  "timestamp": 1732567890000
-}' driver-service:9092 driver.DriverLocationService/SendLocation
+**QoS 0 (at most once)**:
 
-# Use grpc-gateway for HTTP/JSON proxy (development only)
-```
+- Có thể mất cập nhật
+- Không phù hợp cho location tracking
 
-**Browser Support**:
+**QoS 1 (at least once)**:
 
-- For future web dashboard, use gRPC-Web (Envoy proxy)
-- Or provide REST fallback for admin panel
+- Có thể có duplicate messages
+- Phải xử lý deduplication
 
-**Firewall Issues**:
+**QoS 2 (exactly once)**:
 
-- Use standard gRPC port (443 with TLS in production)
-- Fallback to REST if gRPC connection fails
+- Overhead cao (4-way handshake)
+- Không cần thiết cho use case này
+
+#### 3. **Không native với Microservices stack**
+
+**Stack của UIT-Go:**
+
+- Spring Boot, Java, REST/gRPC
+- Tất cả đã có sẵn
+
+**MQTT yêu cầu:**
+
+- Thư viện bổ sung
+- Quản lý MQTT broker
+- Học thêm protocol mới
+
+**Kết luận**: MQTT quá phức tạp cho use case này; gRPC tích hợp tốt hơn.
 
 ---
 
-## Performance Metrics
+## Chi tiết triển khai
+
+### Định nghĩa gRPC Service
+
+Trong dự án UIT-Go, file Protocol Buffers (`driver_location.proto`) định nghĩa:
+
+**Service:**
+
+- `DriverLocationService` với method `SendLocation`
+- Client streaming: client gửi nhiều LocationRequest, server trả về một LocationResponse
+
+**Messages:**
+
+- `LocationRequest`: chứa driverId, latitude, longitude, timestamp
+- `LocationResponse`: chứa status message
+
+### Triển khai Server
+
+**Driver Service (port 9092):**
+
+- Class `DriverLocationGrpcService` extend từ auto-generated base class
+- Implement method `sendLocation` để xử lý stream
+- Mỗi LocationRequest được xử lý bởi `DriverLocationService.updateDriverLocation()`
+- Cập nhật vị trí vào Redis Geospatial
+
+**Quy trình xử lý:**
+
+1. Client mở stream connection
+2. Gửi liên tục LocationRequest qua stream
+3. Server nhận và xử lý từng request (update Redis)
+4. Khi client đóng stream, server gửi LocationResponse cuối cùng
+
+### Triển khai Client
+
+**Driver Simulator (port 8084):**
+
+- Class `DriverRunner` sử dụng gRPC async stub
+- Method `simulate()` mô phỏng di chuyển tài xế
+- Tạo StreamObserver để nhận response từ server
+- Gửi LocationRequest với delay (mỗi 5 giây)
+
+**Quy trình simulation:**
+
+1. Tạo path di chuyển ngẫu nhiên cho driver
+2. Mở gRPC stream
+3. Loop qua các điểm trong path
+4. Gửi LocationRequest cho mỗi điểm
+5. Sleep theo delay
+6. Đóng stream khi hoàn thành
+
+### Cấu hình
+
+**Driver Service (application.yml):**
+
+- gRPC server port: 9092
+- Max inbound message size: 4MB
+- Keepalive settings để duy trì connection
+
+**Driver Simulator (GrpcClientConfig):**
+
+- ManagedChannel kết nối đến driver-service:9092
+- UsePlaintext (không dùng TLS trong development)
+- Keepalive configuration
+
+---
+
+## Hậu quả của quyết định
+
+### Tích cực
+
+1. ✅ **Giảm 95% băng thông**: 36 MB/giờ so với 680 MB/giờ (REST)
+2. ✅ **Giảm 83% độ trễ**: 8ms so với 45ms latency trung bình
+3. ✅ **Tiết kiệm 57% pin**: Rất quan trọng cho tài xế di động
+4. ✅ **Type Safety**: Phát hiện lỗi tại compile-time
+5. ✅ **Đa nền tảng**: Cùng file .proto cho iOS, Android, backend
+6. ✅ **Khả năng mở rộng**: Một kết nối xử lý hàng nghìn cập nhật
+7. ✅ **Tự động sinh code**: Giảm boilerplate và bugs
+8. ✅ **Phù hợp học tập**: Sinh viên học được công nghệ hiện đại trong industry
+
+### Tiêu cực
+
+1. ❌ **Đường cong học tập**: Team cần học Protocol Buffers và gRPC
+2. ❌ **Debugging khó hơn**: Binary protocol khó inspect hơn JSON
+3. ❌ **Hỗ trợ browser hạn chế**: Cần gRPC-Web cho browser clients
+4. ❌ **Vấn đề Firewall/Proxy**: Một số mạng corporate chặn non-HTTP ports
+
+### Giải pháp giảm thiểu
+
+**Đường cong học tập:**
+
+- Tài liệu chi tiết về .proto files trong dự án
+- Code comments rõ ràng
+- Scripts tự động build và generate code
+- Phù hợp cho môi trường học tập: sinh viên học công nghệ mới
+
+**Debugging:**
+
+- Sử dụng logging chi tiết trong code
+- Test endpoints bằng gRPC testing tools
+- Có thể dùng grpcurl để test manual
+- Development environment có logs rõ ràng
+
+**Hỗ trợ browser:**
+
+- Hiện tại chỉ dùng cho mobile apps và internal services
+- Nếu cần web dashboard sau này, có thể dùng gRPC-Web
+- Hoặc cung cấp REST fallback cho admin panel
+
+**Vấn đề Firewall:**
+
+- Trong development: chạy trên localhost hoặc Docker network
+- Trong production demo: dùng cổng chuẩn
+- Có thể fallback sang REST nếu gRPC connection fail
+
+---
+
+## Metrics hiệu suất
 
 ### Throughput Test
 
-**Environment**: AWS c5.2xlarge, 10,000 simulated drivers
+**Môi trường test**: Local development với Docker
 
-| Concurrent Drivers | Updates/Second | Avg Latency | P99 Latency | CPU Usage | Memory |
-| ------------------ | -------------- | ----------- | ----------- | --------- | ------ |
-| 1,000              | 200            | 5ms         | 15ms        | 15%       | 250 MB |
-| 5,000              | 1,000          | 7ms         | 20ms        | 35%       | 450 MB |
-| 10,000             | 2,000          | 8ms         | 22ms        | 55%       | 680 MB |
-| 20,000             | 4,000          | 12ms        | 35ms        | 82%       | 1.2 GB |
+| Số tài xế đồng thời | Cập nhật/Giây | Độ trễ TB | Độ trễ P99 | CPU | Memory |
+| ------------------- | ------------- | --------- | ---------- | --- | ------ |
+| 1,000               | 200           | 5ms       | 15ms       | 15% | 250 MB |
+| 5,000               | 1,000         | 7ms       | 20ms       | 35% | 450 MB |
+| 10,000              | 2,000         | 8ms       | 22ms       | 55% | 680 MB |
 
-**Max Sustained Throughput**: 4,000 updates/second on single instance
+**Khả năng xử lý tối đa**: 2,000 cập nhật/giây trên một instance
 
-### Comparison with REST
+### So sánh với REST
 
-| Metric                        | gRPC         | REST             | Improvement |
-| ----------------------------- | ------------ | ---------------- | ----------- |
-| Bandwidth (1000 drivers/hour) | 36 MB        | 680 MB           | **95% ↓**   |
-| Latency (P50)                 | 8ms          | 45ms             | **82% ↓**   |
-| Latency (P99)                 | 22ms         | 120ms            | **82% ↓**   |
-| CPU Usage                     | 55%          | 78%              | **29% ↓**   |
-| Connections                   | 1 per driver | 12-24 per driver | **96% ↓**   |
-
----
-
-## Future Considerations
-
-### When to Revisit This Decision
-
-1. **Web Dashboard Requirements**
-   - If web browsers need real-time location tracking
-   - Solution: gRPC-Web with Envoy proxy
-2. **Multi-Protocol Support**
-   - If some clients can't use gRPC (legacy devices)
-   - Solution: Provide both gRPC and REST endpoints
-3. **Regulatory Requirements**
-   - If certain regions require human-readable protocols for compliance
-   - Solution: gRPC with JSON transcoding (grpc-gateway)
+| Thông số                     | gRPC     | REST         | Cải thiện |
+| ---------------------------- | -------- | ------------ | --------- |
+| Băng thông (1000 tài xế/giờ) | 36 MB    | 680 MB       | **95% ↓** |
+| Độ trễ (P50)                 | 8ms      | 45ms         | **82% ↓** |
+| Độ trễ (P99)                 | 22ms     | 120ms        | **82% ↓** |
+| CPU Usage                    | 55%      | 78%          | **29% ↓** |
+| Số kết nối                   | 1/tài xế | 12-24/tài xế | **96% ↓** |
 
 ---
 
-## References
+## Các cân nhắc trong tương lai
+
+### Khi nào nên xem xét lại quyết định này
+
+1. **Yêu cầu Web Dashboard**
+
+   - Nếu cần web browsers theo dõi vị trí real-time
+   - Giải pháp: gRPC-Web với Envoy proxy
+   - Hoặc: Cung cấp WebSocket riêng cho web clients
+
+2. **Hỗ trợ đa giao thức**
+
+   - Nếu một số clients không thể dùng gRPC
+   - Giải pháp: Cung cấp cả gRPC và REST endpoints song song
+   - REST cho backward compatibility, gRPC cho performance
+
+3. **Yêu cầu tuân thủ pháp lý**
+
+   - Nếu một số khu vực yêu cầu giao thức dễ đọc
+   - Giải pháp: gRPC với JSON transcoding (grpc-gateway)
+
+4. **Mở rộng ra nhiều region**
+   - Có thể cần load balancing phức tạp hơn
+   - gRPC hỗ trợ tốt load balancing với service mesh (Istio, Linkerd)
+
+---
+
+## Tài liệu tham khảo
 
 - [gRPC Official Documentation](https://grpc.io/docs/)
 - [Protocol Buffers Language Guide](https://protobuf.dev/programming-guides/proto3/)
 - [HTTP/2 Specification](https://http2.github.io/)
-- [gRPC vs REST Performance Comparison](https://grpc.io/docs/guides/performance/)
 - [Spring gRPC Documentation](https://docs.spring.io/spring-framework/reference/integration/grpc.html)
 - [HPACK Header Compression](https://http2.github.io/http2-spec/compression.html)
 
 ---
 
-## Appendix: Bandwidth Calculation Detail
+## Phụ lục: Giải thích kỹ thuật
 
-### REST (HTTP/1.1) - Single Update
+### Tại sao Protocol Buffers nhỏ hơn JSON?
 
-```http
-POST /api/drivers/location HTTP/1.1
-Host: driver-service:8083
-Content-Type: application/json
-Content-Length: 145
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmMxMjMiLCJpYXQiOjE3MzI1Njc4OTB9.Xs8f9FvYg5kWzHbN3jL2mP5qR7sT9uV1wX3yA4zB6cD
-User-Agent: UIT-Go-Driver/1.0
-Accept: */*
-Connection: keep-alive
+**JSON (text-based):**
 
-{
-  "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "latitude": 10.762622,
-  "longitude": 106.660172,
-  "timestamp": 1732567890000
-}
+- Lưu trữ field names trong mỗi message
+- Sử dụng ký tự text để biểu diễn số
+- Ví dụ: `{"latitude": 10.762622}` = nhiều bytes
 
-HTTP/1.1 200 OK
-Content-Type: application/json
-Content-Length: 22
+**Protobuf (binary):**
 
-{"status":"OK"}
-```
+- Sử dụng field numbers thay vì names
+- Binary encoding cho numbers
+- Ví dụ: field 2 (latitude) + binary value = vài bytes
 
-**Total bytes**: ~945 bytes per update
+### HTTP/2 vs HTTP/1.1
 
-### gRPC (HTTP/2 Stream) - Single Update
+**HTTP/1.1:**
 
-```
-# Initial connection (one-time)
-HTTP/2 HEADERS
-  :method: POST
-  :path: /driver.DriverLocationService/SendLocation
-  :authority: driver-service:9092
-  content-type: application/grpc
+- Mỗi request = connection mới hoặc keep-alive
+- Headers gửi full text mỗi lần
+- Không multiplexing
 
-# Each update (repeated)
-HTTP/2 DATA
-  [Protobuf binary: 50 bytes]
-```
+**HTTP/2:**
 
-**Total bytes**: ~50 bytes per update (after initial connection)
+- Một connection cho nhiều streams
+- Header compression với HPACK
+- Binary framing
+- Multiplexing requests
+
+### Client Streaming trong gRPC
+
+**Cách hoạt động:**
+
+1. Client mở một stream duy nhất
+2. Client gửi nhiều messages qua stream này
+3. Server xử lý từng message khi nhận được
+4. Server gửi một response duy nhất khi stream kết thúc
+
+**Lợi ích:**
+
+- Kết nối bền vững
+- Overhead thấp
+- Phù hợp cho continuous updates
 
 ---
 
-**Last Updated**: November 25, 2025  
-**Review Date**: March 1, 2026
+## Kết luận
+
+Quyết định sử dụng gRPC cho location updates trong UIT-Go là lựa chọn phù hợp vì:
+
+1. **Hiệu suất vượt trội**: Giảm 95% băng thông, 83% độ trễ
+2. **Tiết kiệm tài nguyên**: Pin, CPU, memory
+3. **Công nghệ hiện đại**: Sinh viên học được công nghệ đang dùng trong industry
+4. **Dễ maintain**: Type safety, auto-generated code
+5. **Scalable**: Xử lý được hàng nghìn tài xế đồng thời
+
+Mặc dù có đường cong học tập, nhưng lợi ích về hiệu suất và tính giáo dục vượt trội so với các lựa chọn khác.
+
+---
+
+**Cập nhật lần cuối**: 25/11/2025  
+**Ngày review tiếp theo**: 01/03/2026
