@@ -12,6 +12,8 @@ kubectl apply -f infra\k8s\redis\redis-service.yaml
 
 kubectl apply -f infra\k8s\api-gateway\api-gateway-deployment.yaml
 kubectl apply -f infra\k8s\api-gateway\api-gateway-service.yaml
+kubectl apply -f infra\k8s\api-gateway\api-gateway-hpa.yaml
+kubectl apply -f infra\k8s\api-gateway\api-gateway-pdb.yaml
 
 echo Waiting for infrastructure to be ready...
 timeout /t 10 /nobreak
