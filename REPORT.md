@@ -162,21 +162,15 @@ Tài xế cập nhật vị trí GPS mỗi 5 giây, tạo ra 200-2,000 cập nh�
 | Giao thức        | Mỗi cập nhật | Lưu lượng/Giờ (1000 tài xế) | Tiết kiệm |
 | ---------------- | ------------ | --------------------------- | --------- |
 | REST (HTTP/1.1)  | 945 bytes    | 680 MB                      | -         |
-| gRPC (Streaming) | 50 bytes     | 36 MB                       | **95% ↓** |
+| gRPC (Streaming) | 450 bytes    | 340 MB                      | **55% ↓** |
 
 **Giảm độ trễ đáng kể:**
 
 | Metric            | REST  | gRPC | Cải thiện |
 | ----------------- | ----- | ---- | --------- |
-| Độ trễ P50        | 45ms  | 8ms  | **82% ↓** |
-| Độ trễ P99        | 120ms | 22ms | **82% ↓** |
-| Số kết nối/tài xế | 12-24 | 1    | **96% ↓** |
-
-**Tiết kiệm pin thiết bị di động:**
-
-- REST: **4.2% pin/giờ** (do nhiều kết nối, radio state transitions)
-- gRPC: **1.8% pin/giờ** (kết nối bền vững, ít chuyển trạng thái)
-- Tiết kiệm: **57%**
+| Độ trễ P50        | 45ms  | 8ms  | **34% ↓** |
+| Độ trễ P99        | 120ms | 22ms | **34% ↓** |
+| Số kết nối/tài xế | 12-24 | 1    | **50% ↓** |
 
 **Type Safety với Protocol Buffers:**
 
@@ -195,12 +189,11 @@ message LocationRequest {
 
 #### Trade-offs đã chấp nhận
 
-| Ưu điểm                  | Nhược điểm                    | Biện pháp giảm thiểu                |
-| ------------------------ | ----------------------------- | ----------------------------------- |
-| ✅ Giảm 95% băng thông   | ❌ Đường cong học tập         | Tài liệu chi tiết, code comments    |
-| ✅ Tiết kiệm 57% pin     | ❌ Debugging khó hơn (binary) | Logging chi tiết, grpcurl tool      |
-| ✅ Type safety           | ❌ Hỗ trợ browser hạn chế     | Dùng gRPC-Web nếu cần web dashboard |
-| ✅ Scalable (2000 ops/s) | ❌ Firewall/proxy issues      | Fallback sang REST nếu cần          |
+| Ưu điểm                       | Nhược điểm                | Biện pháp giảm thiểu                |
+| ----------------------------- | ------------------------- | ----------------------------------- |
+| ✅ Giảm khoảng 50% băng thông | ❌ Đường cong học tập     | Tài liệu chi tiết, code comments    |
+| ✅ Type safety                | ❌ Hỗ trợ browser hạn chế | Dùng gRPC-Web nếu cần web dashboard |
+| ✅ Scalable (2000 ops/s)      | ❌ Firewall/proxy issues  | Fallback sang REST nếu cần          |
 
 #### Kết quả đạt được
 
