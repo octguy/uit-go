@@ -57,10 +57,16 @@ UIT-Go là hệ thống đặt xe microservices toàn diện, triển khai các 
 
 Dự án có các Architecture Decision Records chi tiết:
 
-- **[ADR-001: Redis cho Geospatial](docs/ADR/001-redis-vs-dynamodb-for-geospatial.md)** - Tại sao chọn Redis thay vì DynamoDB
-- **[ADR-002: gRPC cho Location Updates](docs/ADR/002-grpc-vs-rest-for-location-updates.md)** - Tại sao chọn gRPC thay vì REST
-- **[ADR-003: REST cho CRUD Operations](docs/ADR/003-rest-vs-grpc-for-crud-operations.md)** - Khi nào dùng REST vs gRPC
-- **[ADR-004: RabbitMQ cho Async Messaging](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)** - Tại sao chọn RabbitMQ thay vì Kafka
+- **[ADR-001: Redis cho Geospatial](docs/ADR/001-redis-vs-dynamodb-for-geospatial.md)** -
+- **[ADR-002: gRPC cho Location Updates](docs/ADR/002-grpc-vs-rest-for-location-updates.md)**
+- **[ADR-003: REST cho CRUD Operations](docs/ADR/003-rest-vs-grpc-for-crud-operations.md)**
+- **[ADR-004: RabbitMQ cho Async Messaging](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)**
+- **[ADR-005: Geographic Sharding vs Hash-based Sharding cho Trip Database](docs/ADR/005-geographic-sharding-vs-hash-sharding.md)**
+- **[ADR-006: Redis Read Replicas vs Redis Cluster cho Driver Location Scaling](docs/ADR/006-redis-replicas-vs-cluster.md)**
+- **[ADR-007: HPA vs VPA cho Kubernetes Autoscaling](docs/ADR/007-hpa-vs-vpa-autoscaling.md)**
+- **[ADR-008: Linkerd vs Istio cho Service Mesh](docs/ADR/008-linkerd-vs-istio.md)**
+- **[ADR-009: Resilience4j vs Hystrix cho Circuit Breaker Pattern](docs/ADR/009-resilience4j-vs-hystrix.md)**
+- **[ADR-010: k6 vs JMeter cho Load Testing](docs/ADR/010-k6-vs-jmeter.md)**
 
 ## Yêu cầu Cài đặt
 
@@ -1937,14 +1943,3 @@ Script này sẽ:
 - Kubernetes deployment
 - CI/CD pipeline (GitHub Actions)
 - Load testing và performance optimization
-
-## Tài liệu Bổ sung
-
-### Documentation
-
-- **[Tổng quan Kiến trúc](/docs/ARCHITECTURE.md)** - Chi tiết thiết kế hệ thống
-- **[Redis & gRPC Commands](docs/testing-guide/redis-grpc-testing-commands.md)** - Testing utilities
-- **[ADR-001: Redis cho Geospatial](/docs/ADR/001-redis-vs-dynamodb-for-geospatial.md)** - Quyết định kiến trúc
-- **[ADR-002: gRPC cho Location Updates](/docs/ADR/002-grpc-vs-rest-for-location-updates.md)** - Communication protocol
-- **[ADR-003: REST cho CRUD](/docs/ADR/003-rest-vs-grpc-for-crud-operations.md)** - API design choices
-- **[ADR-004: RabbitMQ cho Messaging](/docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)** - Message broker selection
