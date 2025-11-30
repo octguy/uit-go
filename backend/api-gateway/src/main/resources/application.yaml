@@ -3,30 +3,143 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:
-        - id: user-service
-          uri: http://user-service:8081
-          predicates:
-            - Path=/api/users/**
-        - id: trip-service
-          uri: http://trip-service:8082
-          predicates:
-            - Path=/api/trips/**
-        - id: driver-service
-          uri: http://driver-service:8083
-          predicates:
-            - Path=/api/drivers/**
+      server:
+        webflux:
+          routes:
+            - id: user-service
+              uri: http://user-service:8081
+              predicates:
+                - Path=/api/users/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: userServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/user-service
+                    statusCodes:
+                      - 500
+                      - 502
+                      - 503
+                      - 504
+                - name: Retry
+                  args:
+                    retries: 3
+                    statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
+                    methods: GET,POST
+                    backoff:
+                      firstBackoff: 100ms
+                      maxBackoff: 500ms
+                      factor: 2
+                      basedOnPreviousValue: true
+            - id: trip-service
+              uri: http://trip-service:8082
+              predicates:
+                - Path=/api/trips/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: tripServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/trip-service
+                    statusCodes:
+                      - 500
+                      - 502
+                      - 503
+                      - 504
+                - name: Retry
+                  args:
+                    retries: 3
+                    statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
+                    methods: GET,POST
+                    backoff:
+                      firstBackoff: 100ms
+                      maxBackoff: 500ms
+                      factor: 2
+                      basedOnPreviousValue: true
+            - id: driver-service
+              uri: http://driver-service:8083
+              predicates:
+                - Path=/api/drivers/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: driverServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/driver-service
+                    statusCodes:
+                      - 500
+                      - 502
+                      - 503
+                      - 504
+                - name: Retry
+                  args:
+                    retries: 3
+                    statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
+                    methods: GET,POST
+                    backoff:
+                      firstBackoff: 100ms
+                      maxBackoff: 500ms
+                      factor: 2
+                      basedOnPreviousValue: true
 
 server:
   port: 8080
+
+logging:
+  level:
+    io.github.resilience4j: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.circuitbreaker: DEBUG
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,circuitbreakers,circuitbreakerevents
   endpoint:
     health:
       probes:
         enabled: true
       show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+        registerHealthIndicator: true
+        # Record these exceptions as failures
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.reactive.function.client.WebClientResponseException
+          - org.springframework.cloud.gateway.support.NotFoundException
+          - java.net.ConnectException
+          - io.netty.channel.ConnectTimeoutException
+    instances:
+      userServiceCircuitBreaker:
+        baseConfig: default
+      tripServiceCircuitBreaker:
+        baseConfig: default
+      driverServiceCircuitBreaker:
+        baseConfig: default
+  
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 5s
+        cancelRunningFuture: true
+    instances:
+      userServiceCircuitBreaker:
+        baseConfig: default
+      tripServiceCircuitBreaker:
+        baseConfig: default
+      driverServiceCircuitBreaker:
+        baseConfig: default
