@@ -11,29 +11,14 @@ const tripCreationRate = new Rate('trip_created');
 // Stress Test Configuration for Trip Service
 export const options = {
   stages: [
-    // Ramp up: 0 → 50 VUs trong 1 phút
-    { duration: '1m', target: 50 },
+    // Ramp up: 0 → 500 VUs trong 30 giây
+    { duration: '30s', target: 500 },
 
-    // Ramp up: 50 → 100 VUs trong 1 phút
-    { duration: '1m', target: 100 },
+    // Hold: Giữ 500 VUs trong 1 phút
+    { duration: '1m', target: 500 },
 
-    // Ramp up: 100 → 200 VUs trong 1 phút
-    { duration: '1m', target: 200 },
-
-    // Spike: 200 → 400 VUs trong 30s
-    { duration: '30s', target: 400 },
-
-    // Hold: Giữ 400 VUs trong 2 phút
-    { duration: '2m', target: 400 },
-
-    // Extreme spike: 400 → 600 VUs trong 30s
-    { duration: '30s', target: 600 },
-
-    // Hold: Giữ 600 VUs trong 1 phút
-    { duration: '1m', target: 600 },
-
-    // Ramp down: Giảm xuống 0 trong 1 phút
-    { duration: '1m', target: 0 },
+    // Ramp down: Giảm xuống 0 trong 30 giây
+    { duration: '30s', target: 0 },
   ],
 
   thresholds: {
@@ -84,7 +69,7 @@ export default function () {
   const params = {
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkMzJkOTc3Zi00MGNkLTQ1YjgtYjczMC03NTYzNWIwMmU3MmYiLCJpYXQiOjE3NjQ0MzI2NjcsImV4cCI6MTc2NDUxOTA2N30.hN3Xvt3BRlbtUBNGH8FljFieaVq_Jcl8rd6VpZLyfT0',
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkMzJkOTc3Zi00MGNkLTQ1YjgtYjczMC03NTYzNWIwMmU3MmYiLCJpYXQiOjE3NjQ1MTQ2NzMsImV4cCI6MTc2NDYwMTA3M30.KQzxoqErKA5GhAv3Xw5Q-3s044ciSxpmRJF9VIqS15s',
     },
   };
 
@@ -115,7 +100,8 @@ export default function () {
     console.log(`[VU ${__VU}] Iteration ${__ITER}: Status ${res.status}, Pickup: (${coords.pickupLatitude.toFixed(4)}, ${coords.pickupLongitude.toFixed(4)})`);
   }
 
-  sleep(0.5); // Think time giữa các requests
+  // Sleep 0.05s = 20 req/s per VU → 500 VUs × 20 = 10,000 RPS
+  sleep(0.05);
 }
 
 // Export report sau khi test

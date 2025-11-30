@@ -11,6 +11,15 @@ spring:
 server:
   port: 8080
 
+# ============================================
+# CIRCUIT BREAKER TOGGLE
+# Set to false to disable circuit breaker
+# Can also be set via env: GATEWAY_CIRCUITBREAKER_ENABLED=false
+# ============================================
+gateway:
+  circuitbreaker:
+    enabled: false  # Change to true to enable circuit breaker
+
 logging:
   level:
     root: INFO
