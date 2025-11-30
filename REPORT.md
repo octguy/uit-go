@@ -61,7 +61,7 @@ UIT-Go là một nền tảng đặt xe dựa trên kiến trúc microservices, 
 | Pattern            | Use Case                                 | Lý do                                         |
 | ------------------ | ---------------------------------------- | --------------------------------------------- |
 | **REST API**       | Client-facing endpoints, CRUD operations | Chuẩn mực, dễ sử dụng, phù hợp với web/mobile |
-| **gRPC Streaming** | Cập nhật vị trí tài xế liên tục          | Giảm khoảng 50% băng thông, độ trễ thấp              |
+| **gRPC Streaming** | Cập nhật vị trí tài xế liên tục          | Giảm khoảng 50% băng thông, độ trễ thấp       |
 | **RabbitMQ**       | Thông báo chuyến đi bất đồng bộ          | Decoupling services, đảm bảo delivery         |
 | **OpenFeign**      | Service-to-service communication         | Declarative, dễ maintain                      |
 
@@ -167,10 +167,10 @@ Tài xế cập nhật vị trí GPS mỗi 5 giây, tạo ra 200-2,000 cập nh�
 
 **Giảm độ trễ đáng kể:**
 
-| Metric            | REST  | gRPC | Cải thiện |
-| ----------------- | ----- | ---- | --------- |
-| Độ trễ P50        | 22ms  | 14ms | **34% ↓** |
-| Độ trễ P99        | 120ms | 95ms | **25% ↓** |
+| Metric     | REST  | gRPC | Cải thiện |
+| ---------- | ----- | ---- | --------- |
+| Độ trễ P50 | 22ms  | 14ms | **34% ↓** |
+| Độ trễ P99 | 120ms | 95ms | **25% ↓** |
 
 **Type Safety với Protocol Buffers:**
 
@@ -189,11 +189,11 @@ message LocationRequest {
 
 #### Trade-offs đã chấp nhận
 
-| Ưu điểm                       | Nhược điểm                | Biện pháp giảm thiểu                |
-| ----------------------------- | ------------------------- | ----------------------------------- |
-| ✅ Giảm khoảng 50% băng thông | ❌ Đường cong học tập     | Tài liệu chi tiết, code comments    |
-| ✅ Scalable (2000 ops/s)      | ❌ Firewall/proxy issues  | Fallback sang REST nếu cần          |
-| ✅ Type safety                |  |
+| Ưu điểm                       | Nhược điểm               | Biện pháp giảm thiểu             |
+| ----------------------------- | ------------------------ | -------------------------------- |
+| ✅ Giảm khoảng 50% băng thông | ❌ Đường cong học tập    | Tài liệu chi tiết, code comments |
+| ✅ Scalable (2000 ops/s)      | ❌ Firewall/proxy issues | Fallback sang REST nếu cần       |
+| ✅ Type safety                |                          |
 
 #### Kết quả đạt được
 
@@ -343,6 +343,458 @@ public void handleTripNotification(ConsumerRecord<String, TripNotificationReques
 - Message delivery guarantee với durable queues
 - Dễ monitor và debug với Management UI
 - RAM usage: < 200 MB (phù hợp laptop sinh viên)
+
+---
+
+### 3.5. Quyết định 5: Geographic Sharding cho Trip Database
+
+> **Tham khảo**: [ADR-005: Geographic Sharding vs Hash-based Sharding](docs/ADR/005-geographic-sharding-vs-hash-sharding.md)
+
+#### Bối cảnh
+
+Hệ thống hoạt động đa quốc gia (Việt Nam, Thái Lan) với 100,000+ chuyến đi/ngày. Database PostgreSQL đơn lẻ gặp vấn đề write contention và slow queries theo khu vực.
+
+#### Các phương án đã cân nhắc
+
+1. **Geographic Sharding (by longitude)** ✅ (Đã chọn)
+2. Hash-based Sharding (by trip_id)
+3. Range-based Sharding (by created_at)
+4. Composite Sharding (country + time)
+5. Single DB với Read Replicas
+
+#### Lý do chọn Geographic Sharding
+
+**Perfect Query Locality:**
+
+- 80% queries filter theo location → Zero cross-shard queries
+- Latency: **30-50ms** (cải thiện 70% từ 150-200ms)
+- 100% queries stay within 1 shard
+
+**Aligns with Business Logic:**
+
+- VN Shard: pickup_longitude < 105.0°E (Vietnam)
+- TH Shard: pickup_longitude >= 105.0°E (Thailand)
+- Trips không span countries → Không cần cross-shard JOIN
+
+**Easy to Expand:**
+
+- Thêm countries mới chỉ cần add shard (< 1 day)
+- Malaysia, Singapore có thể thêm dễ dàng
+- Independent scaling per country
+
+#### Trade-offs đã chấp nhận
+
+| Ưu điểm                      | Nhược điểm                      | Biện pháp giảm thiểu                    |
+| ---------------------------- | ------------------------------- | --------------------------------------- |
+| ✅ Horizontal scalability    | ❌ Cross-shard JOINs impossible | Application-level JOIN (rare use case)  |
+| ✅ Query performance (70% ↑) | ❌ Application complexity       | Abstract trong service layer            |
+| ✅ Perfect locality (100%)   | ❌ Uneven distribution          | Acceptable (60/40 split), can sub-shard |
+| ✅ Data isolation            | ❌ No distributed transactions  | Design schema to avoid cross-shard txn  |
+
+#### Kết quả đạt được
+
+- Query latency: **30-50ms** (70% improvement)
+- Write throughput: **1000 writes/s** (2x capacity)
+- Cross-shard queries: **0%** (perfect locality)
+- VN: 60K trips/day, TH: 40K trips/day (both within capacity)
+
+---
+
+### 3.6. Quyết định 6: Redis Read Replicas cho Driver Location Scaling
+
+> **Tham khảo**: [ADR-006: Redis Read Replicas vs Redis Cluster](docs/ADR/006-redis-replicas-vs-cluster.md)
+
+#### Bối cảnh
+
+Driver Service có read-heavy workload: 2,000 writes/s và 5,000 reads/s (ratio 2.5:1). Single Redis instance gặp bottleneck với P99 read latency 20ms.
+
+#### Các phương án đã cân nhắc
+
+1. **Redis Read Replicas với CQRS Pattern** ✅ (Đã chọn)
+2. Redis Cluster (Sharding)
+3. Vertical Scaling (Bigger Instance)
+4. Redis Sentinel (HA only)
+5. Client-side Caching
+
+#### Lý do chọn Redis Read Replicas
+
+**Directly Solves Read Bottleneck:**
+
+- Total: 7,000 ops/s
+- Reads: 5,000 ops/s (71%) → Replica
+- Writes: 2,000 ops/s (29%) → Master
+- Master CPU: 65% → 35% (reduced)
+- Replica CPU: 0% → 40% (balanced)
+
+**CQRS Pattern Match:**
+
+- COMMAND (Write) → Master only
+- QUERY (Read) → Replica only
+- Clear separation of concerns
+
+**Eventual Consistency Acceptable:**
+
+- Replication lag: 1-10ms
+- Driver updates every 5 seconds
+- 10ms staleness negligible (distance error ~0.5m trong 5km search)
+
+#### Trade-offs đã chấp nhận
+
+| Ưu điểm                    | Nhược điểm                | Biện pháp giảm thiểu            |
+| -------------------------- | ------------------------- | ------------------------------- |
+| ✅ Read throughput 67% ↑   | ❌ Eventual consistency   | Acceptable (10ms << 5s update)  |
+| ✅ Master load reduced     | ❌ 2x storage cost        | Negligible (1MB per instance)   |
+| ✅ Horizontal read scaling | ❌ Application complexity | Abstracted in service layer     |
+| ✅ Fault tolerance bonus   | ❌ Replication lag        | Monitor lag, fallback to master |
+
+**Tại sao không chọn Redis Cluster:**
+
+- GEORADIUS queries phải query ALL nodes (scatter-gather)
+- Cannot use multi-key operations (pipeline breaks)
+- 3x resource usage (6 nodes vs 2)
+- We don't have write bottleneck (2% capacity used)
+
+#### Kết quả đạt được
+
+- Read throughput: **5,000 req/s** (67% increase)
+- Read latency P99: **12ms** (40% improvement từ 20ms)
+- Master CPU: **35%** (reduced từ 65%)
+- Replication lag avg: **< 5ms**
+
+---
+
+### 3.7. Quyết định 7: HPA cho Kubernetes Autoscaling
+
+> **Tham khảo**: [ADR-007: HPA vs VPA cho Autoscaling](docs/ADR/007-hpa-vs-vpa-autoscaling.md)
+
+#### Bối cảnh
+
+Microservices cần tự động scale theo traffic biến động (normal 100 req/s → peak 1000 req/s) để optimize chi phí và maintain availability.
+
+#### Các phương án đã cân nhắc
+
+1. **Horizontal Pod Autoscaler (HPA)** ✅ (Đã chọn)
+2. Vertical Pod Autoscaler (VPA)
+3. Fixed Replicas (no autoscaling)
+4. Combination: HPA + VPA
+5. KEDA (Event-driven Autoscaling)
+
+#### Lý do chọn HPA
+
+**Scales with Traffic Pattern:**
+
+- Normal (100 req/s): CPU 20% → 2 pods (minReplicas)
+- Peak (1000 req/s): CPU 85% → 6 pods (auto scale up)
+- After peak: CPU 20% → 2 pods (auto scale down after 5min)
+
+**Fast Reaction Time:**
+
+- T=0s: Traffic spike (CPU: 85%)
+- T=15s: metrics-server collects
+- T=30s: HPA calculates desired replicas
+- T=45s: New pods ready
+- Total: ~45 seconds to handle spike
+
+**Cost Optimization:**
+
+- Without HPA: 10 pods × 24h = 240 pod-hours/day
+- With HPA: avg 4 pods × 24h = 96 pod-hours/day
+- Savings: 60% resource reduction
+
+#### Trade-offs đã chấp nhận
+
+| Ưu điểm                       | Nhược điểm                  | Biện pháp giảm thiểu         |
+| ----------------------------- | --------------------------- | ---------------------------- |
+| ✅ Automatic traffic handling | ❌ CPU metric lag (15-30s)  | Aggressive scale-up policy   |
+| ✅ Cost optimization (60% ↓)  | ❌ Scale down delay (5min)  | Prevent flapping, acceptable |
+| ✅ Improved reliability       | ❌ Cold start time (40-60s) | Keep reasonable minReplicas  |
+| ✅ Production-ready (K8s GA)  | ❌ Spring Boot startup slow | Optimize startup time        |
+
+**Tại sao không chọn VPA:**
+
+- Requires pod restart (service disruption)
+- Scales RESOURCES not CAPACITY (1 bigger pod vs more pods)
+- Unpredictable behavior (constant pod churn)
+- Not suitable for stateless services
+
+**Tại sao không chọn Fixed Replicas:**
+
+- Wastes resources during low traffic (80% idle)
+- Insufficient during peak (overload)
+- Requires manual intervention
+
+#### Kết quả đạt được
+
+**HPA Configuration:**
+
+- minReplicas: 2, maxReplicas: 10
+- targetCPU: 70%
+- scaleUp: 100% per 30s (aggressive)
+- scaleDown: 50% per 60s (conservative, 5min stabilization)
+
+**Load Test Results:**
+
+- 100 req/s → 2 pods (stable)
+- 1000 req/s → 6 pods (scaled in 45s)
+- Back to 100 req/s → 2 pods (after 5min)
+- P95 latency maintained < 100ms during scaling
+
+---
+
+### 3.8. Quyết định 8: Linkerd cho Service Mesh
+
+> **Tham khảo**: [ADR-008: Linkerd vs Istio cho Service Mesh](docs/ADR/008-linkerd-vs-istio.md)
+
+#### Bối cảnh
+
+Microservices architecture cần observability (metrics, tracing), security (mTLS), traffic management (retries, timeouts), và reliability (circuit breaking).
+
+#### Các phương án đã cân nhắc
+
+1. **Linkerd** ✅ (Đã chọn)
+2. Istio
+3. Consul Connect
+4. No Service Mesh (application-level)
+5. AWS App Mesh (cloud-specific)
+
+#### Lý do chọn Linkerd
+
+**Lightweight and Fast:**
+
+- Linkerd proxy: 10-20MB memory, ~5ms latency
+- Istio Envoy: 50-100MB memory, ~20ms latency
+- Impact (9 pods): Linkerd 135MB total vs Istio 675MB total
+- Savings: 540MB RAM, 20ms latency
+
+**Simplicity Over Features:**
+
+- Linkerd: 2 commands để install và inject
+- mTLS enabled tự động, metrics flowing ngay lập tức
+- Istio: Requires Gateways, VirtualServices, DestinationRules và nhiều CRDs
+
+**Automatic mTLS Out-of-the-Box:**
+
+- Service A → Linkerd Proxy → [Encrypted] → Linkerd Proxy → Service B
+- Certificate rotation: Automatic (every 24h)
+- No application changes: Transparent
+- Verification: linkerd viz tap shows tls=true
+
+**Built-in Observability:**
+
+- linkerd viz dashboard: Real-time metrics
+- Success rates per service (99.99%)
+- Latency percentiles (P50, P95, P99)
+- Service topology graph
+- Live request tap
+
+#### Trade-offs đã chấp nhận
+
+| Ưu điểm                    | Nhược điểm                  | Biện pháp giảm thiểu              |
+| -------------------------- | --------------------------- | --------------------------------- |
+| ✅ Low overhead (10-20MB)  | ❌ Less features than Istio | Covers 80% use cases, simpler     |
+| ✅ Simple setup (< 10 min) | ❌ Cannot run without proxy | Linkerd proxy extremely stable    |
+| ✅ Automatic mTLS          | ❌ Additional latency (5ms) | 5ms << target latencies (< 100ms) |
+| ✅ Production-ready (CNCF) | ❌ No advanced traffic mgmt | Can add Flagger if needed         |
+
+**Tại sao không chọn Istio:**
+
+- Heavy resource usage (4x more: 1.375GB vs 335MB)
+- Complex configuration (many CRDs: VirtualService, DestinationRule, etc.)
+- Steeper learning curve (10+ concepts vs Linkerd's simplicity)
+- Slower iteration (config changes take 5-10s to sync)
+
+#### Kết quả đạt được
+
+- **Security:** 100% internal traffic encrypted with mTLS
+- **Performance:** P99 latency overhead only 5ms
+- **Resource usage:** ~215MB total (acceptable for laptop)
+- **Observability:** Real-time service graph, success rates, latencies
+
+---
+
+### 3.9. Quyết định 9: Resilience4j cho Circuit Breaker Pattern
+
+> **Tham khảo**: [ADR-009: Resilience4j vs Hystrix cho Circuit Breaker](docs/ADR/009-resilience4j-vs-hystrix.md)
+
+#### Bối cảnh
+
+Microservices dễ gặp cascading failures: Driver Service down → Trip Service hangs → API Gateway exhausted → ALL requests fail. Cần circuit breaker để fast-fail và prevent cascading failures.
+
+#### Các phương án đã cân nhắc
+
+1. **Resilience4j** ✅ (Đã chọn)
+2. Netflix Hystrix
+3. Spring Retry (no circuit breaker)
+4. Istio/Linkerd Circuit Breaker
+5. Manual Implementation
+
+#### Lý do chọn Resilience4j
+
+**Modern and Actively Maintained:**
+
+- Resilience4j: Latest release 2024 (active), Spring Boot 3 ✅, Java 17+ ✅
+- Hystrix: Latest release 2018, Status MAINTENANCE MODE ❌
+- Netflix recommendation: "We recommend Resilience4j"
+
+**Lightweight - No Dependencies:**
+
+- Resilience4j: ~1MB (core + Vavr), Pure Java, functional
+- Hystrix: ~3MB (RxJava, Archaius, Servo), Heavy dependencies
+
+**Better Spring Boot Integration:**
+
+- Simple annotation-based: @CircuitBreaker, @Retry
+- Fallback method tự động được gọi khi circuit open
+- Graceful degradation với empty list hoặc cached data
+
+**Configuration in application.yml:**
+
+- failureRateThreshold: 50% (Open if 50% failed)
+- waitDurationInOpenState: 10s (Wait before HALF_OPEN)
+- slidingWindowSize: 10 (Last 10 calls)
+- Retry: maxAttempts 3, exponential backoff (1s, 2s, 4s)
+
+#### Trade-offs đã chấp nhận
+
+| Ưu điểm                        | Nhược điểm                  | Biện pháp giảm thiểu                          |
+| ------------------------------ | --------------------------- | --------------------------------------------- |
+| ✅ Prevents cascading failures | ❌ Configuration complexity | Start with defaults, tune based on monitoring |
+| ✅ Automatic recovery testing  | ❌ False positives possible | Acceptable (better than cascading)            |
+| ✅ Graceful degradation        | ❌ Fallback limitations     | Works best for read ops, use cache            |
+| ✅ Modern & maintained         | ❌ Must tune per service    | Document best practices                       |
+
+**Tại sao không chọn Hystrix:**
+
+- Maintenance mode since 2018 (deprecated)
+- Thread pool isolation overhead (~1-2ms context switch)
+- Heavier dependencies (RxJava 1.x, Archaius)
+- Complex configuration (20+ properties)
+
+**Tại sao không chọn Service Mesh Circuit Breaker:**
+
+- Coarse-grained (entire service, not per-method)
+- Cannot access application context (no cached fallback)
+- Complementary, not replacement (use both together)
+
+#### Kết quả đạt được
+
+**Failure Simulation:**
+
+- Without circuit breaker: Request timeout 30s → API gateway exhausted
+- With Resilience4j:
+  - Request 1-5: Timeout (establishing failure pattern)
+  - Request 6+: Circuit OPENS → Fast-fail in 10ms
+  - After 10s: Circuit HALF_OPEN → Test 3 calls
+  - If success: Circuit CLOSED → Normal operation
+- Result: ✅ Graceful degradation, no cascading failure
+
+**Metrics:**
+
+```
+resilience4j_circuitbreaker_state{name="driverService"} 0.0  # CLOSED
+resilience4j_circuitbreaker_failure_rate 0.5%  # Well below 50% threshold
+resilience4j_circuitbreaker_calls_total{kind="successful"} 9,850
+resilience4j_circuitbreaker_calls_total{kind="failed"} 50
+```
+
+---
+
+### 3.10. Quyết định 10: k6 cho Load Testing
+
+> **Tham khảo**: [ADR-010: k6 vs JMeter cho Load Testing](docs/ADR/010-k6-vs-jmeter.md)
+
+#### Bối cảnh
+
+Microservices cần load testing để validate performance (< 100ms latency, 1000+ RPS), find bottlenecks, capacity planning, và verify autoscaling.
+
+#### Các phương án đã cân nhắc
+
+1. **k6** ✅ (Đã chọn)
+2. Apache JMeter
+3. Gatling
+4. Locust
+5. Artillery
+
+#### Lý do chọn k6
+
+**Modern Developer Experience:**
+
+- k6 test script: JavaScript/ES6 (dễ học, quen thuộc)
+- Stages: Ramp up, sustained load, ramp down
+- Thresholds: p(95)<200ms, error rate <1%
+- Checks: status code, response time validation
+- Clean, readable code như Postman tests
+
+**Performance - Lightweight:**
+
+- Benchmark (1000 users): k6 ~100MB RAM vs JMeter ~1.5GB RAM
+- k6: Single binary (60MB), no JVM
+- JMeter: 100MB + Java runtime required
+
+**Built for CI/CD:**
+
+- Simple one-liner: k6 run --vus 100 --duration 30s script.js
+- Output formats: JSON, InfluxDB, Prometheus, Grafana Cloud
+- Exit codes: 0 (pass), 99 (fail) → Perfect for CI/CD pipelines
+
+**Thresholds and Assertions:**
+
+- http_req_duration: p(95)<200ms, p(99)<500ms
+- http_req_failed: rate<1% errors
+- http_reqs: rate>100 RPS
+- Auto-fail test if thresholds not met
+
+#### Trade-offs đã chấp nhận
+
+| Ưu điểm                    | Nhược điểm                  | Biện pháp giảm thiểu                  |
+| -------------------------- | --------------------------- | ------------------------------------- |
+| ✅ Developer-friendly (JS) | ❌ No GUI for test creation | Code-first better for version control |
+| ✅ Lightweight (60MB)      | ❌ JavaScript only          | JavaScript widely known               |
+| ✅ CI/CD integration       | ❌ Limited protocol support | HTTP/gRPC sufficient for our use case |
+| ✅ Fast execution (< 1s)   | ❌ No visual test builder   | Postman can export to k6              |
+
+**Tại sao không chọn JMeter:**
+
+- GUI-based configuration (XML, hard to review in Git)
+- Resource heavy (15-20x heavier: 1.5GB vs 100MB)
+- Slow startup (5-10s JVM warmup vs < 1s)
+- Complex for simple tests (must use GUI)
+
+**Tại sao không chọn Gatling:**
+
+- Scala learning curve (team doesn't know Scala)
+- JVM dependency (longer startup)
+- Smaller ecosystem
+
+**Tại sao không chọn Locust:**
+
+- Python performance limits (GIL, max ~1000 users single process)
+- Results aggregation manual
+- Distributed mode complexity
+
+#### Kết quả đạt được
+
+**API Gateway Load Test:**
+
+**Results:**
+
+- Checks: 99.95% passed (29985 ✓, 15 ✗)
+- http_req_duration: avg=45ms, p(95)=85ms, p(99)=120ms
+- http_req_failed: 0.05%
+- http_reqs: 30000 (100/s)
+
+**Thresholds:**
+
+- ✓ http_req_duration: p(95)<200ms
+- ✓ http_req_failed: rate<0.01
+
+**Key findings:**
+
+- Max throughput: 100 RPS
+- P95 latency: 85ms ✅
+- Error rate: 0.05% ✅
+- Bottleneck: Trip Service (CPU 80%)
+- Action: Enable HPA → scaled to 3 replicas → 200 RPS
 
 ---
 

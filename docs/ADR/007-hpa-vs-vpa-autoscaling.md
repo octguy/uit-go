@@ -11,9 +11,7 @@ Microservices (API Gateway, Trip Service, Driver Service) cần khả năng tự
 
 Hiện tại: Fixed 2 replicas → Không tối ưu (waste hay overload)
 
-### Yêu c
-
-ầu
+### Yêu cầu
 
 1. **Automatic scaling**: Không cần manual intervention
 2. **React to traffic**: Scale trong < 1 minute khi traffic tăng
@@ -35,6 +33,7 @@ Hiện tại: Fixed 2 replicas → Không tối ưu (waste hay overload)
 **Nhóm em chọn Horizontal Pod Autoscaler (HPA)** based on CPU metrics.
 
 **Configuration:**
+
 ```yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -48,12 +47,12 @@ spec:
   minReplicas: 2
   maxReplicas: 10
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
 ```
 
 ---
@@ -171,15 +170,15 @@ VPA cannot resize running pods:
 ```
 Current state:
   Pod with requests: cpu=200m, memory=512Mi
-  
+
 VPA decides:
   New requests: cpu=500m, memory=1Gi
-  
+
 Action required:
   1. Terminate existing pod
   2. Create new pod with new requests
   3. Wait for readiness
-  
+
 Downtime: ~30 seconds per pod
 ```
 
@@ -193,7 +192,7 @@ VPA scales RESOURCES, not CAPACITY:
 Traffic spike:
   VPA action: Increase pod CPU from 200m to 500m
   Result: 1 bigger pod
-  
+
 But we need:
   More pods to distribute load
   Not bigger individual pods
@@ -232,7 +231,7 @@ VPA won't improve anything, just add complexity
 
 ```yaml
 spec:
-  replicas: 5  # Always 5 pods
+  replicas: 5 # Always 5 pods
 ```
 
 #### Nhược điểm:
@@ -297,6 +296,7 @@ VPA added: Adds complexity, no benefit
 ```
 
 **When HPA + VPA makes sense:**
+
 - Separate metrics (HPA on traffic, VPA on memory)
 - Workloads with varying resource needs
 - Not our case
@@ -314,10 +314,10 @@ spec:
   scaleTargetRef:
     name: api-gateway
   triggers:
-  - type: prometheus
-    metadata:
-      query: rate(http_requests_total[1m])
-      threshold: '100'
+    - type: prometheus
+      metadata:
+        query: rate(http_requests_total[1m])
+        threshold: "100"
 ```
 
 #### Nhược điểm:
@@ -365,6 +365,7 @@ HPA: Standard Kubernetes resource
 ```
 
 **When KEDA makes sense:**
+
 - Scaling based on queue length (we use RabbitMQ!)
 - External event sources
 - Future enhancement, not initial implementation
@@ -376,6 +377,7 @@ HPA: Standard Kubernetes resource
 ### HPA Configuration per Service
 
 **API Gateway:**
+
 ```yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -389,28 +391,29 @@ spec:
   minReplicas: 2
   maxReplicas: 10
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 300  # Wait 5 min before scale down
+      stabilizationWindowSeconds: 300 # Wait 5 min before scale down
       policies:
-      - type: Percent
-        value: 50
-        periodSeconds: 60  # Max 50% scale down per minute
+        - type: Percent
+          value: 50
+          periodSeconds: 60 # Max 50% scale down per minute
     scaleUp:
-      stabilizationWindowSeconds: 0  # Scale up immediately
+      stabilizationWindowSeconds: 0 # Scale up immediately
       policies:
-      - type: Percent
-        value: 100
-        periodSeconds: 30  # Can double pods every 30s
+        - type: Percent
+          value: 100
+          periodSeconds: 30 # Can double pods every 30s
 ```
 
 **Trip Service:**
+
 ```yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -423,11 +426,11 @@ spec:
   minReplicas: 2
   maxReplicas: 8
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        averageUtilization: 70
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          averageUtilization: 70
 ```
 
 ### Resource Requests/Limits
@@ -443,27 +446,28 @@ spec:
   template:
     spec:
       containers:
-      - name: api-gateway
-        resources:
-          requests:
-            cpu: "200m"      # HPA uses this as baseline
-            memory: "256Mi"
-          limits:
-            cpu: "1000m"     # Max burst
-            memory: "512Mi"
+        - name: api-gateway
+          resources:
+            requests:
+              cpu: "200m" # HPA uses this as baseline
+              memory: "256Mi"
+            limits:
+              cpu: "1000m" # Max burst
+              memory: "512Mi"
 ```
 
 **Why requests matter:**
+
 ```
 HPA formula:
   desiredReplicas = ceil(currentReplicas × currentCPU / targetCPU)
-  
+
 Example:
   currentReplicas: 2
   currentCPU: 140m avg = 70% of 200m request
   targetCPU: 70%
   desiredReplicas: ceil(2 × 70 / 70) = 2 (stable)
-  
+
 When traffic increases:
   currentCPU: 180m avg = 90% of 200m request
   desiredReplicas: ceil(2 × 90 / 70) = 3 (scale up)
@@ -503,6 +507,7 @@ kubectl describe hpa api-gateway-hpa
 ### Tích cực
 
 1. ✅ **Automatic Traffic Handling**
+
 ```
 100 req/s → 2 pods
 500 req/s → 5 pods (auto)
@@ -511,6 +516,7 @@ Back to 100 req/s → 2 pods (auto scale down)
 ```
 
 2. ✅ **Cost Optimization**
+
 ```
 Without HPA: 10 pods × 24 hours = 240 pod-hours/day
 With HPA: avg 4 pods × 24 hours = 96 pod-hours/day
@@ -518,6 +524,7 @@ Savings: 60% resource reduction
 ```
 
 3. ✅ **Improved Reliability**
+
 ```
 No manual intervention → Less human error
 Always right-sized → Better performance
@@ -525,6 +532,7 @@ Handles unexpected spikes → Higher availability
 ```
 
 4. ✅ **Fast Reaction**
+
 ```
 Scale up: 30-45 seconds
 Scale down: 5 minutes (conservative, prevents flapping)
@@ -541,7 +549,8 @@ Lag: 15-30 seconds (metrics collection interval)
 During lag: Existing pods handle extra load (may see temporary latency spike)
 ```
 
-**Mitigation:** 
+**Mitigation:**
+
 - Set aggressive scale-up policy (100% per 30s)
 - Use PodDisruptionBudget to maintain min available
 
@@ -565,13 +574,14 @@ New pod creation:
   3. Container start: 5s
   4. Spring Boot startup: 20-30s
   5. Readiness probe: 10s
-  
+
 Total: 40-60 seconds until traffic
 
 During this time: Old pods handle increased load
 ```
 
 **Mitigation:**
+
 - Keep minReplicas reasonable (2-3)
 - Optimize Spring Boot startup time
 - Image pre-pulling on nodes
@@ -583,13 +593,13 @@ During this time: Old pods handle increased load
 ```yaml
 # Scale based on request rate, not CPU
 metrics:
-- type: Pods
-  pods:
-    metric:
-      name: http_requests_per_second
-    target:
-      type: AverageValue
-      averageValue: "100"
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"
 ```
 
 **Benefit:** More direct correlation to traffic
@@ -601,12 +611,15 @@ metrics:
 Nhóm em sẽ **enhancement** nếu:
 
 1. **CPU metric không đủ precise**
+
    - Giải pháp: Add custom metrics (request rate, latency) với Prometheus Adapter
 
 2. **Need faster reaction**
+
    - Giải pháp: KEDA scaling on RabbitMQ queue length
 
 3. **Pods have memory leaks** (memory grows over time)
+
    - Giải pháp: Add VPA in "Recreate" mode for memory only
 
 4. **Multi-dimensional scaling** (CPU + memory + custom)
