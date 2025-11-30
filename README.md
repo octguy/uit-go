@@ -1942,10 +1942,9 @@ Script này sẽ:
 
 ### Documentation
 
-- **[Tổng quan Kiến trúc](docs/ARCHITECTURE.md)** - Chi tiết thiết kế hệ thống và components (Tiếng Việt)
-- **[API Interfaces](docs/testing-guide/API_ENDPOINTS.md)** - Tài liệu API đầy đủ
+- **[Tổng quan Kiến trúc](/docs/ARCHITECTURE.md)** - Chi tiết thiết kế hệ thống và components
 - **[Redis & gRPC Commands](docs/testing-guide/redis-grpc-testing-commands.md)** - Testing utilities
-- **[ADR-001: Redis cho Geospatial](docs/ADR/001-redis-vs-dynamodb-for-geospatial.md)** - Quyết định kiến trúc
-- **[ADR-002: gRPC cho Location Updates](docs/ADR/002-grpc-vs-rest-for-location-updates.md)** - Communication protocol
-- **[ADR-003: REST cho CRUD](docs/ADR/003-rest-vs-grpc-for-crud-operations.md)** - API design choices
-- **[ADR-004: RabbitMQ cho Messaging](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)** - Message broker selection
+- **[ADR-001: Redis cho Geospatial](/docs/ADR/001-redis-vs-dynamodb-for-geospatial.md)** - Quyết định kiến trúc
+- **[ADR-002: gRPC cho Location Updates](/docs/ADR/002-grpc-vs-rest-for-location-updates.md)** - Communication protocol
+- **[ADR-003: REST cho CRUD](/docs/ADR/003-rest-vs-grpc-for-crud-operations.md)** - API design choices
+- **[ADR-004: RabbitMQ cho Messaging](/docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)** - Message broker selection
