@@ -857,3 +857,7 @@ Kiến trúc hybrid với REST + gRPC + RabbitMQ cung cấp sự cân bằng t�
 - Developer experience (REST)
 - Performance (gRPC)
 - Decoupling (RabbitMQ)
+
+# SƠ ĐỒ CHO MODULE CHUYÊN SÂU
+
+![Architecture Diagram](./images/deep-module-diagram.png)
