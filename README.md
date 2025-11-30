@@ -1942,7 +1942,7 @@ Script này sẽ:
 
 ### Documentation
 
-- **[Tổng quan Kiến trúc](/docs/ARCHITECTURE.md)** - Chi tiết thiết kế hệ thống và components
+- **[Tổng quan Kiến trúc](/docs/ARCHITECTURE.md)** - Chi tiết thiết kế hệ thống
 - **[Redis & gRPC Commands](docs/testing-guide/redis-grpc-testing-commands.md)** - Testing utilities
 - **[ADR-001: Redis cho Geospatial](/docs/ADR/001-redis-vs-dynamodb-for-geospatial.md)** - Quyết định kiến trúc
 - **[ADR-002: gRPC cho Location Updates](/docs/ADR/002-grpc-vs-rest-for-location-updates.md)** - Communication protocol
