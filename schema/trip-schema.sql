@@ -22,6 +22,7 @@ CREATE TABLE rating
     id UUID PRIMARY KEY,
     trip_id UUID NOT NULL UNIQUE,
     score INTEGER NOT NULL,
+    comment VARCHAR(500),
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     CONSTRAINT fk_trip FOREIGN KEY (trip_id) REFERENCES trip(id) ON DELETE CASCADE
 );
