@@ -1,0 +1,7 @@
+- RabbitMQ
+- Redis Caching
+- K8s HPA, PDB, Rolling Update
+- Service Mesh
+- Circuit Breaker + Retries with exponential backoff
+- Database Sharding
+- Redis Read Replica (CQRS Pattern?)

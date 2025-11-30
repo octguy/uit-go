@@ -34,11 +34,11 @@
   * Prometheus + Grafana for metrics, Jaeger for tracing, EFK (Elasticsearch/Fluentd/Kibana) or Loki + Grafana for logs.
   * Use Prometheus metrics to drive HPA and to validate load tests.
 
-* **Traffic shaping & reliability patterns**:
+* **Traffic shaping & reliability patterns**: (DONE)
 
   * Circuit breaker (e.g., via application libs or service mesh), bulkheads, retries with exponential backoff, rate limiting at API gateway or ingress (NGINX/Envoy).
 
-* **Service mesh (optional for local)**:
+* **Service mesh (optional for local)**: (DONE)
 
   * Linkerd or Istio for advanced routing, mTLS, slow-down testing, and traffic-shifting experiments. Adds complexity; use only if you need cross-service observability and resilience features.
 
@@ -85,21 +85,6 @@
 3. Run k6 test from a local pod (create a `k6` job in cluster so load originates internal) to avoid local machine bottleneck.
 4. Gradually increase load; record thresholds at which errors or latencies exceed targets.
 
-## Example k6 scenario (pseudocode)
-
-```js
-import http from 'k6/http';
-import { sleep } from 'k6';
-export let options = { stages: [{duration: '2m', target: 100}, {duration: '5m', target: 1000}] };
-export default function () {
-  // driver search endpoint
-  http.get('http://tripservice.internal/api/v1/search?lat=...&lon=...');
-  sleep(1);
-}
-```
-
-(Use k6 checks and thresholds to fail the test if latency > SLA.)
-
 ---
 
 # Tuning & hardening actions (what to implement after baseline tests)
@@ -131,15 +116,6 @@ export default function () {
 9. **Use read replicas for analytics & dashboards**
 
    * Route analytics & non-critical reads to replicas.
-
----
-
-# Observability & experiment tracking
-
-* **Tracing**: Jaeger for distributed traces; ensure driver search flow is traced end-to-end.
-* **Metrics**: Expose Prometheus metrics from services; record during every test run.
-* **Logging**: Centralize logs (EFK or Loki) and attach log-correlation IDs to traces.
-* **Test result storage**: store k6 results (JSON) and ingest into Grafana or export charts for the report.
 
 ---
 
@@ -180,34 +156,6 @@ export default function () {
 
 ---
 
-**Phase 1 — Baseline deploy (2–3 days)**
-
-* Deploy TripService, DriverService, DB (single primary), Redis (but not used yet), RabbitMQ (but not wired yet).
-* Deploy Prometheus & Grafana, Jaeger, and a basic dashboard.
-* Smoke test and capture baseline.
-
-**Phase 2 — Baseline load testing (2–3 days)**
-
-* Create k6 scenarios (search, location update, spike). Run baseline tests and gather metrics.
-
-**Phase 3 — Implement architecture changes (3–5 days)**
-
-* Introduce RabbitMQ between TripService and DriverService; implement consumer logic.
-* Add Redis materialized store for driver search.
-* Add DB read replica simulation & pgbouncer.
-* Add HPA (CPU initially) and later HPA via custom metrics (queue length).
-
-**Phase 4 — Verify & tune (3–5 days)**
-
-* Re-run load tests, measure improvements, tune caching TTLs, DB indexes, pooling, and HPA thresholds.
-* Iterate until performance targets met or diminishing returns.
-
-**Phase 5 — Final report & runbook (1–2 days)**
-
-* Compile results, graphs, design justification, trade-offs, and runbook.
-
----
-
 # Example short checklist for final report section “Design choices & trade-offs”
 
 * Why asynchronous queue? (Availability > latency under surge)
@@ -215,10 +163,3 @@ export default function () {
 * Why read replicas? (Scale read throughput; trade replication lag)
 * Why HPA on custom metric? (Faster reaction to backlog than CPU only)
 * Cost of complexity (team ops burden vs huge scale capability)
-
----
-
-# Quick notes for local constraints & realism
-
-* Local k8s cannot perfectly emulate cloud autoscaling or large-node clusters; use synthetic load and metric thresholds to simulate behavior and identify software bottlenecks.
-* When documenting numbers, present them as “observed on local cluster X nodes” and avoid extrapolating to cloud without further testing.
