@@ -32,9 +32,6 @@ kubectl apply -f infra\k8s\trip-db\trip-service-db-vn-service.yaml
 kubectl apply -f infra\k8s\trip-db\trip-service-db-th-deployment.yaml
 kubectl apply -f infra\k8s\trip-db\trip-service-db-th-service.yaml
 
-kubectl apply -f infra\k8s\driver-service\driver-service-db-deployment.yaml
-kubectl apply -f infra\k8s\driver-service\driver-service-db-service.yaml
-
 echo Waiting for databases to be ready...
 timeout /t 10 /nobreak
 
