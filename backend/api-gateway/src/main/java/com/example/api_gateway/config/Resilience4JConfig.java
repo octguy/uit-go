@@ -2,28 +2,27 @@ package com.example.api_gateway.config;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
 import org.springframework.cloud.client.circuitbreaker.Customizer;
-import org.springframework.cloud.gateway.support.NotFoundException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import java.io.IOException;
-import java.net.ConnectException;
 import java.time.Duration;
-import java.util.concurrent.TimeoutException;
 
 @Configuration
 public class Resilience4JConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(Resilience4JConfig.class);
+
     /**
-     * Configures the ReactiveResilience4JCircuitBreakerFactory to use default settings
-     * if specific configuration is not found.
+     * Configures the ReactiveResilience4JCircuitBreakerFactory to use default settings.
      * 
-     * Note: The YAML configuration (resilience4j.circuitbreaker...) is handled by 
-     * resilience4j-spring-boot3, but Spring Cloud Gateway needs this factory to integrate properly.
+     * IMPORTANT: We use recordException predicate to record ALL exceptions as failures.
+     * This is necessary because when Linkerd returns 503, Spring Cloud Gateway throws
+     * various exceptions that need to be caught.
      */
     @Bean
     public Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
@@ -36,14 +35,12 @@ public class Resilience4JConfig {
                         .permittedNumberOfCallsInHalfOpenState(3)
                         .minimumNumberOfCalls(5)
                         .automaticTransitionFromOpenToHalfOpenEnabled(true)
-                        // Record these exceptions as failures for circuit breaker
-                        .recordExceptions(
-                                IOException.class,
-                                TimeoutException.class,
-                                ConnectException.class,
-                                WebClientResponseException.class,
-                                NotFoundException.class
-                        )
+                        // Record ALL exceptions as failures - this catches any error from downstream
+                        .recordException(throwable -> {
+                            log.warn("Circuit Breaker recording exception: {} - {}", 
+                                    throwable.getClass().getName(), throwable.getMessage());
+                            return true; // Record ALL exceptions as failures
+                        })
                         .build())
                 .timeLimiterConfig(TimeLimiterConfig.custom()
                         .timeoutDuration(Duration.ofSeconds(5))
