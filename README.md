@@ -51,47 +51,7 @@ UIT-Go là hệ thống đặt xe microservices toàn diện, triển khai các 
 
 ### Sơ đồ Kiến trúc
 
-```
-                                    ┌─────────────────┐
-                                    │   Client App    │
-                                    │  (Web/Mobile)   │
-                                    └────────┬────────┘
-                                             │
-                                             │ HTTP/REST
-                                             ▼
-                                    ┌─────────────────┐
-                                    │  API Gateway    │
-                                    │   Port 8080     │◄─── TẤT CẢ requests qua đây
-                                    └────────┬────────┘
-                         ┌───────────────────┼───────────────────┐
-                         │                   │                   │
-                         ▼                   ▼                   ▼
-              ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-              │  User Service    │ │  Trip Service    │ │ Driver Service   │
-              │    Port 8081     │ │    Port 8082     │ │    Port 8083     │
-              └────────┬─────────┘ └────────┬─────────┘ └────────┬─────────┘
-                       │                    │                    │
-                       │                    │                    │
-                       ▼                    ▼                    ▼
-              ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-              │   PostgreSQL     │ │  PostgreSQL (2)  │ │     Redis        │
-              │   Port 5435      │ │  VN: 5433        │ │   Port 6379      │
-              │                  │ │  TH: 5434        │ │  (Geospatial)    │
-              └──────────────────┘ └──────────────────┘ └──────────────────┘
-                                            │                    ▲
-                                            │                    │
-                                            ▼                    │
-                                   ┌──────────────────┐         │
-                                   │    RabbitMQ      │         │ gRPC
-                                   │   Port 5672      │         │ Streaming
-                                   │   (Messaging)    │         │
-                                   └──────────────────┘         │
-                                                                 │
-                                                    ┌────────────┴─────────┐
-                                                    │  Driver Simulator    │
-                                                    │     Port 8084        │
-                                                    └──────────────────────┘
-```
+![Architecture Diagram](./docs/images/architecture-diagram.png)
 
 ### Quyết định Kiến trúc (ADR)
 
@@ -324,7 +284,8 @@ mvnw.cmd spring-boot:run
 | User Service     | 8081      | -         | Qua Gateway               | http://localhost:8081 (internal) |
 | Trip Service     | 8082      | -         | Qua Gateway               | http://localhost:8082 (internal) |
 | Driver Service   | 8083      | 9092      | Qua Gateway               | http://localhost:8083 (internal) |
-| Driver Simulator | 8084      | -         | Qua Gateway               | http://localhost:8084 (testing)  |
+| Driver Simulator | 8084      | -         | http://localhost:8084     | http://localhost:8084 (testing)  |
+| Redis            | 6379      | -         | http://localhost:6379     | -                                |
 | RabbitMQ UI      | 15672     | -         | http://localhost:15672    | guest/guest                      |
 
 ### Health Checks
@@ -332,7 +293,7 @@ mvnw.cmd spring-boot:run
 Kiểm tra tất cả services đang chạy:
 
 ```bash
-# Qua API Gateway (Recommended)
+# Qua API Gateway
 curl http://localhost:8080/actuator/health
 
 # Kiểm tra từng service trực tiếp
@@ -344,153 +305,665 @@ curl http://localhost:8084/actuator/health  # Driver Simulator
 
 ### Endpoints API Chính (QUA API GATEWAY - PORT 8080)
 
-#### 👤 Quản lý Người dùng
-
 **Tất cả requests đi qua: `http://localhost:8080`**
 
-```bash
-# Đăng ký người dùng mới (Passenger)
-POST   http://localhost:8080/api/users/register
+#### I. Quản lý Người dùng (User Service)
 
-# Đăng nhập
-POST   http://localhost:8080/api/users/login
+##### 1. Đăng ký người dùng (api/users/register)
 
-# Lấy thông tin profile
-GET    http://localhost:8080/api/users/me
-Header: Authorization: Bearer <JWT-TOKEN>
-
-# Cập nhật profile
-PUT    http://localhost:8080/api/users/profile
-Header: Authorization: Bearer <JWT-TOKEN>
-
-# Lấy tất cả users
-GET    http://localhost:8080/api/users
-```
-
-**Request body mẫu - Đăng ký:**
+###### Example request
 
 ```json
 {
-  "email": "user@example.com",
-  "password": "SecurePass123"
+  "email": "user1@gmail.com",
+  "password": "123456"
 }
 ```
 
-**Request body mẫu - Đăng nhập:**
+###### Example response
 
 ```json
 {
-  "email": "user@example.com",
-  "password": "SecurePass123"
+  "id": "38eebcb1-fd83-45e7-8fd2-9a82056f4f9e",
+  "email": "user1@gmail.com",
+  "role": "ROLE_USER",
+  "createdAt": "2025-11-30T01:52:44.487335178"
 }
 ```
 
-#### 🚗 Quản lý Chuyến đi
-
-**Tất cả requests đi qua: `http://localhost:8080`**
+###### Test cURL
 
 ```bash
-# Ước tính giá cước
-POST   http://localhost:8080/api/trips/estimate-fare
-
-# Tạo chuyến đi mới
-POST   http://localhost:8080/api/trips/create
-Header: Authorization: Bearer <PASSENGER-TOKEN>
-
-# Lấy thông tin chuyến đi
-GET    http://localhost:8080/api/trips/{tripId}
-Header: Authorization: Bearer <TOKEN>
-
-# Hủy chuyến đi
-POST   http://localhost:8080/api/trips/{tripId}/cancel
-Header: Authorization: Bearer <TOKEN>
-
-# Chấp nhận chuyến đi (Driver)
-POST   http://localhost:8080/api/trips/{tripId}/accept
-Header: Authorization: Bearer <DRIVER-TOKEN>
-
-# Bắt đầu chuyến đi
-POST   http://localhost:8080/api/trips/{tripId}/start
-Header: Authorization: Bearer <DRIVER-TOKEN>
-
-# Hoàn thành chuyến đi
-POST   http://localhost:8080/api/trips/{tripId}/complete
-Header: Authorization: Bearer <DRIVER-TOKEN>
-
-# Đánh giá chuyến đi
-POST   http://localhost:8080/api/trips/{tripId}/rate
-Header: Authorization: Bearer <PASSENGER-TOKEN>
-
-# Lịch sử chuyến đi
-GET    http://localhost:8080/api/trips/history
-Header: Authorization: Bearer <TOKEN>
+curl -s -X POST http://localhost:8080/api/users/register \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"email\": \"user1@gmail.com\",
+    \"password\": \"123456\"
+  }"
 ```
 
-**Request body mẫu - Ước tính giá:**
+##### 2. Đăng ký tài xế (api/users/register-driver)
+
+###### Example request
+
+```json
+{
+  "email": "driver1@gmail.com",
+  "password": "123456",
+  "vehicleModel": "Maybach S450",
+  "vehicleNumber": "51ABCD"
+}
+```
+
+###### Example response
+
+```json
+{
+  "id": "a899664d-f87c-428b-8d68-c367c4befc6f",
+  "email": "driver1@gmail.com",
+  "vehicleModel": "Maybach S450",
+  "vehicleNumber": "51ABCD",
+  "createdAt": "2025-11-30T01:59:15.918547804"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -s -X POST http://localhost:8080/api/users/register \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"email\": \"driver1@gmail.com\",
+    \"password\": \"123456\",
+    \"vehicleModel\": \"Maybach S450\",
+    \"vehicleNumber\": \"51ABCD\"
+  }"
+```
+
+##### 3. Đăng nhập (cho user và driver) (api/users/login)
+
+###### Example request
+
+```json
+{
+  "email": "user1@gmail.com",
+  "password": "123456"
+}
+```
+
+###### Example response
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkNzIwODhmNS00YjM4LT..."
+}
+```
+
+###### Test cURL
+
+```bash
+curl -s -X POST http://localhost:8080/api/users/login \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"email\": \"user1@gmail.com\",
+    \"password\": \"123456\"
+  }"
+```
+
+##### 3. Fetch thông tin người dùng (api/users/me)
+
+###### Example response
+
+```json
+{
+  "id": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "email": "user1@gmail.com",
+  "role": "ROLE_USER",
+  "createdAt": "2025-11-27T18:20:43.901194"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8080/api/users/me" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+```
+
+#### II. Quản lý chuyến đi (Trip Service)
+
+##### 1. Ước tính giá cước (api/trips/estimate-fare)
+
+###### Example request
 
 ```json
 {
   "pickupLatitude": 10.762622,
   "pickupLongitude": 106.660172,
-  "destinationLatitude": 10.775818,
-  "destinationLongitude": 106.695595
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181
 }
 ```
 
-**Request body mẫu - Tạo chuyến đi:**
+###### Example response
+
+```json
+{
+  "fare": 900,
+  "distance": 4.668933885013943
+}
+```
+
+###### Test cURL
+
+```bash
+curl -s -X POST http://localhost:8080/api/trips/estimate-fare \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d "{
+    \"pickupLatitude\": 10.762622,
+    \"pickupLongitude\": 106.660172,
+    \"destinationLatitude\": 10.779783,
+    \"destinationLongitude\": 106.699181
+  }"
+```
+
+##### 2. Tạo chuyến đi (api/trips/create)
+
+###### Example request
 
 ```json
 {
   "pickupLatitude": 10.762622,
   "pickupLongitude": 106.660172,
-  "destinationLatitude": 10.775818,
-  "destinationLongitude": 106.695595,
-  "estimatedFare": 45000
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "estimatedFare": 50000
 }
 ```
 
-#### 🚕 Quản lý Tài xế
-
-**Tất cả requests đi qua: `http://localhost:8080`**
-
-```bash
-# Đăng ký tài xế
-POST   http://localhost:8080/api/drivers/register
-
-# Cập nhật trạng thái tài xế (AVAILABLE/BUSY/OFFLINE)
-POST   http://localhost:8080/api/drivers/status
-Header: Authorization: Bearer <DRIVER-TOKEN>
-
-# Tìm tài xế gần khu vực
-GET    http://localhost:8080/api/drivers/nearby?latitude=10.762622&longitude=106.660172&radius=5
-
-# Lấy thông báo chuyến đi
-GET    http://localhost:8080/api/drivers/{driverId}/notifications
-Header: Authorization: Bearer <DRIVER-TOKEN>
-
-# Chấp nhận thông báo chuyến đi
-POST   http://localhost:8080/api/drivers/notifications/{tripId}/accept
-Header: Authorization: Bearer <DRIVER-TOKEN>
-```
-
-**Request body mẫu - Đăng ký tài xế:**
+###### Example response
 
 ```json
 {
-  "email": "driver@example.com",
-  "password": "SecurePass123",
-  "name": "Tran Van B",
-  "phone": "+84907654321",
-  "vehicleType": "SEDAN",
-  "licensePlate": "59A-12345"
+  "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "driverId": null,
+  "status": "SEARCHING_DRIVER",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "requestedAt": "2025-11-30T02:17:01.517732297",
+  "startedAt": null,
+  "completedAt": null,
+  "cancelledAt": null
 }
 ```
 
-#### 🎯 Driver Simulator (Testing)
+###### Test cURL
 
 ```bash
-# Bắt đầu mô phỏng tài xế
-curl -s -X POST "http://localhost:8084/api/simulate/start-all?startLat=10.762622&startLng=106.660172&endLat=10.776889&endLng=106.700806&steps=200&delayMillis=1000"
+curl -s -X POST http://localhost:8080/api/trips/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d "{
+    \"pickupLatitude\": 10.762622,
+    \"pickupLongitude\": 106.660172,
+    \"destinationLatitude\": 10.779783,
+    \"destinationLongitude\": 106.699181,
+    \"estimatedFare\": 500000,
+  }"
+```
+
+##### 3. Lấy thông tin chuyến đi (api/trips/{id})
+
+###### Example response
+
+```json
+{
+  "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "IN_PROGRESS",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "requestedAt": "2025-11-30T02:17:01.517732",
+  "startedAt": "2025-11-30T02:20:15.123456",
+  "completedAt": null,
+  "cancelledAt": null
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8080/api/trips/f537dc54-670d-48f9-aac0-f2d3245def18" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 4. Hủy chuyến đi (api/trips/{id}/cancel)
+
+###### Example response
+
+```json
+{
+  "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "driverId": null,
+  "status": "CANCELLED",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "requestedAt": "2025-11-30T02:17:01.517732",
+  "startedAt": null,
+  "completedAt": null,
+  "cancelledAt": "2025-11-30T02:18:30.654321"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/trips/f537dc54-670d-48f9-aac0-f2d3245def18/cancel" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN"
+```
+
+##### 5. Chấp nhận chuyến đi (api/trips/{id}/accept)
+
+###### Example response
+
+```json
+{
+  "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "ACCEPTED",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "requestedAt": "2025-11-30T02:17:01.517732",
+  "startedAt": null,
+  "completedAt": null,
+  "cancelledAt": null
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/trips/f537dc54-670d-48f9-aac0-f2d3245def18/accept" \
+  -H "Authorization: Bearer DRIVER_ACCESS_TOKEN"
+```
+
+##### 6. Bắt đầu chuyến đi (api/trips/{id}/start)
+
+###### Example response
+
+```json
+{
+  "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "IN_PROGRESS",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "requestedAt": "2025-11-30T02:17:01.517732",
+  "startedAt": "2025-11-30T02:20:15.123456",
+  "completedAt": null,
+  "cancelledAt": null
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/trips/f537dc54-670d-48f9-aac0-f2d3245def18/start" \
+  -H "Authorization: Bearer DRIVER_ACCESS_TOKEN"
+```
+
+##### 7. Hoàn thành chuyến đi (api/trips/{id}/complete)
+
+###### Example response
+
+```json
+{
+  "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "COMPLETED",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "requestedAt": "2025-11-30T02:17:01.517732",
+  "startedAt": "2025-11-30T02:20:15.123456",
+  "completedAt": "2025-11-30T02:35:45.789012",
+  "cancelledAt": null
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/trips/f537dc54-670d-48f9-aac0-f2d3245def18/complete" \
+  -H "Authorization: Bearer DRIVER_ACCESS_TOKEN"
+```
+
+##### 8. Đánh giá chuyến đi (api/trips/{id}/rate)
+
+###### Example response
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "tripId": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "rating": 5,
+  "comment": "Excellent service, very professional driver!",
+  "createdAt": "2025-11-30T02:40:00.123456"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/trips/f537dc54-670d-48f9-aac0-f2d3245def18/rate?rating=5&comment=Excellent%20service" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN"
+```
+
+##### 9. Lấy danh sách tất cả chuyến đi (api/trips)
+
+###### Example response
+
+```json
+[
+  {
+    "id": "f537dc54-670d-48f9-aac0-f2d3245def18",
+    "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+    "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "status": "COMPLETED",
+    "pickupLatitude": 10.762622,
+    "pickupLongitude": 106.660172,
+    "destinationLatitude": 10.779783,
+    "destinationLongitude": 106.699181,
+    "fare": 50000,
+    "requestedAt": "2025-11-30T02:17:01.517732",
+    "startedAt": "2025-11-30T02:20:15.123456",
+    "completedAt": "2025-11-30T02:35:45.789012",
+    "cancelledAt": null
+  }
+]
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8080/api/trips" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 10. Tìm tài xế gần đây (api/trips/driver/get-nearby-drivers)
+
+###### Example response
+
+```json
+[
+  {
+    "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "latitude": 10.7625,
+    "longitude": 106.6601,
+    "distance": 0.15,
+    "status": "AVAILABLE"
+  },
+  {
+    "driverId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "latitude": 10.763,
+    "longitude": 106.661,
+    "distance": 0.28,
+    "status": "AVAILABLE"
+  }
+]
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8080/api/trips/driver/get-nearby-drivers?lat=10.762622&lng=106.660172&radiusKm=3.0&limit=5" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### III. Quản lý tài xế (Driver Service)
+
+##### 1. Đặt tất cả tài xế online (api/drivers/online-all)
+
+###### Example response
+
+```
+Status: 200 OK
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/drivers/online-all" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 2. Đặt tài xế hiện tại online (api/drivers/online)
+
+###### Example response
+
+```
+Status: 200 OK
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/drivers/online" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 3. Đặt tài xế hiện tại offline (api/drivers/offline)
+
+###### Example response
+
+```
+Status: 200 OK
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/drivers/offline" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 4. Chấp nhận thông báo chuyến đi (api/drivers/trips/{tripId}/accept)
+
+###### Example response
+
+```json
+{
+  "tripId": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "accepted": true,
+  "message": "Trip accepted successfully"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/drivers/trips/f537dc54-670d-48f9-aac0-f2d3245def18/accept?driverId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 5. Từ chối thông báo chuyến đi (api/drivers/trips/{tripId}/decline)
+
+###### Example response
+
+```json
+{
+  "tripId": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "accepted": false,
+  "message": "Trip declined"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X POST "http://localhost:8080/api/drivers/trips/f537dc54-670d-48f9-aac0-f2d3245def18/decline?driverId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 6. Lấy danh sách chuyến đi đang chờ (api/drivers/trips/pending)
+
+###### Example response
+
+```json
+[
+  {
+    "tripId": "f537dc54-670d-48f9-aac0-f2d3245def18",
+    "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+    "pickupLatitude": 10.762622,
+    "pickupLongitude": 106.660172,
+    "destinationLatitude": 10.779783,
+    "destinationLongitude": 106.699181,
+    "fare": 50000,
+    "notifiedAt": "2025-11-30T02:17:05.123456"
+  }
+]
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8080/api/drivers/trips/pending?driverId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 7. Lấy thông tin thông báo chuyến đi (api/drivers/trips/{tripId})
+
+###### Example response
+
+```json
+{
+  "tripId": "f537dc54-670d-48f9-aac0-f2d3245def18",
+  "passengerId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "pickupLatitude": 10.762622,
+  "pickupLongitude": 106.660172,
+  "destinationLatitude": 10.779783,
+  "destinationLongitude": 106.699181,
+  "fare": 50000,
+  "notifiedAt": "2025-11-30T02:17:05.123456"
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8080/api/drivers/trips/f537dc54-670d-48f9-aac0-f2d3245def18" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### V. API nội bộ (Internal APIs - Service-to-Service)
+
+##### 1. Xác thực token (api/internal/auth/validate)
+
+**Service:** User Service  
+**Mục đích:** API Gateway sử dụng để validate JWT token
+
+###### Example response
+
+```json
+{
+  "userId": "d72088f5-4b38-41dd-a7ef-bd6e001874a3",
+  "role": "ROLE_USER",
+  "valid": true
+}
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8082/api/internal/auth/validate" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+##### 2. Lấy danh sách tất cả tài xế (api/internal/drivers)
+
+**Service:** User Service  
+**Mục đích:** Lấy thông tin tất cả tài xế đã đăng ký
+
+###### Example response
+
+```json
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "email": "driver1@gmail.com",
+    "vehicleModel": "Honda City",
+    "vehicleNumber": "29A-12345",
+    "createdAt": "2025-11-27T10:30:00.123456"
+  },
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "email": "driver2@gmail.com",
+    "vehicleModel": "Toyota Vios",
+    "vehicleNumber": "30B-67890",
+    "createdAt": "2025-11-28T14:20:00.654321"
+  }
+]
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8082/api/internal/drivers"
+```
+
+##### 3. Tìm tài xế gần đây - Internal (api/internal/drivers/nearby)
+
+**Service:** Driver Service  
+**Mục đích:** Trip Service gọi để tìm tài xế gần vị trí khách hàng
+
+###### Example response
+
+```json
+[
+  {
+    "driverId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "latitude": 10.7625,
+    "longitude": 106.6601,
+    "distanceInMeters": 150.5
+  },
+  {
+    "driverId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "latitude": 10.763,
+    "longitude": 106.661,
+    "distanceInMeters": 280.3
+  }
+]
+```
+
+###### Test cURL
+
+```bash
+curl -X GET "http://localhost:8083/api/internal/drivers/nearby?lat=10.762622&lng=106.660172&radiusKm=3.0&limit=5"
 ```
 
 ## Truy cập Database
@@ -562,6 +1035,109 @@ Tạo connection PostgreSQL mới với:
 - **Username:** trip_service_user
 - **Password:** trip_service_pass
 
+### Database Schema
+
+#### User Service Database Schema
+
+```sql
+-- Table: user
+CREATE TABLE "user"
+(
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    deleted_at TIMESTAMP WITHOUT TIME ZONE
+);
+
+-- Table: driver
+CREATE TABLE driver (
+    id UUID PRIMARY KEY,
+    vehicle_model VARCHAR(255) NOT NULL,
+    vehicle_number VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT fk_user FOREIGN KEY (id) REFERENCES "user"(id) ON DELETE CASCADE
+);
+```
+
+**Mô tả:**
+
+- **Table `user`**: Lưu thông tin người dùng (bao gồm cả khách hàng và tài xế)
+
+  - `id`: UUID primary key
+  - `email`: Email đăng nhập (unique)
+  - `password`: Mật khẩu đã hash
+  - `created_at`: Thời gian tạo tài khoản
+  - `deleted_at`: Soft delete timestamp
+
+- **Table `driver`**: Lưu thông tin bổ sung cho tài xế
+  - `id`: UUID (cùng với user.id, FK reference)
+  - `vehicle_model`: Model xe (vd: Honda City, Toyota Vios)
+  - `vehicle_number`: Biển số xe
+  - `created_at`: Thời gian đăng ký làm tài xế
+
+#### Trip Service Database Schema
+
+```sql
+-- Table: trip
+CREATE TABLE trip (
+    id UUID PRIMARY KEY,
+    passenger_id UUID NOT NULL,
+    driver_id UUID,
+    status VARCHAR(50) NOT NULL,
+    pickup_latitude DOUBLE PRECISION NOT NULL,
+    pickup_longitude DOUBLE PRECISION NOT NULL,
+    destination_latitude DOUBLE PRECISION NOT NULL,
+    destination_longitude DOUBLE PRECISION NOT NULL,
+    fare NUMERIC(38,2),
+    requested_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    started_at TIMESTAMP WITHOUT TIME ZONE,
+    completed_at TIMESTAMP WITHOUT TIME ZONE,
+    cancelled_at TIMESTAMP WITHOUT TIME ZONE,
+    CONSTRAINT trip_status_check CHECK (
+        status IN ('SEARCHING_DRIVER', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')
+    )
+);
+
+-- Table: rating
+CREATE TABLE rating (
+    id UUID PRIMARY KEY,
+    trip_id UUID NOT NULL UNIQUE,
+    score INTEGER NOT NULL,
+    comment VARCHAR(500),
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT fk_trip FOREIGN KEY (trip_id) REFERENCES trip(id) ON DELETE CASCADE
+);
+```
+
+**Mô tả:**
+
+- **Table `trip`**: Lưu thông tin chuyến đi
+
+  - `id`: UUID primary key
+  - `passenger_id`: ID của khách hàng
+  - `driver_id`: ID của tài xế (null khi đang tìm)
+  - `status`: Trạng thái chuyến đi
+    - `SEARCHING_DRIVER`: Đang tìm tài xế
+    - `ACCEPTED`: Tài xế đã chấp nhận
+    - `IN_PROGRESS`: Đang trong chuyến
+    - `COMPLETED`: Hoàn thành
+    - `CANCELLED`: Đã hủy
+  - `pickup_latitude/longitude`: Tọa độ điểm đón
+  - `destination_latitude/longitude`: Tọa độ điểm đến
+  - `fare`: Giá cước
+  - `requested_at`: Thời gian yêu cầu chuyến đi
+  - `started_at`: Thời gian bắt đầu chuyến
+  - `completed_at`: Thời gian hoàn thành
+  - `cancelled_at`: Thời gian hủy
+
+- **Table `rating`**: Lưu đánh giá chuyến đi
+  - `id`: UUID primary key
+  - `trip_id`: ID chuyến đi (unique - mỗi chuyến chỉ đánh giá 1 lần)
+  - `score`: Điểm đánh giá (1-5 sao)
+  - `comment`: Nhận xét
+  - `created_at`: Thời gian đánh giá
+
 ### Truy cập Redis
 
 Driver Service sử dụng Redis cho dữ liệu geospatial và notification storage.
@@ -606,85 +1182,6 @@ Password: guest
 - Purge queues nếu cần
 
 ## Kiểm thử API
-
-### Ví dụ: Đăng ký và Xác thực Người dùng
-
-**⚠️ Quan trọng: Tất cả requests đi qua port 8080 (API Gateway)**
-
-```bash
-# 1. Đăng ký người dùng mới
-curl -X POST http://localhost:8080/api/users/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "nguyen.van.a@example.com",
-    "password": "MatKhau123",
-  }'
-
-# 2. Đăng nhập để lấy JWT token
-curl -X POST http://localhost:8080/api/users/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "nguyen.van.a@example.com",
-    "password": "MatKhau123"
-  }'
-
-# Response sẽ chứa JWT token:
-# {
-#   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-# }
-
-# 3. Sử dụng token cho các requests cần xác thực
-TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-curl -X GET http://localhost:8080/api/users/me \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-### Ví dụ: Tạo Chuyến đi
-
-```bash
-# 1. Ước tính giá cước trước
-curl -X POST http://localhost:8080/api/trips/estimate-fare \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pickupLatitude": 10.762622,
-    "pickupLongitude": 106.660172,
-    "destinationLatitude": 10.775818,
-    "destinationLongitude": 106.695595
-  }'
-
-# Response:
-# {
-#   "distanceKm": 2.5,
-#   "estimatedFare": 45000,
-# }
-
-# 2. Tạo chuyến đi mới (cần token của passenger)
-curl -X POST http://localhost:8080/api/trips/create \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $PASSENGER_TOKEN" \
-  -d '{
-    "passengerId": "123e4567-e89b-12d3-a456-426614174000",
-    "pickupAddress": "268 Lý Thường Kiệt, Quận 10, TP.HCM",
-    "destinationAddress": "Vincom Center, Đồng Khởi, Quận 1",
-    "pickupLatitude": 10.762622,
-    "pickupLongitude": 106.660172,
-    "destinationLatitude": 10.775818,
-    "destinationLongitude": 106.695595,
-    "estimatedFare": 45000
-  }'
-
-# Response:
-# {
-#   "id": "trip-uuid",
-#   "status": "SEARCHING_DRIVER",
-#   "estimatedFare": 45000,
-#   "createdAt": "2025-11-29T10:30:00"
-# }
-
-# 3. Lấy thông tin chuyến đi
-curl http://localhost:8080/api/trips/{trip-id} \
-  -H "Authorization: Bearer $TOKEN"
-```
 
 ### Ví dụ: Test Flow Hoàn chỉnh - Tạo Chuyến đi và Thông báo Tài xế
 
@@ -959,109 +1456,62 @@ Key Learning:
 - **Trip vẫn tồn tại**: Trip entity vẫn còn trong database với status SEARCHING_DRIVER
 - **Accept có thể thành công**: Tùy business logic, driver vẫn có thể accept nếu trip status cho phép
 
-### Flow Hoàn chỉnh: Từ Đăng ký đến Hoàn thành Chuyến đi
+---
+
+## Proof giao tiếp giữa các service
+
+**Script tự động:** `linux-run/test-notify-trip.sh`
+
+Script này test toàn bộ flow từ tạo chuyến đi đến gửi thông báo cho tài xế gần nhất qua RabbitMQ.
+
+**Chạy script:**
 
 ```bash
-# === BƯỚC 1: Đăng ký Passenger ===
-curl -X POST http://localhost:8080/api/users/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "passenger@example.com",
-    "password": "Pass123",
-    "name": "Nguyen Van A",
-    "phone": "+84901111111",
-    "userType": "PASSENGER"
-  }'
-
-# === BƯỚC 2: Đăng ký Driver ===
-curl -X POST http://localhost:8080/api/drivers/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "driver@example.com",
-    "password": "Pass123",
-    "name": "Tran Van B",
-    "phone": "+84902222222",
-    "vehicleType": "SEDAN",
-    "licensePlate": "59A-12345"
-  }'
-
-# === BƯỚC 3: Passenger Login ===
-PASSENGER_TOKEN=$(curl -X POST http://localhost:8080/api/users/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "passenger@example.com", "password": "Pass123"}' \
-  | jq -r '.token')
-
-# === BƯỚC 4: Driver Login ===
-DRIVER_TOKEN=$(curl -X POST http://localhost:8080/api/users/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "driver@example.com", "password": "Pass123"}' \
-  | jq -r '.token')
-
-# === BƯỚC 5: Start Driver Simulator ===
-curl -X POST http://localhost:8084/api/simulate/start \
-  -H "Content-Type: application/json" \
-  -d '{
-    "driverId": "driver-uuid",
-    "startLat": 10.762622,
-    "startLng": 106.660172,
-    "endLat": 10.775818,
-    "endLng": 106.695595,
-    "speedKmh": 40
-  }'
-
-# === BƯỚC 6: Passenger tạo chuyến đi ===
-TRIP_ID=$(curl -X POST http://localhost:8080/api/trips/create \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $PASSENGER_TOKEN" \
-  -d '{
-    "passengerId": "passenger-uuid",
-    "pickupAddress": "268 Lý Thường Kiệt",
-    "destinationAddress": "Vincom Center",
-    "pickupLatitude": 10.762622,
-    "pickupLongitude": 106.660172,
-    "destinationLatitude": 10.775818,
-    "destinationLongitude": 106.695595,
-    "estimatedFare": 45000
-  }' | jq -r '.id')
-
-# === BƯỚC 7: Driver nhận thông báo (qua RabbitMQ) ===
-# Driver Service tự động nhận notification và lưu vào Redis
-
-# === BƯỚC 8: Driver lấy danh sách notifications ===
-curl http://localhost:8080/api/drivers/driver-uuid/notifications \
-  -H "Authorization: Bearer $DRIVER_TOKEN"
-
-# === BƯỚC 9: Driver chấp nhận chuyến đi ===
-curl -X POST http://localhost:8080/api/drivers/notifications/$TRIP_ID/accept \
-  -H "Authorization: Bearer $DRIVER_TOKEN"
-
-# === BƯỚC 10: Driver bắt đầu chuyến đi ===
-curl -X POST http://localhost:8080/api/trips/$TRIP_ID/start \
-  -H "Authorization: Bearer $DRIVER_TOKEN"
-
-# === BƯỚC 11: Driver hoàn thành chuyến đi ===
-curl -X POST http://localhost:8080/api/trips/$TRIP_ID/complete \
-  -H "Authorization: Bearer $DRIVER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "actualFare": 48000,
-    "completedAt": "2025-11-29T11:00:00"
-  }'
-
-# === BƯỚC 12: Passenger đánh giá chuyến đi ===
-curl -X POST http://localhost:8080/api/trips/$TRIP_ID/rate \
-  -H "Authorization: Bearer $PASSENGER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "rating": 5,
-    "comment": "Tài xế lái xe rất tốt!"
-  }'
+cd linux-run
+chmod +x test-notify-trip.sh
+./test-notify-trip.sh
 ```
 
-Để biết thêm ví dụ kiểm thử chi tiết, xem:
+**Flow của script:**
 
-- [docs/testing-guide/API_ENDPOINTS.md](docs/testing-guide/API_ENDPOINTS.md)
-- [docs/testing-guide/redis-grpc-testing-commands.md](docs/testing-guide/redis-grpc-testing-commands.md)
+1. **Setup drivers**: Đưa tất cả drivers online và start simulation
+2. **Passenger login**: Đăng nhập để lấy JWT token
+3. **Tìm tài xế gần**: Gọi API tìm tài xế trong bán kính 3km
+4. **Tạo chuyến đi**: POST /api/trips/create
+5. **RabbitMQ xử lý**: Trip Service publish notification đến RabbitMQ
+6. **Driver Service nhận**: Consume message và lưu vào Redis với TTL=15s
+7. **Kiểm tra thông báo**: Verify tài xế gần nhất nhận được thông báo
+8. **Kiểm tra Redis**: Verify pending notification trong Redis
+
+**Phần 1:** Bắt đầu simulate driver để có thể tìm driver cho chuyến đi
+
+- Bắt đầu giả lập tài xế, đợi khoảng 10s để tài xế đi đủ xa, sau đó tìm được tài xế với các toạ độ tương ứng.
+  ![](./docs/images/simulate-driver-locations.png)
+
+- Logs chứng minh đã thành công update toạ độ cho tài xế qua gRPC (hiệu năng cao).
+  ![](./docs/images/driver-simulator-logs.png)
+
+- Logs trong Redis
+  ![](./docs/images/redis-logs.png)
+
+**Phần 2:** Đăng nhập để lấy accessToken -> tạo chuyến -> thông báo cho driver bằng Rabbit MQ.
+
+- Bắt đầu tạo chuyến đi:
+  ![](./docs/images/create-trip-logs.png)
+
+- Logs gọi từ trip qua user để validate token:
+  ![](./docs/images/user-service-logs.png)
+
+- Tạo trip thành công và gửi thông báo cho driver:
+  ![](./docs/images/trip-service-logs.png)
+
+- Driver service nhận thông báo từ trip service được gửi bằng Rabbit MQ:
+  ![](./docs/images/driver-service-logs.png)
+
+**Phần 3:** Kiểm tra Redis TTL.
+![](./docs/images/check-redis-ttl.png)
+
+---
 
 ## Xử lý Sự cố
 
@@ -1499,27 +1949,3 @@ Script này sẽ:
 - **[ADR-002: gRPC cho Location Updates](docs/ADR/002-grpc-vs-rest-for-location-updates.md)** - Communication protocol
 - **[ADR-003: REST cho CRUD](docs/ADR/003-rest-vs-grpc-for-crud-operations.md)** - API design choices
 - **[ADR-004: RabbitMQ cho Messaging](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)** - Message broker selection
-
-### Quick References
-
-**Kiến trúc Pattern**: Database-per-service microservices với database sharding  
-**Authentication**: JWT Bearer tokens  
-**Inter-Service Communication**: REST (OpenFeign) + gRPC + RabbitMQ  
-**Data Storage**: PostgreSQL (relational + sharding) + Redis (geospatial/caching)  
-**Container Orchestration**: Docker Compose  
-**API Gateway**: Spring Cloud Gateway (tất cả requests qua port 8080)
-
----
-
-## Giấy phép
-
-Dự án này được phát triển cho mục đích học tập tại Đại học Công nghệ Thông tin (UIT), ĐHQG TP.HCM.
-
-## Liên hệ
-
-Nếu có câu hỏi hoặc vấn đề, vui lòng tạo issue trên GitHub repository.
-
----
-
-**Cập nhật lần cuối**: 29/11/2025  
-**Phiên bản**: 1.0.0
