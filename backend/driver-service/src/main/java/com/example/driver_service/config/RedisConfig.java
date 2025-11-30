@@ -1,51 +1,100 @@
 package com.example.driver_service.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * Redis Configuration for Master-Replica Setup
+ * - Master: Handles all WRITE operations
+ * - Replica: Handles all READ operations
+ */
 @Configuration
 public class RedisConfig {
 
-    @Bean
-    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    @Value("${spring.data.redis.master.host}")
+    private String masterHost;
+
+    @Value("${spring.data.redis.master.port}")
+    private int masterPort;
+
+    @Value("${spring.data.redis.replica.host}")
+    private String replicaHost;
+
+    @Value("${spring.data.redis.replica.port}")
+    private int replicaPort;
+
+    /**
+     * Connection factory for Redis MASTER (writes)
+     */
+    @Bean(name = "redisMasterConnectionFactory")
+    @Primary
+    public RedisConnectionFactory redisMasterConnectionFactory() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(masterHost);
+        config.setPort(masterPort);
+        return new LettuceConnectionFactory(config);
+    }
+
+    /**
+     * Connection factory for Redis REPLICA (reads)
+     */
+    @Bean(name = "redisReplicaConnectionFactory")
+    public RedisConnectionFactory redisReplicaConnectionFactory() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(replicaHost);
+        config.setPort(replicaPort);
+        return new LettuceConnectionFactory(config);
+    }
+
+    /**
+     * RedisTemplate for WRITE operations (uses master)
+     */
+    @Bean(name = "redisMasterTemplate")
+    @Primary
+    public RedisTemplate<String, String> redisMasterTemplate() {
         RedisTemplate<String, String> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory);
-        template.setDefaultSerializer(new StringRedisSerializer());
+        template.setConnectionFactory(redisMasterConnectionFactory());
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
         template.afterPropertiesSet();
         return template;
     }
 
-    @Bean
-    public RedisTemplate<String, Object> redisObjectTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory);
+    /**
+     * RedisTemplate for READ operations (uses replica)
+     */
+    @Bean(name = "redisReplicaTemplate")
+    public RedisTemplate<String, String> redisReplicaTemplate() {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisReplicaConnectionFactory());
         template.setKeySerializer(new StringRedisSerializer());
-        
-        // Configure ObjectMapper with JavaTimeModule for LocalDateTime support
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        
-        // Enable polymorphic type handling to avoid ClassCastException
-        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
-                .allowIfSubType(Object.class)
-                .build();
-        objectMapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);
-        
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
-        
-        template.setValueSerializer(serializer);
+        template.setValueSerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(serializer);
+        template.setHashValueSerializer(new StringRedisSerializer());
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    /**
+     * RedisTemplate for Object storage (uses master for writes)
+     * Used by TripNotificationService to store PendingTripNotification objects
+     */
+    @Bean(name = "redisObjectTemplate")
+    public RedisTemplate<String, Object> redisObjectTemplate() {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisMasterConnectionFactory());
+        template.setKeySerializer(new StringRedisSerializer());
+        // Use default JDK serialization for objects
         template.afterPropertiesSet();
         return template;
     }
 }
-

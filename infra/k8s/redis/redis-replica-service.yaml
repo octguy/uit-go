@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-replica
+  labels:
+    app: redis
+    role: replica
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+  selector:
+    app: redis
+  # This will load balance across all redis pods
+  # Application should connect to this for read operations
+  # Note: In production, you might want to use a headless service
+  # and client-side load balancing for better control

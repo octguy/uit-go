@@ -8,7 +8,8 @@ kubectl apply -f infra\k8s\rabbitmq\rabbitmq-deployment.yaml
 kubectl apply -f infra\k8s\rabbitmq\rabbitmq-service.yaml
 
 kubectl apply -f infra\k8s\redis\redis-deployment.yaml
-kubectl apply -f infra\k8s\redis\redis-service.yaml
+kubectl apply -f infra\k8s\redis\redis-master-service.yaml
+kubectl apply -f infra\k8s\redis\redis-replica-service.yaml
 
 kubectl apply -f infra\k8s\api-gateway\api-gateway-deployment.yaml
 kubectl apply -f infra\k8s\api-gateway\api-gateway-service.yaml
