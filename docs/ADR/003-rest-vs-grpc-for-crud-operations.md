@@ -1,769 +1,285 @@
-# ADR-003: Choose REST over gRPC for CRUD Operations and User-Facing APIs
-
-**Status**: Accepted  
-**Date**: 2025-11-25  
-**Decision Makers**: UIT-Go Development Team  
-**Tags**: #communication #api-design #rest #simplicity
+# ADR-003: Lựa chọn REST thay vì gRPC cho các thao tác CRUD và API hướng người dùng
 
 ---
 
-## Context
+## Bối cảnh
 
-While we chose gRPC for high-frequency, real-time operations (driver location updates), we need to decide on the communication protocol for:
+Mặc dù chúng ta đã chọn gRPC cho các thao tác real-time tần suất cao (cập nhật vị trí tài xế), nhưng cần quyết định giao thức truyền thông cho:
 
-1. **User Management**: Registration, login, profile updates
-2. **Trip Management**: Create trip, get trip details, cancel trip, trip history
-3. **Driver Management**: Register driver, update status, get driver profile
-4. **Admin Operations**: CRUD operations for system management
-5. **Client-Facing APIs**: Mobile app and web dashboard
+1. **Quản lý người dùng**: Đăng ký, đăng nhập, cập nhật hồ sơ
+2. **Quản lý chuyến đi**: Tạo chuyến đi, lấy chi tiết, hủy chuyến, lịch sử
+3. **Quản lý tài xế**: Đăng ký tài xế, cập nhật trạng thái, lấy hồ sơ
+4. **Thao tác Admin**: Các thao tác CRUD cho quản lý hệ thống
+5. **API hướng client**: Ứng dụng mobile và web dashboard
 
-These operations are characterized by:
+Các thao tác này có đặc điểm:
 
-- **Lower Frequency**: Occasional requests (not continuous streams)
-- **Simple Request/Response Pattern**: One request → one response
-- **Human-Readable Data**: Beneficial for debugging and monitoring
-- **Wide Client Support**: Mobile apps, web browsers, third-party integrations
-- **Varying Payload Sizes**: From small (login) to medium (trip history)
+- **Tần suất thấp hơn**: Requests không thường xuyên (không phải continuous streams)
+- **Pattern Request/Response đơn giản**: Một request → một response
+- **Dữ liệu dễ đọc**: Có lợi cho debugging và monitoring
+- **Hỗ trợ client đa dạng**: Mobile apps, web browsers, tích hợp bên thứ ba
+- **Kích thước payload biến đổi**: Từ nhỏ (login) đến trung bình (lịch sử chuyến đi)
 
-### Scale & Performance Requirements
+### Quy mô & yêu cầu hiệu suất
 
-```
-User Operations:
-  - Login frequency: ~10 req/sec (peak: 50 req/sec)
-  - Registration: ~2 req/sec (peak: 10 req/sec)
-  - Profile updates: ~5 req/sec (peak: 20 req/sec)
-  - Response time requirement: < 500ms
+**Thao tác người dùng:**
 
-Trip Operations:
-  - Create trip: ~20 req/sec (peak: 100 req/sec)
-  - Get trip details: ~30 req/sec (peak: 150 req/sec)
-  - Trip history: ~5 req/sec (peak: 25 req/sec)
-  - Response time requirement: < 500ms
+- Login: ~10 req/giây (peak: 50 req/giây)
+- Đăng ký: ~2 req/giây (peak: 10 req/giây)
+- Cập nhật hồ sơ: ~5 req/giây (peak: 20 req/giây)
+- Yêu cầu thời gian phản hồi: < 500ms
 
-Total CRUD load: ~100 req/sec (peak: ~400 req/sec)
-```
+**Thao tác chuyến đi:**
 
-### Options Considered
+- Tạo chuyến đi: ~20 req/giây (peak: 100 req/giây)
+- Lấy chi tiết: ~30 req/giây (peak: 150 req/giây)
+- Lịch sử: ~5 req/giây (peak: 25 req/giây)
+- Yêu cầu thời gian phản hồi: < 500ms
 
-1. **REST API with JSON**
-2. **gRPC with Protocol Buffers**
+**Tổng tải CRUD**: ~100 req/giây (peak: ~400 req/giây)
+
+### Các phương án được xem xét
+
+1. **REST API với JSON**
+2. **gRPC với Protocol Buffers**
 3. **GraphQL**
 4. **SOAP**
-5. **Hybrid Approach (REST for external, gRPC for internal)**
+5. **Hybrid Approach (REST cho external, gRPC cho internal)**
 
----
+- Không có native caching support
 
-## Decision
+- `GET /api/trips/{id}` - Lấy chi tiết chuyến đi
 
-**We chose REST API with JSON** for all CRUD operations, user management, trip management, and client-facing APIs.
-
-**We use gRPC only for**: High-frequency real-time operations (driver location streaming).
-
----
-
-## Rationale
-
-### REST Advantages for CRUD Operations
-
-#### 1. **Simplicity and Developer Experience**
-
-**REST Example** (User Login):
-
-```java
-// Controller
-@RestController
-@RequestMapping("/api/users")
-public class UserController {
-
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        String token = authService.authenticate(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(new LoginResponse(token));
-    }
-}
-
-// Request
-POST /api/users/login HTTP/1.1
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "SecurePass123"
-}
-
-// Response
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 86400
-}
-```
-
-**gRPC Example** (Same operation):
-
-```protobuf
-// Define .proto file
-service UserService {
-  rpc Login(LoginRequest) returns (LoginResponse);
-}
-
-message LoginRequest {
-  string email = 1;
-  string password = 2;
-}
-
-message LoginResponse {
-  string token = 1;
-  int32 expiresIn = 2;
-}
-
-// Compile proto file
-protoc --java_out=... --grpc-java_out=... user.proto
-
-// Implement service
-@GrpcService
-public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
-    @Override
-    public void login(LoginRequest request, StreamObserver<LoginResponse> responseObserver) {
-        String token = authService.authenticate(request.getEmail(), request.getPassword());
-        LoginResponse response = LoginResponse.newBuilder()
-            .setToken(token)
-            .setExpiresIn(86400)
-            .build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-    }
-}
-```
-
-**Winner: REST** - Less boilerplate, more straightforward for simple operations.
-
-#### 2. **Browser and Third-Party Integration**
-
-**REST**:
-
-```javascript
-// Web browser (JavaScript)
-fetch('https://api.uitgo.com/api/users/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'john@example.com', password: 'Pass123' })
-})
-  .then(res => res.json())
-  .then(data => console.log(data.token));
-
-// cURL (command line)
-curl -X POST https://api.uitgo.com/api/users/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"john@example.com","password":"Pass123"}'
-
-// Postman (API testing)
-# No special setup needed, just add URL and JSON body
-```
-
-**gRPC**:
-
-```javascript
-// Web browser requires gRPC-Web + Envoy proxy
-import {UserServiceClient} from './generated/user_grpc_web_pb';
-import {LoginRequest} from './generated/user_pb';
-
-const client = new UserServiceClient('https://api.uitgo.com:9090');
-const request = new LoginRequest();
-request.setEmail('john@example.com');
-request.setPassword('Pass123');
-
-client.login(request, {}, (err, response) => {
-  if (err) console.error(err);
-  else console.log(response.getToken());
-});
-
-// cURL doesn't support gRPC directly, need grpcurl
-grpcurl -plaintext -d '{"email":"john@example.com","password":"Pass123"}' \
-  api.uitgo.com:9090 user.UserService/Login
-
-// Postman supports gRPC but requires .proto files import
-```
-
-**Winner: REST** - Universal support, no special tooling needed.
-
-#### 3. **Human-Readable Debugging**
-
-**REST Debugging**:
-
-```bash
-# View request/response in browser DevTools Network tab
-Request:
-  POST /api/trips/request
-  {
-    "passengerId": "abc123",
-    "pickupLocation": "University Campus",
-    "destination": "Downtown Mall"
-  }
-
-Response:
-  {
-    "id": "def456",
-    "status": "REQUESTED",
-    "fare": null,
-    "createdAt": "2025-11-25T10:30:00Z"
-  }
-
-# Easily readable and debuggable
-# Can copy-paste JSON for testing
-# Clear understanding of data structure
-```
-
-**gRPC Debugging**:
-
-```bash
-# Binary protocol, requires special tools
-
-# Option 1: grpcurl (command line)
-grpcurl -d '{"passengerId":"abc123"}' localhost:9090 trip.TripService/CreateTrip
-
-# Option 2: gRPC reflection + GUI tools (e.g., Postman, BloomRPC)
-
-# Option 3: Logging interceptor
-@GrpcService
-public class TripGrpcService extends TripServiceGrpc.TripServiceImplBase {
-    @Override
-    public void createTrip(CreateTripRequest request, StreamObserver<TripResponse> responseObserver) {
-        // Must add custom logging to see request/response
-        logger.info("Request: {}", request);
-        // ...
-    }
-}
-```
-
-**Winner: REST** - Immediate visibility in browser/tools, no special setup.
-
-#### 4. **Caching Support**
-
-**REST with HTTP Caching**:
-
-```http
-# Request
-GET /api/trips/abc123 HTTP/1.1
-If-None-Match: "v1.0"
-
-# Response (not modified)
-HTTP/1.1 304 Not Modified
-ETag: "v1.0"
-
-# Response (modified)
-HTTP/1.1 200 OK
-ETag: "v1.1"
-Cache-Control: max-age=60
-```
-
-Benefits:
-
-- **Browser Caching**: Automatic caching by browsers
-- **CDN Support**: Can use CloudFlare, AWS CloudFront
-- **Conditional Requests**: ETag, Last-Modified headers
-- **Cache Control**: Fine-grained cache policies
-
-**gRPC**:
-
-- No native caching support
-- Must implement custom caching layer
-- Binary protocol complicates CDN integration
-
-**Winner: REST** - Native HTTP caching support.
-
-#### 5. **API Gateway Compatibility**
-
-**REST**:
-
-```yaml
-# Spring Cloud Gateway (our current setup)
-routes:
-  - id: user-service
-    uri: http://user-service:8081
-    predicates:
-      - Path=/api/users/**
-    filters:
-      - RewritePath=/api/users/(?<segment>.*), /$\{segment}
-
-  # Easy integration with:
-  - Rate limiting
-  - Authentication
-  - Request transformation
-  - Response caching
-  - Load balancing
-```
-
-**gRPC**:
-
-```yaml
-# Requires Envoy proxy or gRPC-specific gateway
-# More complex configuration
-# Limited support in Spring Cloud Gateway
-# Need additional infrastructure
-```
-
-**Winner: REST** - Better integration with API Gateway.
-
-#### 6. **Performance is Adequate**
-
-**Benchmark Results** (CRUD operations):
-
-| Operation               | REST (JSON) | gRPC (Protobuf) | Difference         |
-| ----------------------- | ----------- | --------------- | ------------------ |
-| User Login              | 45ms        | 35ms            | -22% (gRPC faster) |
-| Create Trip             | 65ms        | 52ms            | -20% (gRPC faster) |
-| Get Trip Details        | 28ms        | 22ms            | -21% (gRPC faster) |
-| Trip History (10 trips) | 85ms        | 68ms            | -20% (gRPC faster) |
-
-**Analysis**:
-
-- gRPC is 20-25% faster
-- **BUT**: Both meet < 500ms SLA requirement
-- Absolute difference: 10-20ms (negligible for user experience)
-- **Trade-off**: 20% performance gain vs development complexity
-
-**Decision**: 20% performance improvement doesn't justify additional complexity for CRUD operations.
-
----
-
-### When gRPC Doesn't Add Value
-
-#### 1. **Low Frequency Operations**
-
-```
-Login frequency: 10 req/sec (vs 2,000 location updates/sec for gRPC)
-
-Benefits of gRPC diminish at low frequency:
-- Persistent connection overhead not amortized
-- Binary serialization savings minimal (45ms → 35ms)
-- Streaming not needed (single request/response)
-```
-
-#### 2. **Variable Payload Sizes**
-
-```
-User login: ~100 bytes (small)
-Trip history: ~5 KB (medium)
-Trip details: ~500 bytes (small)
-
-gRPC Advantages:
-  Small payloads: 20% size reduction (100 bytes → 80 bytes) = 20 bytes saved
-  Medium payloads: 15% size reduction (5 KB → 4.25 KB) = 750 bytes saved
-
-Impact on 100 requests:
-  REST: 100 × 100 bytes = 10 KB total
-  gRPC: 100 × 80 bytes = 8 KB total
-  Savings: 2 KB (negligible for modern networks)
-```
-
-#### 3. **Schema Evolution**
-
-**REST (JSON)**:
-
-```json
-// Version 1
-{
-  "id": "abc123",
-  "status": "REQUESTED"
-}
-
-// Version 2 (add field, backward compatible)
-{
-  "id": "abc123",
-  "status": "REQUESTED",
-  "estimatedFare": 150000  // New field
-}
-
-// Clients ignore unknown fields automatically
-// No code regeneration needed
-```
-
-**gRPC (Protobuf)**:
-
-```protobuf
-// Version 1
-message TripResponse {
-  string id = 1;
-  string status = 2;
-}
-
-// Version 2 (add field)
-message TripResponse {
-  string id = 1;
-  string status = 2;
-  double estimatedFare = 3;  // New field
-}
-
-// Must regenerate code from .proto
-mvn clean compile
-// Clients must update generated code
-```
-
-**Winner: REST** - Easier schema evolution, no code regeneration.
-
----
-
-### Why Not GraphQL?
-
-GraphQL was considered for user-facing APIs but rejected:
-
-#### 1. **Overkill for Simple CRUD**
-
-```graphql
-# GraphQL query (complex)
-query {
-  trip(id: "abc123") {
-    id
-    status
-    passenger {
-      id
-      name
-      phone
-    }
-    driver {
-      id
-      name
-      vehicle {
-        model
-        number
-      }
-    }
-    fare
-  }
-}
-
-# REST (simple)
-GET /api/trips/abc123
-
-# For our use case, we don't need:
-- Flexible field selection
-- Multiple resource fetching in single request
-- Client-driven queries
-```
-
-#### 2. **Learning Curve & Complexity**
-
-- Requires GraphQL schema definition
-- Custom resolvers for each field
-- N+1 query problem requires DataLoader
-- Caching is more complex
-
-#### 3. **Performance Overhead**
-
-```
-REST: Direct database query
-GraphQL:
-  1. Parse query
-  2. Validate against schema
-  3. Execute resolvers
-  4. Merge results
-Total overhead: 10-30ms
-```
-
-**Decision**: GraphQL deferred to future if complex client requirements emerge.
-
----
-
-## Implementation Details
-
-### REST API Design Standards
-
-#### 1. **Resource-Based URIs**
-
-```
-Users:
-  POST   /api/users/register         - Create user
-  POST   /api/users/login            - Authenticate
-  GET    /api/users/profile          - Get profile (authenticated)
-  PUT    /api/users/profile          - Update profile
-
-Trips:
-  POST   /api/trips/request          - Create trip
-  GET    /api/trips/{id}             - Get trip details
-  PUT    /api/trips/{id}/cancel      - Cancel trip
-  GET    /api/trips/history          - Get trip history
-
-Drivers:
-  POST   /api/drivers/register       - Register driver
-  PUT    /api/drivers/status         - Update status
-  GET    /api/drivers/{id}           - Get driver profile
-```
-
-#### 2. **HTTP Methods & Status Codes**
-
-```
-POST   - Create resource (201 Created)
-GET    - Retrieve resource (200 OK, 404 Not Found)
-PUT    - Update resource (200 OK, 404 Not Found)
-DELETE - Delete resource (204 No Content, 404 Not Found)
-PATCH  - Partial update (200 OK)
-
-Error Codes:
-  400 Bad Request - Invalid input
-  401 Unauthorized - Missing/invalid authentication
-  403 Forbidden - Insufficient permissions
-  404 Not Found - Resource doesn't exist
-  409 Conflict - Duplicate resource
-  500 Internal Server Error - Server error
-```
-
-#### 3. **Consistent Response Format**
-
-```json
-// Success Response
-{
-  "data": {
-    "id": "abc123",
-    "status": "REQUESTED"
-  }
-}
-
-// Error Response
-{
-  "error": {
-    "code": "INVALID_INPUT",
-    "message": "Email address is required",
-    "field": "email"
-  }
-}
-
-// Paginated Response
-{
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalPages": 5,
-    "totalItems": 97
-  }
-}
-```
+- Consistent structure giúp clients dễ dàng parse
+- Clear error messages giúp debugging
+- Pagination tránh overload server và client
 
 #### 4. **API Versioning**
 
-```
-# URL versioning (simple, explicit)
-/api/v1/users/login
-/api/v2/users/login
+**URL versioning (UIT-Go sử dụng):**
 
-# Header versioning (alternative)
-GET /api/users/login
-Accept: application/vnd.uitgo.v1+json
-```
+- `/api/v1/users/login`
+- `/api/v2/users/login`
+- Đơn giản, rõ ràng, dễ route
 
-### Spring Boot Implementation
+**Header versioning (alternative):**
 
-```java
-@RestController
-@RequestMapping("/api/trips")
-public class TripController {
+- Same URL, version trong header
+- `Accept: application/vnd.uitgo.v1+json`
+- Linh hoạt nhưng phức tạp hơn
 
-    private final TripService tripService;
+**Lợi ích:**
 
-    @PostMapping("/request")
-    public ResponseEntity<TripResponse> createTrip(
-        @Valid @RequestBody CreateTripRequest request,
-        @AuthenticationPrincipal CustomUserDetails user
-    ) {
-        TripResponse trip = tripService.createTrip(request, user.getUserId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(trip);
-    }
+- Backward compatibility
+- Có thể maintain nhiều versions
+- Clients upgrade theo tốc độ của họ
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TripResponse> getTrip(@PathVariable UUID id) {
-        return tripService.getTripById(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
+### Spring Boot Implementation Pattern
 
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<TripResponse> cancelTrip(
-        @PathVariable UUID id,
-        @AuthenticationPrincipal CustomUserDetails user
-    ) {
-        TripResponse trip = tripService.cancelTrip(id, user.getUserId());
-        return ResponseEntity.ok(trip);
-    }
+**Controller Layer:**
 
-    @GetMapping("/history")
-    public ResponseEntity<List<TripResponse>> getTripHistory(
-        @AuthenticationPrincipal CustomUserDetails user,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size
-    ) {
-        List<TripResponse> trips = tripService.getTripHistory(
-            user.getUserId(), page, size
-        );
-        return ResponseEntity.ok(trips);
-    }
-}
-```
+- Sử dụng `@RestController` annotation
+- `@RequestMapping` cho base path
+- Method-specific mappings: `@PostMapping`, `@GetMapping`, v.v.
+- Validation với `@Valid`
+- Authentication với `@AuthenticationPrincipal`
 
-### OpenFeign for Inter-Service Communication
+**Service Layer:**
 
-```java
-@FeignClient(name = "user-service", url = "http://user-service:8081")
-public interface UserClient {
+- Business logic tách biệt khỏi controller
+- Transaction management
+- Error handling
 
-    @GetMapping("/api/internal/auth/validate")
-    UserValidationResponse validate(@RequestHeader("Authorization") String token);
+**Repository Layer:**
 
-    @GetMapping("/api/internal/users/{id}")
-    UserResponse getUserById(@PathVariable UUID id);
-}
+- JPA repositories cho database access
+- Query methods hoặc custom queries
 
-@FeignClient(name = "driver-service", url = "http://driver-service:8083")
-public interface DriverClient {
+### OpenFeign cho Inter-Service Communication
 
-    @GetMapping("/api/internal/drivers/nearby")
-    List<NearbyDriverResponse> getNearbyDrivers(
-        @RequestParam double lat,
-        @RequestParam double lng,
-        @RequestParam(defaultValue = "3.0") double radiusKm,
-        @RequestParam(defaultValue = "5") int limit
-    );
-}
-```
+**Mục đích:**
+
+- Trip Service gọi Driver Service để tìm nearby drivers
+- Trip Service gọi User Service để validate users
+- Driver Service gọi Trip Service để accept trip
+
+**Đặc điểm OpenFeign:**
+
+- Declarative HTTP client
+- Tự động load balancing
+- Error handling và retries
+- Integration với Spring Cloud
 
 ---
 
-## Consequences
+## Hậu quả của quyết định
 
-### Positive
+### Tích cực
 
-1. ✅ **Simple Development**: Easy to implement and maintain
-2. ✅ **Universal Support**: Works in browsers, mobile apps, curl, Postman
-3. ✅ **Easy Debugging**: Human-readable JSON in Network tab
-4. ✅ **API Gateway Integration**: Works seamlessly with Spring Cloud Gateway
-5. ✅ **Caching Support**: Native HTTP caching
-6. ✅ **Third-Party Integration**: Easy for partners to integrate
-7. ✅ **Team Familiarity**: Team already knows REST/JSON
-8. ✅ **Tooling**: Rich ecosystem (Swagger, Postman, curl)
+1. ✅ **Phát triển đơn giản**: Dễ implement và maintain
+2. ✅ **Hỗ trợ phổ quát**: Hoạt động trên browsers, mobile apps, curl, Postman
+3. ✅ **Debugging dễ dàng**: JSON dễ đọc trong Network tab
+4. ✅ **Tích hợp API Gateway**: Tương thích hoàn hảo với Spring Cloud Gateway
+5. ✅ **Hỗ trợ Caching**: HTTP caching native
+6. ✅ **Tích hợp bên thứ ba**: Dễ dàng cho partners tích hợp
+7. ✅ **Team quen thuộc**: Team đã biết REST/JSON
+8. ✅ **Công cụ phong phú**: Swagger, Postman, curl, và nhiều tools khác
+9. ✅ **Phù hợp học tập**: Sinh viên dễ học và thực hành
 
-### Negative
+### Tiêu cực
 
-1. ❌ **20% Slower than gRPC**: 45ms vs 35ms (still within SLA)
-2. ❌ **Larger Payloads**: JSON vs Protobuf (not significant for CRUD)
-3. ❌ **No Type Safety**: Runtime errors vs compile-time errors
-4. ❌ **Manual Serialization**: No auto-generated code
+1. ❌ **Chậm hơn gRPC 20%**: 45ms vs 35ms (vẫn trong SLA)
+2. ❌ **Payload lớn hơn**: JSON vs Protobuf (không đáng kể cho CRUD)
+3. ❌ **Không có Type Safety**: Runtime errors thay vì compile-time
+4. ❌ **Serialization thủ công**: Không có auto-generated code
 
-### Mitigations
+### Giải pháp giảm thiểu
 
-**Performance**:
+**Performance:**
 
-- Adequate for CRUD operations (< 500ms SLA)
-- Optimize database queries, add caching if needed
-- Use HTTP/2 for header compression
+- Đủ tốt cho CRUD operations (< 500ms SLA)
+- Optimize database queries
+- Thêm caching nếu cần
+- Sử dụng HTTP/2 cho header compression
+- Database indexing tốt
 
-**Type Safety**:
+**Type Safety:**
 
-- Use `@Valid` annotation for input validation
-- Define DTOs with clear documentation
-- Add unit tests for serialization/deserialization
+- Sử dụng `@Valid` annotation cho input validation
+- Định nghĩa DTOs rõ ràng với documentation
+- Unit tests cho serialization/deserialization
+- Request/Response validation layers
 
-**Large Payloads**:
+**Large Payloads:**
 
-- Use gzip compression (automatic in Spring Boot)
-- Paginate large responses
-- Consider GraphQL if clients need field selection
+- Sử dụng gzip compression (tự động trong Spring Boot)
+- Pagination cho large responses
+- Field filtering nếu cần
+- Có thể xem xét GraphQL nếu clients cần field selection
 
 ---
 
-## Hybrid Architecture Decision
+## Quyết định Kiến trúc Hybrid
 
-### REST for:
+### REST được sử dụng cho:
 
-- ✅ User management (register, login, profile)
-- ✅ Trip management (CRUD operations)
-- ✅ Driver management (CRUD operations)
-- ✅ Admin operations
+- ✅ Quản lý người dùng (register, login, profile)
+- ✅ Quản lý chuyến đi (CRUD operations)
+- ✅ Quản lý tài xế (CRUD operations)
+- ✅ Thao tác Admin
 - ✅ Client-facing APIs (mobile, web)
-- ✅ Third-party integrations
+- ✅ Tích hợp bên thứ ba
 
-### gRPC for:
+### gRPC được sử dụng cho:
 
-- ✅ Driver location updates (high-frequency streaming)
-- ✅ Future real-time features (e.g., live trip tracking)
-- ✅ Internal service-to-service calls (future, if needed)
+- ✅ Cập nhật vị trí tài xế (high-frequency streaming)
+- ✅ Các tính năng real-time trong tương lai (ví dụ: live trip tracking)
+- ✅ Internal service-to-service calls (nếu cần trong tương lai)
 
-### Decision Matrix:
+### Ma trận quyết định:
 
-| Criteria          | REST         | gRPC          |
-| ----------------- | ------------ | ------------- |
-| Request frequency | < 100/sec    | > 1000/sec    |
-| Streaming needed  | No           | Yes           |
-| Browser support   | Required     | Not required  |
-| Human-readable    | Preferred    | Not important |
-| Payload size      | < 10 KB      | Any           |
-| Type safety       | Nice to have | Critical      |
+| Tiêu chí           | REST       | gRPC             |
+| ------------------ | ---------- | ---------------- |
+| Tần suất request   | < 100/giây | > 1000/giây      |
+| Cần streaming      | Không      | Có               |
+| Hỗ trợ browser     | Bắt buộc   | Không bắt buộc   |
+| Dễ đọc             | Ưu tiên    | Không quan trọng |
+| Kích thước payload | < 10 KB    | Bất kỳ           |
+| Type safety        | Tốt nếu có | Rất quan trọng   |
 
----
+**Nguyên tắc chọn lựa:**
 
-## Future Considerations
-
-### When to Add gRPC for CRUD
-
-Consider migrating CRUD operations to gRPC if:
-
-1. **Scale Increases 10x**
-
-   - Current: ~100 req/sec
-   - Threshold: > 1,000 req/sec
-   - Reason: Performance gains justify complexity
-
-2. **Mobile Data Costs Become Issue**
-
-   - Current: Unlimited data plans common
-   - Threshold: Significant user base on limited data
-   - Reason: Smaller payloads save mobile data
-
-3. **Type Safety Becomes Critical**
-   - Current: Manageable with validation
-   - Threshold: Frequent schema changes cause bugs
-   - Reason: Compile-time safety prevents runtime errors
-
-### When to Add GraphQL
-
-Consider GraphQL if:
-
-1. **Complex Client Requirements**
-
-   - Clients need flexible field selection
-   - Multiple mobile app versions with different needs
-   - Over-fetching becomes a problem
-
-2. **Third-Party Developer API**
-   - Public API for external developers
-   - Need to support various use cases
+- Mặc định: Sử dụng REST
+- Chỉ dùng gRPC khi: High frequency + Real-time + Performance critical
 
 ---
 
-## References
+## Các cân nhắc trong tương lai
 
-- [REST API Design Best Practices](https://restfulapi.net/)
-- [Spring Boot REST Documentation](https://spring.io/guides/gs/rest-service/)
-- [OpenFeign Documentation](https://spring.io/projects/spring-cloud-openfeign)
-- [HTTP Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
-- [RESTful API Versioning](https://restfulapi.net/versioning/)
-- [JSON vs Protobuf Performance](https://auth0.com/blog/beating-json-performance-with-protobuf/)
+### Khi nào nên thêm gRPC cho CRUD
+
+Xem xét chuyển CRUD operations sang gRPC nếu:
+
+#### 1. **Quy mô tăng 10 lần**
+
+**Hiện tại:** ~100 req/giây  
+**Ngưỡng:** > 1,000 req/giây  
+**Lý do:** Performance gains biện minh cho complexity
+
+**Dấu hiệu:**
+
+- Response time bắt đầu vượt quá SLA
+- Database load quá cao
+- Network bandwidth trở thành bottleneck
+- CPU usage cao do JSON serialization
+
+#### 2. **Mobile Data trở thành vấn đề**
+
+**Hiện tại:** Unlimited data plans phổ biến  
+**Ngưỡng:** Nhiều users với limited data plans  
+**Lý do:** Payloads nhỏ hơn tiết kiệm mobile data
+
+**Dấu hiệu:**
+
+- User complaints về data usage
+- Nhiều users ở emerging markets
+- App được dùng nhiều ở nơi có mạng yếu
+
+#### 3. **Type Safety trở nên quan trọng**
+
+**Hiện tại:** Quản lý được với validation  
+**Ngưỡng:** Schema changes thường xuyên gây bugs  
+**Lý do:** Compile-time safety ngăn runtime errors
+
+**Dấu hiệu:**
+
+- Nhiều bugs do API contract violations
+- Khó maintain consistency giữa client và server
+- Nhiều teams phát triển độc lập
+
+### Khi nào nên thêm GraphQL
+
+Xem xét GraphQL nếu:
+
+#### 1. **Yêu cầu phức tạp từ Clients**
+
+**Dấu hiệu:**
+
+- Clients cần flexible field selection
+- Nhiều mobile app versions với nhu cầu khác nhau
+- Over-fetching trở thành vấn đề (fetch quá nhiều data không dùng)
+- Under-fetching yêu cầu nhiều requests
+
+#### 2. **Public API cho developers bên ngoài**
+
+**Dấu hiệu:**
+
+- Cần public API cho external developers
+- Cần hỗ trợ nhiều use cases khác nhau
+- Third-party developers cần flexibility
+
+#### 3. **Mobile performance critical**
+
+**Dấu hiệu:**
+
+- Cần minimize số lượng requests
+- Bandwidth optimization quan trọng
+- Flexible queries giúp giảm data transfer
 
 ---
 
-## Appendix: Performance Benchmark Details
+## Phụ lục: Chi tiết Performance Benchmark
 
-### Test Environment
+### Môi trường Test
 
-- **Instance**: AWS c5.2xlarge (8 vCPU, 16 GB RAM)
-- **Load**: 100 concurrent users
-- **Duration**: 10 minutes
-- **Network**: Same VPC (low latency)
+- **Instance**: Local development environment
+- **Concurrent users**: 100
+- **Duration**: 10 phút
+- **Network**: Local Docker network (low latency)
 
-### Benchmark Results
+### Kết quả Benchmark
 
-| Operation    | REST P50 | REST P99 | gRPC P50 | gRPC P99 |
+| Thao tác     | REST P50 | REST P99 | gRPC P50 | gRPC P99 |
 | ------------ | -------- | -------- | -------- | -------- |
 | Login        | 42ms     | 85ms     | 32ms     | 68ms     |
 | Register     | 78ms     | 145ms    | 62ms     | 125ms    |
@@ -773,9 +289,35 @@ Consider GraphQL if:
 | Cancel Trip  | 45ms     | 92ms     | 35ms     | 75ms     |
 | Trip History | 82ms     | 165ms    | 65ms     | 142ms    |
 
-**Conclusion**: gRPC is consistently 20-25% faster, but both meet < 500ms SLA.
+**Giải thích metrics:**
+
+- **P50 (Median)**: 50% requests nhanh hơn giá trị này
+- **P99**: 99% requests nhanh hơn giá trị này (worst-case gần như)
+
+**Kết luận**:
+
+- gRPC consistently nhanh hơn 20-25%
+- Cả hai đều đáp ứng SLA < 500ms
+- Chênh lệch tuyệt đối nhỏ (10-20ms)
+- User experience tương đương
 
 ---
 
-**Last Updated**: November 25, 2025  
-**Review Date**: March 1, 2026
+## Kết luận
+
+Quyết định sử dụng REST cho CRUD operations và gRPC chỉ cho high-frequency streaming là lựa chọn phù hợp vì:
+
+### Lý do chính:
+
+1. **Simplicity > Performance gains**: 20% faster không đáng để trade-off với complexity
+2. **Developer experience**: REST dễ học, dễ debug, dễ maintain
+3. **Ecosystem**: Rich tooling và universal support
+4. **Educational value**: Sinh viên học được REST fundamentals tốt hơn
+5. **Pragmatic**: Đáp ứng requirements với least complexity
+
+### Hybrid approach benefits:
+
+- **Best of both worlds**: REST cho CRUD, gRPC cho streaming
+- **Right tool for the job**: Mỗi protocol cho use case phù hợp
+- **Learning opportunity**: Sinh viên học cả hai technologies
+- **Scalable**: Có thể thêm gRPC cho services khác nếu cần
