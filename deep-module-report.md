@@ -10,7 +10,7 @@
 
 **Giải pháp:** Geographic Sharding - phân mảnh database theo khu vực địa lý.
 
-> **Chi tiết kỹ thuật:** [ADR-005: Database Sharding Strategy](docs/ADR/005-database-sharding-strategy.md)
+> **Chi tiết kỹ thuật:** [ADR-005: Geographic Sharding vs Hash-based Sharding](docs/ADR/005-geographic-sharding-vs-hash-sharding.md)
 
 ### 2.1.2. Kiến trúc
 
@@ -74,8 +74,7 @@
 
 **Giải pháp:** Asynchronous messaging với RabbitMQ để decouple services và improve availability.
 
-> **Chi tiết kỹ thuật:** [ADR-004: RabbitMQ vs Kafka](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)  
-> **Implementation:** [ADR-006: RabbitMQ Implementation](docs/ADR/006-rabbitmq-implementation.md)
+> **Chi tiết kỹ thuật:** [ADR-004: RabbitMQ vs Kafka](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md)
 
 ### 2.2.2. Kiến trúc
 
@@ -141,7 +140,7 @@
 
 **Giải pháp:** Redis Read Replicas với CQRS pattern - tách biệt reads và writes.
 
-> **Chi tiết kỹ thuật:** [ADR-007: Redis Read Replicas Implementation](docs/ADR/007-redis-read-replicas.md)
+> **Chi tiết kỹ thuật:** [ADR-006: Redis Read Replicas vs Redis Cluster](docs/ADR/006-redis-replicas-vs-cluster.md)
 
 ### 2.3.2. Kiến trúc
 
@@ -229,7 +228,7 @@
 
 **Giải pháp:** Kubernetes native scaling và resilience patterns.
 
-> **Chi tiết kỹ thuật:** [ADR-008: Kubernetes Scaling Strategy](docs/ADR/008-kubernetes-scaling-strategy.md)
+> **Chi tiết kỹ thuật:** [ADR-007: HPA vs VPA for Autoscaling](docs/ADR/007-hpa-vs-vpa-autoscaling.md)
 
 ### 2.4.2. Components đã implement
 
@@ -328,7 +327,7 @@ strategy:
 
 **Giải pháp:** Service mesh với Linkerd (lightweight alternative to Istio).
 
-> **Chi tiết kỹ thuật:** [ADR-009: Service Mesh Selection](docs/ADR/009-service-mesh-linkerd.md)
+> **Chi tiết kỹ thuật:** [ADR-008: Linkerd vs Istio for Service Mesh](docs/ADR/008-linkerd-vs-istio.md)
 
 ### 2.5.2. Features đã enable
 
@@ -385,7 +384,7 @@ strategy:
 
 **Giải pháp:** Circuit Breaker pattern với Resilience4j.
 
-> **Chi tiết kỹ thuật:** [ADR-010: Circuit Breaker Implementation](docs/ADR/010-circuit-breaker-resilience4j.md)
+> **Chi tiết kỹ thuật:** [ADR-009: Resilience4j vs Hystrix for Circuit Breaker](docs/ADR/009-resilience4j-vs-hystrix.md)
 
 ### 2.6.2. Kiến trúc
 
@@ -466,7 +465,7 @@ public Response fallback() {
 
 ### 2.7.1. Testing Strategy
 
-> **Chi tiết:** [ADR-011: Load Testing Strategy](docs/ADR/011-load-testing-k6.md)
+> **Chi tiết:** [ADR-010: k6 vs JMeter for Load Testing](docs/ADR/010-k6-vs-jmeter.md)
 
 **Tool:** k6 (modern load testing tool)
 
@@ -563,10 +562,9 @@ public Response fallback() {
 ---
 
 **Tài liệu tham khảo ADR:**
-- [ADR-005: Database Sharding Strategy](docs/ADR/005-database-sharding-strategy.md)
-- [ADR-006: RabbitMQ Implementation](docs/ADR/006-rabbitmq-implementation.md)
-- [ADR-007: Redis Read Replicas](docs/ADR/007-redis-read-replicas.md)
-- [ADR-008: Kubernetes Scaling Strategy](docs/ADR/008-kubernetes-scaling-strategy.md)
-- [ADR-009: Service Mesh (Linkerd)](docs/ADR/009-service-mesh-linkerd.md)
-- [ADR-010: Circuit Breaker with Resilience4j](docs/ADR/010-circuit-breaker-resilience4j.md)
-- [ADR-011: Load Testing with k6](docs/ADR/011-load-testing-k6.md)
+- [ADR-005: Geographic Sharding vs Hash-based Sharding](docs/ADR/005-geographic-sharding-vs-hash-sharding.md)
+- [ADR-006: Redis Read Replicas vs Redis Cluster](docs/ADR/006-redis-replicas-vs-cluster.md)
+- [ADR-007: HPA vs VPA for Autoscaling](docs/ADR/007-hpa-vs-vpa-autoscaling.md)
+- [ADR-008: Linkerd vs Istio for Service Mesh](docs/ADR/008-linkerd-vs-istio.md)
+- [ADR-009: Resilience4j vs Hystrix for Circuit Breaker](docs/ADR/009-resilience4j-vs-hystrix.md)
+- [ADR-010: k6 vs JMeter for Load Testing](docs/ADR/010-k6-vs-jmeter.md)
