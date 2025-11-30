@@ -212,7 +212,7 @@ if echo "$PENDING_TRIPS" | jq -e 'type == "array"' > /dev/null 2>&1; then
     if [ "$PENDING_COUNT" -gt 0 ]; then
         echo -e "${GREEN}✅ Driver has $PENDING_COUNT pending trip(s)${NC}"
         echo ""
-        echo "$PENDING_TRIPS" | jq -r '.[] | "  • Trip ID: \(.tripId)\n    Passenger: \(.passengerName)\n    Fare: \(.estimatedFare) VND\n    Distance: \(.distanceKm) km\n    Expires at: \(.expiresAt)"'
+        echo "$PENDING_TRIPS" | jq -r '.[] | "  • Trip ID: \(.tripId)\n    Fare: \(.estimatedFare) VND\n    Distance: \(.distanceKm) km\n    Expires at: \(.expiresAt)"'
         echo ""
         
         # Check if our trip is in the pending list
