@@ -61,13 +61,13 @@ export default function () {
 export function handleSummary(data) {
   return {
     // HTML report
-    "load-tests/stress-api-gateway-report.html": htmlReport(data),
+    "load-tests/stress-report.html": htmlReport(data),
 
     // JSON report
-    "load-tests/stress-api-gateway-report.json": JSON.stringify(data, null, 2),
+    "load-tests/stress-report.json": JSON.stringify(data, null, 2),
 
     // Text summary
-    "load-tests/stress-api-gateway-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
+    "load-tests/stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
 
     // Console output
     stdout: textSummary(data, { indent: " ", enableColors: true }),

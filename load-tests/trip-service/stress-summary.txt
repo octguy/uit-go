@@ -1,0 +1,22 @@
+     ✓ trip creation status is 200 or 201
+     ✓ response has trip data
+
+     checks.........................: 100.00% ✓ 118192     ✗ 0    
+     data_received..................: 32 MB   66 kB/s
+     data_sent......................: 29 MB   60 kB/s
+   ✓ errors.........................: 0.00%   ✓ 0          ✗ 0    
+     http_req_blocked...............: avg=27.74µs min=0s       med=0s      max=28.95ms  p(90)=0s      p(95)=0s     
+     http_req_connecting............: avg=17.68µs min=0s       med=0s      max=19.16ms  p(90)=0s      p(95)=0s     
+     http_req_duration..............: avg=1.89s   min=15.29ms  med=1.43s   max=18.66s   p(90)=4.05s   p(95)=5.62s  
+     ✗ { expected_response:true }...: avg=1.89s   min=15.29ms  med=1.43s   max=18.66s   p(90)=4.05s   p(95)=5.62s  
+   ✓ http_req_failed................: 0.00%   ✓ 0          ✗ 59096
+     http_req_receiving.............: avg=23.99ms min=0s       med=11.39ms max=2.43s    p(90)=61.75ms p(95)=86.58ms
+     http_req_sending...............: avg=42.23µs min=0s       med=0s      max=179.41ms p(90)=0s      p(95)=0s     
+     http_req_tls_handshaking.......: avg=0s      min=0s       med=0s      max=0s       p(90)=0s      p(95)=0s     
+     http_req_waiting...............: avg=1.87s   min=15.29ms  med=1.41s   max=18.66s   p(90)=4.01s   p(95)=5.58s  
+     http_reqs......................: 59096   123.004303/s
+     iteration_duration.............: avg=2.39s   min=515.77ms med=1.94s   max=19.16s   p(90)=4.55s   p(95)=6.12s  
+     iterations.....................: 59096   123.004303/s
+     trip_created...................: 100.00% ✓ 59096      ✗ 0    
+     vus............................: 7       min=1        max=600
+     vus_max........................: 600     min=600      max=600

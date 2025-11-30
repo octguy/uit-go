@@ -73,13 +73,13 @@ export default function () {
 export function handleSummary(data) {
   return {
     // HTML report
-    "load-tests/spike-api-gateway-report.html": htmlReport(data),
+    "load-tests/spike-report.html": htmlReport(data),
 
     // JSON report
-    "load-tests/spike-api-gateway-report.json": JSON.stringify(data, null, 2),
+    "load-tests/spike-report.json": JSON.stringify(data, null, 2),
 
     // Text summary
-    "load-tests/spike-api-gateway-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
+    "load-tests/spike-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
 
     // Console output
     stdout: textSummary(data, { indent: " ", enableColors: true }),
