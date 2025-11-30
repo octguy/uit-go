@@ -1,4 +1,4 @@
-# Báo cáo cuối kỳ đồ án Xây dựng Nền tảng "UIT-Go" Cloud-native
+# Báo cáo cuối kỳ đồ án Xây dựng nền tảng "UIT-Go" Cloud-native
 
 ### Lớp: SE360.Q11
 
@@ -41,26 +41,27 @@ UIT-Go là một nền tảng đặt xe dựa trên kiến trúc microservices, 
 #### Trip Service (Port 8082)
 
 - **Công nghệ**: Spring Boot, JPA, OpenFeign, RabbitMQ
-- **Chức năng**: Quản lý chuyến đi, tính giá cước, tìm tài xế gần nhất
+- **Chức năng**: Quản lý chuyến đi, tính giá cước
 - **Database Sharding**: 2 PostgreSQL databases theo địa lý (VN: Port 5433, TH: Port 5434)
 
 #### Driver Service (Port 8083, gRPC: 9092)
 
 - **Công nghệ**: Spring Boot, Redis Geospatial, gRPC, RabbitMQ
-- **Chức năng**: Quản lý vị trí tài xế real-time, tìm kiếm tài xế gần nhất
+- **Chức năng**: Quản lý vị trí tài xế bán real-time, tìm tài xế trong vùng bán kính quy định
 - **Storage**: Redis cho geospatial queries
 
 #### Driver Simulator (Port 8084)
 
 - **Công nghệ**: Spring Boot, gRPC Client
 - **Chức năng**: Mô phỏng vị trí di chuyển của tài xế cho testing
+- **Lưu ý**: Chỉ phục vụ việc mô phỏng, không thuộc hệ thống
 
 ### 1.4. Patterns Giao tiếp
 
 | Pattern            | Use Case                                 | Lý do                                         |
 | ------------------ | ---------------------------------------- | --------------------------------------------- |
 | **REST API**       | Client-facing endpoints, CRUD operations | Chuẩn mực, dễ sử dụng, phù hợp với web/mobile |
-| **gRPC Streaming** | Cập nhật vị trí tài xế liên tục          | Giảm 95% băng thông, độ trễ thấp              |
+| **gRPC Streaming** | Cập nhật vị trí tài xế liên tục          | Giảm khoảng 50% băng thông, độ trễ thấp              |
 | **RabbitMQ**       | Thông báo chuyến đi bất đồng bộ          | Decoupling services, đảm bảo delivery         |
 | **OpenFeign**      | Service-to-service communication         | Declarative, dễ maintain                      |
 
@@ -168,9 +169,8 @@ Tài xế cập nhật vị trí GPS mỗi 5 giây, tạo ra 200-2,000 cập nh�
 
 | Metric            | REST  | gRPC | Cải thiện |
 | ----------------- | ----- | ---- | --------- |
-| Độ trễ P50        | 45ms  | 8ms  | **34% ↓** |
-| Độ trễ P99        | 120ms | 22ms | **34% ↓** |
-| Số kết nối/tài xế | 12-24 | 1    | **50% ↓** |
+| Độ trễ P50        | 22ms  | 14ms | **34% ↓** |
+| Độ trễ P99        | 120ms | 95ms | **25% ↓** |
 
 **Type Safety với Protocol Buffers:**
 
@@ -192,8 +192,8 @@ message LocationRequest {
 | Ưu điểm                       | Nhược điểm                | Biện pháp giảm thiểu                |
 | ----------------------------- | ------------------------- | ----------------------------------- |
 | ✅ Giảm khoảng 50% băng thông | ❌ Đường cong học tập     | Tài liệu chi tiết, code comments    |
-| ✅ Type safety                | ❌ Hỗ trợ browser hạn chế | Dùng gRPC-Web nếu cần web dashboard |
 | ✅ Scalable (2000 ops/s)      | ❌ Firewall/proxy issues  | Fallback sang REST nếu cần          |
+| ✅ Type safety                |  |
 
 #### Kết quả đạt được
 
@@ -752,24 +752,9 @@ public void handleTripNotification(ConsumerRecord<String, TripNotificationReques
 - Offline mode support
 - Background location tracking
 
-### 5.4. Lessons Learned cho Tương lai
+### 5.4. Lessons Learned
 
-#### 5.4.1. Architecture
-
-**Nên làm từ đầu:**
-
-- Observability stack (metrics, tracing, logging)
-- Comprehensive testing strategy
-- API versioning
-- Feature flags cho gradual rollout
-
-**Có thể defer:**
-
-- Service mesh (chỉ cần khi scale lớn)
-- Advanced caching strategies
-- Multi-region deployment
-
-#### 5.4.2. Technology Choices
+#### 5.4.1. Technology Choices
 
 **Đúng quyết định:**
 
@@ -781,9 +766,8 @@ public void handleTripNotification(ConsumerRecord<String, TripNotificationReques
 **Có thể cân nhắc lại:**
 
 - Database sharding strategy (có thể dùng Citus cho auto-sharding)
-- Monitoring stack (có thể dùng managed services)
 
-#### 5.4.3. Process
+#### 5.4.2. Process
 
 **Best practices:**
 

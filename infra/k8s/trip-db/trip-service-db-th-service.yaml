@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: trip-service-db
+  name: trip-service-db-th
 spec:
   selector:
-    app: trip-service-db
+    app: trip-service-db-th
   ports:
     - protocol: TCP
       port: 5432

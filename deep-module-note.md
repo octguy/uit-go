@@ -1,7 +1,3 @@
-Nice — I’ll lay out a concrete, actionable set of technologies, methods and a step-by-step plan you can run **only on your local k8s** cluster for Module A (Scalability & Performance). I’ll include architecture patterns, trade-offs to defend, how to prove them with load tests, tuning actions, observability, and a practical deliverable plan (what to build and when).
-
----
-
 # High-level choices (what I recommend and why)
 
 * **Asynchronous communication between TripService ↔ DriverService**: use a lightweight message broker (RabbitMQ / NATS / Kafka). (DONE: TripService send trip notification to Driver via RabbitMQ)
@@ -21,13 +17,13 @@ Nice — I’ll lay out a concrete, actionable set of technologies, methods and 
   * Cache driver availability (NOT YET), geo-tiles, and static metadata.
   * **Trade-off**: stale reads unless TTLs or invalidation are used.
 
-* **Database strategy**:
+* **Database strategy**: (DONE: VN-TH Sharding)
 
   * Primary OLTP DB (Postgres or MySQL) for authoritative state; **Read replicas** for scale (simulate locally) and connection pooling (pgbouncer).
   * Consider **logical partitioning / sharding** by geographic region when hyper-scale is required.
   * **Trade-off**: replication brings read scalability but increases operational complexity and possible replication lag -> consistency vs availability trade.
 
-* **Kubernetes native scaling & resilience**:
+* **Kubernetes native scaling & resilience**: (DONE: Rolling update, HPA, PDB)
 
   * **HPA (HorizontalPodAutoscaler)** using CPU/memory and custom metrics (Prometheus adapter).
   * **VPA (Vertical Pod Autoscaler)** for stateful components as needed.
