@@ -104,9 +104,8 @@ public class TripServiceImpl implements ITripService {
                         10
                 );
 
-                // Get only the nearest driver (first in the list, sorted by distance)
+                // Get all nearby drivers (not just the nearest one)
                 List<String> nearbyDriverIds = nearbyDrivers.stream()
-                        .limit(1)  // Only take the nearest driver
                         .map(NearbyDriverResponse::getDriverId)
                         .toList();
 
@@ -135,8 +134,8 @@ public class TripServiceImpl implements ITripService {
                 // Only send notification if there are nearby drivers
                 if (!nearbyDriverIds.isEmpty()) {
                     tripNotificationService.notifyNearbyDrivers(notification);
-                    log.info("Trip {} created and notification sent to RabbitMQ for nearest driver: {}",
-                            tripResponse.getId(), nearbyDriverIds.get(0));
+                    log.info("Trip {} created and notification sent to RabbitMQ for {} nearby driver(s): {}",
+                            tripResponse.getId(), nearbyDriverIds.size(), nearbyDriverIds);
                 } else {
                     log.warn("Trip {} created but no drivers to notify", tripResponse.getId());
                 }

@@ -6,9 +6,11 @@
 set -e
 
 # Configuration
-USER_SERVICE_PORT=8080
-TRIP_SERVICE_PORT=8080
-DRIVER_SERVICE_PORT=8080
+BASE_PORT=8080
+USER_SERVICE_PORT=${BASE_PORT}
+TRIP_SERVICE_PORT=${BASE_PORT}
+DRIVER_SERVICE_PORT=${BASE_PORT}
+DRIVER_SIMULATOR_PORT=8084
 
 # Default test credentials
 PASSENGER_EMAIL="${PASSENGER_EMAIL:-user1@gmail.com}"
@@ -45,7 +47,7 @@ echo ""
 
 echo -e "${YELLOW}Starting driver location simulation...${NC}"
 echo "Simulating movement from (10.762622, 106.660172) to (10.776889, 106.700806)"
-SIMULATE_RESPONSE=$(curl -s -X POST "http://localhost:8084/api/simulate/start-all?startLat=10.762622&startLng=106.660172&endLat=10.776889&endLng=106.700806&steps=200&delayMillis=1000")
+SIMULATE_RESPONSE=$(curl -s -X POST "http://localhost:${DRIVER_SIMULATOR_PORT}/api/simulate/start-all?startLat=10.762622&startLng=106.660172&endLat=10.776889&endLng=106.700806&steps=200&delayMillis=1000")
 echo "Response: $SIMULATE_RESPONSE"
 echo ""
 
@@ -120,9 +122,7 @@ DRIVER_USER_INFO=$(curl -s -X GET "http://localhost:${USER_SERVICE_PORT}/api/use
 
 if echo "$DRIVER_USER_INFO" | jq -e '.email' > /dev/null 2>&1; then
     DRIVER_EMAIL=$(echo "$DRIVER_USER_INFO" | jq -r '.email')
-    DRIVER_NAME=$(echo "$DRIVER_USER_INFO" | jq -r '.name')
     echo -e "${GREEN}✅ Driver info retrieved${NC}"
-    echo "Driver Name: $DRIVER_NAME"
     echo "Driver Email: $DRIVER_EMAIL"
 else
     echo -e "${RED}❌ Failed to get driver info${NC}"
@@ -179,8 +179,11 @@ if echo "$TRIP_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
     TRIP_ID=$(echo "$TRIP_RESPONSE" | jq -r '.id')
     TRIP_STATUS=$(echo "$TRIP_RESPONSE" | jq -r '.status')
     TRIP_DRIVER_ID=$(echo "$TRIP_RESPONSE" | jq -r '.driverId')
+    TRIP_PASSENGER_ID=$(echo "$TRIP_RESPONSE" | jq -r '.passengerId')
     echo -e "${GREEN}✅ Trip created successfully!${NC}"
     echo "Trip ID: $TRIP_ID"
+    echo "Passenger ID: $TRIP_PASSENGER_ID"
+    echo "Passenger Email: $PASSENGER_EMAIL"
     echo "Status: $TRIP_STATUS"
     echo "Driver ID: $TRIP_DRIVER_ID"
     echo "Created at: $(date '+%Y-%m-%d %H:%M:%S')"
@@ -201,35 +204,26 @@ echo -e "${GREEN}✅ Notification sent${NC}"
 echo ""
 echo "=========================================================="
 
-# Step 7: Check pending trips immediately (should have notification)
-echo -e "${BLUE}Step 7: Checking pending trips immediately (before expiration)...${NC}"
-echo "Driver ID: $NEAREST_DRIVER_ID"
+# Step 7: Check pending trips for ALL drivers immediately (should have notifications)
+echo -e "${BLUE}Step 7: Checking pending trips for ALL nearby drivers (before expiration)...${NC}"
 echo ""
 
-PENDING_TRIPS_BEFORE=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${NEAREST_DRIVER_ID}")
+DRIVERS_WITH_NOTIFICATION_BEFORE=0
 
-if echo "$PENDING_TRIPS_BEFORE" | jq -e 'type == "array"' > /dev/null 2>&1; then
-    PENDING_COUNT_BEFORE=$(echo "$PENDING_TRIPS_BEFORE" | jq 'length')
-    if [ "$PENDING_COUNT_BEFORE" -gt 0 ]; then
-        echo -e "${GREEN}✅ Driver has $PENDING_COUNT_BEFORE pending trip(s) BEFORE expiration${NC}"
-        echo ""
-        echo "$PENDING_TRIPS_BEFORE" | jq -r '.[] | "  • Trip ID: \(.tripId)\n    Passenger: \(.passengerName)\n    Fare: \(.estimatedFare) VND\n    Distance: \(.distanceKm) km\n    Expires at: \(.expiresAt)"'
-        echo ""
-        
-        # Check if our trip is in the pending list
-        OUR_TRIP_IN_LIST=$(echo "$PENDING_TRIPS_BEFORE" | jq -r --arg trip_id "$TRIP_ID" '.[] | select(.tripId == $trip_id) | .tripId')
-        if [ -n "$OUR_TRIP_IN_LIST" ]; then
-            echo -e "${GREEN}✅ Our trip $TRIP_ID is in the pending list${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Our trip $TRIP_ID is NOT in the pending list${NC}"
+for DRIVER_ID in $(echo "$NEARBY_DRIVERS" | jq -r '.[].driverId'); do
+    PENDING=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${DRIVER_ID}")
+    if echo "$PENDING" | jq -e 'type == "array"' > /dev/null 2>&1; then
+        COUNT=$(echo "$PENDING" | jq 'length')
+        if [ "$COUNT" -gt 0 ]; then
+            echo -e "${GREEN}  ✅ Driver ${DRIVER_ID:0:8}... has $COUNT pending trip(s)${NC}"
+            echo "$PENDING" | jq -r '.[] | "    └─ Trip: \(.tripId)\n       Passenger ID: \(.passengerId)\n       Pickup: (\(.pickupLatitude), \(.pickupLongitude))\n       Destination: (\(.destinationLatitude), \(.destinationLongitude))\n       Fare: \(.estimatedFare) VND\n       Distance: \(.distanceKm) km\n       Expires: \(.expiresAt)"'
+            echo ""
+            DRIVERS_WITH_NOTIFICATION_BEFORE=$((DRIVERS_WITH_NOTIFICATION_BEFORE + 1))
         fi
-    else
-        echo -e "${YELLOW}⚠️  No pending trips found${NC}"
     fi
-else
-    echo -e "${RED}❌ Error checking pending trips${NC}"
-    echo "Response: $PENDING_TRIPS_BEFORE"
-fi
+done
+
+echo -e "${BLUE}Summary: $DRIVERS_WITH_NOTIFICATION_BEFORE drivers have pending notifications BEFORE expiration${NC}"
 
 echo ""
 echo "=========================================================="
@@ -250,63 +244,75 @@ echo -e "${GREEN}✅ 15 seconds elapsed - Notification should be EXPIRED now!${N
 echo ""
 echo "=========================================================="
 
-# Step 9: Check pending trips after expiration (should be empty)
-echo -e "${BLUE}Step 9: Checking pending trips AFTER expiration...${NC}"
-echo "Driver ID: $NEAREST_DRIVER_ID"
+# Step 9: Check pending trips for ALL drivers after expiration (should be empty)
+echo -e "${BLUE}Step 9: Checking pending trips for ALL nearby drivers AFTER expiration...${NC}"
 echo ""
 
-PENDING_TRIPS_AFTER=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${NEAREST_DRIVER_ID}")
+DRIVERS_WITH_NOTIFICATION_AFTER=0
+DRIVERS_WITHOUT_NOTIFICATION_AFTER=0
 
-if echo "$PENDING_TRIPS_AFTER" | jq -e 'type == "array"' > /dev/null 2>&1; then
-    PENDING_COUNT_AFTER=$(echo "$PENDING_TRIPS_AFTER" | jq 'length')
-    if [ "$PENDING_COUNT_AFTER" -eq 0 ]; then
-        echo -e "${GREEN}✅ EXPECTED: Pending trips list is EMPTY (notification expired)${NC}"
-    else
-        echo -e "${YELLOW}⚠️  UNEXPECTED: Driver still has $PENDING_COUNT_AFTER pending trip(s)${NC}"
-        echo "$PENDING_TRIPS_AFTER" | jq '.'
+for DRIVER_ID in $(echo "$NEARBY_DRIVERS" | jq -r '.[].driverId'); do
+    PENDING=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${DRIVER_ID}")
+    if echo "$PENDING" | jq -e 'type == "array"' > /dev/null 2>&1; then
+        COUNT=$(echo "$PENDING" | jq 'length')
+        if [ "$COUNT" -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Driver ${DRIVER_ID:0:8}... notification expired (no pending trips)${NC}"
+            DRIVERS_WITHOUT_NOTIFICATION_AFTER=$((DRIVERS_WITHOUT_NOTIFICATION_AFTER + 1))
+        else
+            echo -e "${YELLOW}  ⚠️  Driver ${DRIVER_ID:0:8}... still has $COUNT pending trip(s)${NC}"
+            DRIVERS_WITH_NOTIFICATION_AFTER=$((DRIVERS_WITH_NOTIFICATION_AFTER + 1))
+        fi
     fi
+done
+
+echo ""
+if [ "$DRIVERS_WITHOUT_NOTIFICATION_AFTER" -eq "$DRIVER_COUNT" ]; then
+    echo -e "${GREEN}✅ EXPECTED: All $DRIVER_COUNT drivers' notifications expired${NC}"
 else
-    echo -e "${RED}❌ Error checking pending trips${NC}"
-    echo "Response: $PENDING_TRIPS_AFTER"
+    echo -e "${YELLOW}⚠️  Only $DRIVERS_WITHOUT_NOTIFICATION_AFTER/$DRIVER_COUNT drivers' notifications expired${NC}"
 fi
 
 echo ""
 echo "=========================================================="
 
-# Step 10: Driver tries to accept the expired trip
-echo -e "${BLUE}Step 10: Driver attempting to accept EXPIRED trip...${NC}"
-echo "Driver ID: $NEAREST_DRIVER_ID"
-echo "Driver Email: $DRIVER_EMAIL"
+# Step 10: Multiple drivers try to accept the expired trip
+echo -e "${BLUE}Step 10: Testing drivers attempting to accept EXPIRED trip...${NC}"
 echo "Trip ID: $TRIP_ID"
 echo "Time since creation: >15 seconds"
 echo ""
 
-ACCEPT_RESPONSE=$(curl -s -X POST "http://localhost:${TRIP_SERVICE_PORT}/api/trips/${TRIP_ID}/accept" \
-  -H "Authorization: Bearer $DRIVER_TOKEN")
+ACCEPT_SUCCESS=0
+ACCEPT_FAILED=0
 
-echo "Accept Response:"
-echo "$ACCEPT_RESPONSE" | jq '.'
+# Try first 3 drivers
+DRIVER_IDS=($(echo "$NEARBY_DRIVERS" | jq -r '.[].driverId' | head -3))
+
+for DRIVER_ID in "${DRIVER_IDS[@]}"; do
+    echo -e "${YELLOW}Driver ${DRIVER_ID:0:8}... attempting to accept...${NC}"
+    ACCEPT_RESPONSE=$(curl -s -X POST "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/${TRIP_ID}/accept?driverId=${DRIVER_ID}")
+    
+    ACCEPTED=$(echo "$ACCEPT_RESPONSE" | jq -r '.accepted')
+    MESSAGE=$(echo "$ACCEPT_RESPONSE" | jq -r '.message')
+    
+    if [ "$ACCEPTED" == "true" ]; then
+        echo -e "  ${RED}❌ UNEXPECTED: Driver was able to accept!${NC}"
+        ACCEPT_SUCCESS=$((ACCEPT_SUCCESS + 1))
+    else
+        echo -e "  ${GREEN}✅ EXPECTED: Driver blocked - $MESSAGE${NC}"
+        ACCEPT_FAILED=$((ACCEPT_FAILED + 1))
+    fi
+    echo ""
+done
+
+echo -e "${BLUE}Acceptance Test Results:${NC}"
+echo "  Success (should be 0): $ACCEPT_SUCCESS"
+echo "  Failed (expected): $ACCEPT_FAILED"
 echo ""
 
-if echo "$ACCEPT_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-    ACCEPTED_TRIP_STATUS=$(echo "$ACCEPT_RESPONSE" | jq -r '.status')
-    ACCEPTED_TRIP_DRIVER=$(echo "$ACCEPT_RESPONSE" | jq -r '.driverId')
-    
-    echo -e "${GREEN}✅ Trip was accepted (even though notification expired)${NC}"
-    echo "New Status: $ACCEPTED_TRIP_STATUS"
-    echo "Assigned Driver: $ACCEPTED_TRIP_DRIVER"
-    echo ""
-    echo -e "${YELLOW}⚠️  NOTE: Trip can still be accepted even after notification expires!${NC}"
-    echo -e "${YELLOW}    Redis notification expiration (15s TTL) is separate from trip acceptance logic.${NC}"
+if [ "$ACCEPT_SUCCESS" -eq 0 ]; then
+    echo -e "${GREEN}✅ CORRECT: All drivers blocked from accepting expired trip!${NC}"
 else
-    ERROR_MESSAGE=$(echo "$ACCEPT_RESPONSE" | jq -r '.message // .error // "Unknown error"')
-    echo -e "${RED}❌ Trip acceptance failed!${NC}"
-    echo "Error: $ERROR_MESSAGE"
-    echo ""
-    echo -e "${YELLOW}This could be because:${NC}"
-    echo "  - Another driver already accepted"
-    echo "  - Trip was cancelled"
-    echo "  - Trip status changed"
+    echo -e "${RED}❌ FAILED: $ACCEPT_SUCCESS driver(s) were able to accept expired trip!${NC}"
 fi
 
 echo ""

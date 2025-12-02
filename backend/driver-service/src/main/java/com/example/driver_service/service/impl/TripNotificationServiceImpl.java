@@ -12,10 +12,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -141,12 +139,10 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
     private void deleteOtherDriverNotifications(UUID tripId, UUID acceptingDriverId) {
         // Find and delete notifications for this trip from other drivers
         Set<String> allKeys = redisTemplate.keys(PENDING_TRIPS_KEY + "*:" + tripId.toString());
-        if (allKeys != null) {
-            for (String key : allKeys) {
-                if (!key.contains(acceptingDriverId.toString())) {
-                    redisTemplate.delete(key);
-                    log.info("Deleted trip {} notification for other driver from key: {}", tripId, key);
-                }
+        for (String key : allKeys) {
+            if (!key.contains(acceptingDriverId.toString())) {
+                redisTemplate.delete(key);
+                log.info("Deleted trip {} notification for other driver from key: {}", tripId, key);
             }
         }
     }
@@ -176,7 +172,7 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
         String pattern = PENDING_TRIPS_KEY + driverId.toString() + ":*";
         Set<String> keys = redisTemplate.keys(pattern);
         
-        if (keys == null || keys.isEmpty()) {
+        if (keys.isEmpty()) {
             log.info("No pending trips found for driver {}", driverId);
             return Collections.emptyList();
         }
@@ -199,7 +195,7 @@ public class TripNotificationServiceImpl implements ITripNotificationService {
     public void expirePendingNotifications() {
         Set<String> keys = redisTemplate.keys(PENDING_TRIPS_KEY + "*");
         
-        if (keys == null || keys.isEmpty()) {
+        if (keys.isEmpty()) {
             return;
         }
 

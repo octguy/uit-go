@@ -6,9 +6,11 @@
 set -e
 
 # Configuration
-USER_SERVICE_PORT=8080
-TRIP_SERVICE_PORT=8080
-DRIVER_SERVICE_PORT=8080
+BASE_PORT=8080
+USER_SERVICE_PORT=${BASE_PORT}
+TRIP_SERVICE_PORT=${BASE_PORT}
+DRIVER_SERVICE_PORT=${BASE_PORT}
+DRIVER_SIMULATOR_PORT=8084
 
 # Default test credentials
 PASSENGER_EMAIL="${PASSENGER_EMAIL:-user1@gmail.com}"
@@ -44,7 +46,7 @@ echo ""
 
 echo -e "${YELLOW}Starting driver location simulation...${NC}"
 echo "Simulating movement from (10.762622, 106.660172) to (10.776889, 106.700806)"
-SIMULATE_RESPONSE=$(curl -s -X POST "http://localhost:8084/api/simulate/start-all?startLat=10.762622&startLng=106.660172&endLat=10.776889&endLng=106.700806&steps=200&delayMillis=1000")
+SIMULATE_RESPONSE=$(curl -s -X POST "http://localhost:${DRIVER_SIMULATOR_PORT}/api/simulate/start-all?startLat=10.762622&startLng=106.660172&endLat=10.776889&endLng=106.700806&steps=200&delayMillis=1000")
 echo "Response: $SIMULATE_RESPONSE"
 echo ""
 
@@ -132,8 +134,11 @@ TRIP_RESPONSE=$(curl -s -X POST http://localhost:${TRIP_SERVICE_PORT}/api/trips/
 if echo "$TRIP_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
     TRIP_ID=$(echo "$TRIP_RESPONSE" | jq -r '.id')
     TRIP_STATUS=$(echo "$TRIP_RESPONSE" | jq -r '.status')
+    TRIP_PASSENGER_ID=$(echo "$TRIP_RESPONSE" | jq -r '.passengerId')
     echo -e "${GREEN}✅ Trip created successfully!${NC}"
     echo "Trip ID: $TRIP_ID"
+    echo "Passenger ID: $TRIP_PASSENGER_ID"
+    echo "Passenger Email: $PASSENGER_EMAIL"
     echo "Status: $TRIP_STATUS"
 else
     echo -e "${RED}❌ Trip creation failed!${NC}"
@@ -163,16 +168,15 @@ if [ -n "$TRIP_LOGS" ]; then
     echo "$TRIP_LOGS"
     echo ""
     
-    # Extract the single nearest driver ID from logs
-    NOTIFIED_DRIVER_ID=$(echo "$TRIP_LOGS" | grep -oE 'nearest driver: [a-f0-9-]+' | grep -oE '[a-f0-9-]+$' | head -1)
-    if [ -n "$NOTIFIED_DRIVER_ID" ]; then
-        echo -e "${GREEN}✅ Nearest driver notified: $NOTIFIED_DRIVER_ID${NC}"
+    # Extract all notified driver IDs from logs (now supports multiple drivers)
+    NOTIFIED_COUNT=$(echo "$TRIP_LOGS" | grep -oE '[0-9]+ nearby driver\(s\)' | grep -oE '[0-9]+' | head -1)
+    if [ -n "$NOTIFIED_COUNT" ]; then
+        echo -e "${GREEN}✅ Driver notified: $NOTIFIED_COUNT nearby driver(s)${NC}"
+        # Extract first driver from the list for compatibility
+        NOTIFIED_DRIVER_ID=$(echo "$TRIP_LOGS" | grep -oE '\[[a-f0-9-]{36}' | sed 's/\[//' | head -1)
     else
-        # Fallback to old format if needed
-        NOTIFIED_DRIVER_ID=$(echo "$TRIP_LOGS" | grep -oE '\[[a-f0-9-]+\]' | grep -oE '[a-f0-9-]+' | head -1)
-        if [ -n "$NOTIFIED_DRIVER_ID" ]; then
-            echo -e "${GREEN}✅ Driver notified: $NOTIFIED_DRIVER_ID${NC}"
-        fi
+        # Fallback to old format
+        NOTIFIED_DRIVER_ID=$(echo "$TRIP_LOGS" | grep -oE '[a-f0-9-]{36}' | head -1)
     fi
 else
     echo -e "${YELLOW}⚠️  Could not find specific log entries (logs may have rotated)${NC}"
@@ -186,56 +190,49 @@ echo -e "${BLUE}Step 6: Verifying nearest driver received notification...${NC}"
 echo ""
 
 if [ -n "$FIRST_DRIVER_ID" ]; then
-    echo -e "${YELLOW}Expected nearest driver: $FIRST_DRIVER_ID${NC}"
-    if [ -n "$NOTIFIED_DRIVER_ID" ]; then
-        echo -e "${YELLOW}Actually notified driver: $NOTIFIED_DRIVER_ID${NC}"
+    echo -e "${YELLOW}Expected first driver: $FIRST_DRIVER_ID${NC}"
+    if [ -n "$NOTIFIED_COUNT" ]; then
+        echo -e "${YELLOW}Actually notified: $NOTIFIED_COUNT driver(s)${NC}"
         echo ""
         
-        if [ "$FIRST_DRIVER_ID" = "$NOTIFIED_DRIVER_ID" ]; then
-            echo -e "${GREEN}✅ CORRECT: Nearest driver was notified!${NC}"
-        else
-            echo -e "${RED}❌ MISMATCH: Expected $FIRST_DRIVER_ID but $NOTIFIED_DRIVER_ID was notified${NC}"
+        if [ "$NOTIFIED_COUNT" -eq "$DRIVER_COUNT" ]; then
+            echo -e "${GREEN}✅ CORRECT: All $DRIVER_COUNT nearby drivers were notified!${NC}"
+        elif [ "$NOTIFIED_COUNT" -gt 1 ]; then
+            echo -e "${GREEN}✅ GOOD: Multiple drivers ($NOTIFIED_COUNT) were notified${NC}"
+        elif [ "$NOTIFIED_COUNT" -eq 1 ]; then
+            echo -e "${YELLOW}⚠️  Only 1 driver was notified (old behavior)${NC}"
         fi
     else
-        echo -e "${YELLOW}⚠️  Could not determine which driver was notified from logs${NC}"
+        echo -e "${YELLOW}⚠️  Could not determine how many drivers were notified from logs${NC}"
     fi
     echo ""
     
-    # Check pending notification for the nearest driver
-    echo -e "${YELLOW}Checking pending trips for nearest driver: $FIRST_DRIVER_ID${NC}"
-    PENDING_TRIPS=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${FIRST_DRIVER_ID}")
-    
-    if echo "$PENDING_TRIPS" | jq -e '. | length' > /dev/null 2>&1; then
-        PENDING_COUNT=$(echo "$PENDING_TRIPS" | jq '. | length')
-        if [ "$PENDING_COUNT" -gt 0 ]; then
-            echo -e "${GREEN}  ✅ Nearest driver has $PENDING_COUNT pending trip(s)${NC}"
-            echo "$PENDING_TRIPS" | jq -r '.[] | "    Trip ID: \(.tripId)\n    Fare: \(.estimatedFare) VND\n    Distance: \(.distanceKm) km\n    Expires at: \(.expiresAt)"'
-        else
-            echo -e "${YELLOW}  ⚠️  No pending trips (may have expired after 15 seconds)${NC}"
-        fi
-    else
-        echo -e "${RED}  ❌ Error checking pending trips${NC}"
-    fi
+    # Check pending notifications for ALL nearby drivers
+    echo -e "${YELLOW}Checking pending trips for all nearby drivers...${NC}"
     echo ""
     
-    # Check if other drivers received notifications (should be 0)
-    if [ "$DRIVER_COUNT" -gt 1 ]; then
-        echo -e "${YELLOW}Verifying other drivers did NOT receive notification...${NC}"
-        OTHER_NOTIFIED=0
-        echo "$NEARBY_DRIVERS" | jq -r '.[1:] | .[].driverId' | while read -r OTHER_DRIVER_ID; do
-            PENDING=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${OTHER_DRIVER_ID}")
-            if echo "$PENDING" | jq -e '. | length' > /dev/null 2>&1; then
-                COUNT=$(echo "$PENDING" | jq '. | length')
-                if [ "$COUNT" -gt 0 ]; then
-                    echo -e "${RED}  ❌ Driver $OTHER_DRIVER_ID unexpectedly has $COUNT pending trip(s)${NC}"
-                    OTHER_NOTIFIED=$((OTHER_NOTIFIED + 1))
-                fi
+    DRIVERS_WITH_NOTIFICATION=0
+    DRIVERS_WITHOUT_NOTIFICATION=0
+    
+    echo "$NEARBY_DRIVERS" | jq -r '.[].driverId' | while read -r DRIVER_ID; do
+        PENDING=$(curl -s "http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${DRIVER_ID}")
+        if echo "$PENDING" | jq -e '. | length' > /dev/null 2>&1; then
+            COUNT=$(echo "$PENDING" | jq '. | length')
+            if [ "$COUNT" -gt 0 ]; then
+                echo -e "${GREEN}  ✅ Driver ${DRIVER_ID:0:8}... has $COUNT pending trip(s)${NC}"
+                # Display trip details for this driver
+                echo "$PENDING" | jq -r '.[] | "    └─ Trip: \(.tripId)\n       Passenger ID: \(.passengerId)\n       Pickup: (\(.pickupLatitude), \(.pickupLongitude))\n       Destination: (\(.destinationLatitude), \(.destinationLongitude))\n       Fare: \(.estimatedFare) VND\n       Distance: \(.distanceKm) km\n       Expires: \(.expiresAt)"'
+                echo ""
+                DRIVERS_WITH_NOTIFICATION=$((DRIVERS_WITH_NOTIFICATION + 1))
+            else
+                echo -e "${YELLOW}  ○ Driver ${DRIVER_ID:0:8}... has no pending trips${NC}"
+                DRIVERS_WITHOUT_NOTIFICATION=$((DRIVERS_WITHOUT_NOTIFICATION + 1))
             fi
-        done
-        if [ "$OTHER_NOTIFIED" -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Other drivers correctly have no pending trips${NC}"
         fi
-    fi
+    done
+    
+    echo ""
+    echo -e "${BLUE}Summary: $DRIVERS_WITH_NOTIFICATION drivers received notification${NC}"
 else
     echo -e "${YELLOW}⚠️  No nearby drivers to check${NC}"
 fi
@@ -269,29 +266,23 @@ echo "=========================================================="
 echo -e "${GREEN}SUMMARY${NC}"
 echo "=========================================================="
 echo "Trip ID: $TRIP_ID"
+echo "Passenger ID: $TRIP_PASSENGER_ID"
+echo "Passenger Email: $PASSENGER_EMAIL"
 echo "Trip Status: $TRIP_STATUS"
 echo "Nearby Drivers Found: $DRIVER_COUNT"
-if [ -n "$FIRST_DRIVER_ID" ]; then
-    echo "Nearest Driver ID: $FIRST_DRIVER_ID"
-fi
-if [ -n "$NOTIFIED_DRIVER_ID" ]; then
-    echo "Notified Driver ID: $NOTIFIED_DRIVER_ID"
-    if [ "$FIRST_DRIVER_ID" = "$NOTIFIED_DRIVER_ID" ]; then
-        echo -e "${GREEN}✅ Verification: Nearest driver was correctly notified${NC}"
-    else
-        echo -e "${RED}❌ Verification: Driver mismatch detected${NC}"
-    fi
+if [ -n "$NOTIFIED_COUNT" ]; then
+    echo "Drivers Notified: $NOTIFIED_COUNT"
 fi
 echo ""
 
-if [ -n "$NOTIFIED_DRIVER_ID" ]; then
+if [ -n "$FIRST_DRIVER_ID" ]; then
     echo -e "${YELLOW}To test driver acceptance (within 15 seconds of trip creation):${NC}"
     echo ""
-    echo "curl -X POST 'http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/${TRIP_ID}/accept?driverId=${NOTIFIED_DRIVER_ID}' | jq"
+    echo "curl -X POST 'http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/${TRIP_ID}/accept?driverId=${FIRST_DRIVER_ID}' | jq"
     echo ""
-    echo -e "${YELLOW}To check pending trips for notified driver:${NC}"
+    echo -e "${YELLOW}To check pending trips for first driver:${NC}"
     echo ""
-    echo "curl -X GET 'http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${NOTIFIED_DRIVER_ID}' | jq"
+    echo "curl -X GET 'http://localhost:${DRIVER_SERVICE_PORT}/api/drivers/trips/pending?driverId=${FIRST_DRIVER_ID}' | jq"
 fi
 
 echo ""
@@ -303,5 +294,5 @@ echo ""
 # Export variables for use in shell
 echo "# You can use these variables in your shell:"
 echo "export TRIP_ID=\"$TRIP_ID\""
-[ -n "$NOTIFIED_DRIVER_ID" ] && echo "export DRIVER_ID=\"$NOTIFIED_DRIVER_ID\""
+[ -n "$FIRST_DRIVER_ID" ] && echo "export DRIVER_ID=\"$FIRST_DRIVER_ID\""
 echo "export PASSENGER_TOKEN=\"$TOKEN\""
