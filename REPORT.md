@@ -1571,13 +1571,3 @@ Dự án UIT-Go đã thành công xây dựng một nền tảng đặt xe micro
 
 Hệ thống hiện tại đã sẵn sàng cho demo và có foundation tốt để mở rộng thành production-ready platform trong tương lai.
 
----
-
-**Tài liệu tham khảo:**
-
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Kiến trúc chi tiết
-- [ADR-001](docs/ADR/001-redis-vs-dynamodb-for-geospatial.md) - Redis vs DynamoDB
-- [ADR-002](docs/ADR/002-grpc-vs-rest-for-location-updates.md) - gRPC vs REST
-- [ADR-003](docs/ADR/003-rest-vs-grpc-for-crud-operations.md) - REST vs gRPC cho CRUD
-- [ADR-004](docs/ADR/004-rabbitmq-vs-kafka-for-async-messaging.md) - RabbitMQ vs Kafka
-- [README.md](README.md) - Setup và API documentation

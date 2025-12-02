@@ -13,8 +13,11 @@ Nền tảng đặt xe dựa trên kiến trúc microservices được xây dự
 - [API Endpoints](#api-endpoints)
 - [Truy cập Database](#truy-cập-database)
 - [Kiểm thử API](#kiểm-thử-api)
+- [Proof giao tiếp giữa các service](#proof-giao-tiếp-giữa-các-service)
 - [Xử lý Sự cố](#xử-lý-sự-cố)
 - [Quy trình Phát triển](#quy-trình-phát-triển)
+- [Công nghệ Sử dụng](#công-nghệ-sử-dụng)
+- [Tính năng Dự án](#tính-năng-dự-án)
 
 ## Tổng quan Hệ thống
 
@@ -99,68 +102,46 @@ uit-go/
 │   │   ├── src/
 │   │   ├── pom.xml
 │   │   ├── Dockerfile
-│   │   └── mvnw/mvnw.cmd
+│   │   └── mvnw
 │   ├── user-service/       # Quản lý người dùng (Port 8081)
-│   │   ├── src/main/java/com/example/user_service/
-│   │   │   ├── controller/  # REST controllers
-│   │   │   ├── service/     # Business logic
-│   │   │   ├── repository/  # Data access
-│   │   │   ├── entity/      # JPA entities
-│   │   │   ├── jwt/         # JWT authentication
-│   │   │   └── config/      # Security & CORS config
+│   │   ├── src/
 │   │   ├── pom.xml
-│   │   └── Dockerfile
+│   │   ├── Dockerfile
+│   │   └── mvnw
 │   ├── trip-service/       # Quản lý chuyến đi (Port 8082)
-│   │   ├── src/main/java/com/example/trip_service/
-│   │   │   ├── controller/  # REST controllers
-│   │   │   ├── service/     # Business logic
-│   │   │   ├── repository/  # Multi-datasource (VN/TH sharding)
-│   │   │   ├── entity/      # JPA entities
-│   │   │   ├── config/      # OpenFeign clients, RabbitMQ, DB routing
-│   │   │   └── client/      # OpenFeign interfaces
+│   │   ├── src/
 │   │   ├── pom.xml
-│   │   └── Dockerfile
+│   │   ├── Dockerfile
+│   │   └── mvnw
 │   ├── driver-service/     # Quản lý tài xế (Port 8083, gRPC: 9092)
 │   │   ├── src/main/
-│   │   │   ├── java/com/example/driver_service/
-│   │   │   │   ├── controller/  # REST controllers
-│   │   │   │   ├── service/     # Business logic, Redis Geo
-│   │   │   │   ├── grpc/        # gRPC service implementation
-│   │   │   │   ├── listener/    # RabbitMQ listener
-│   │   │   │   └── config/      # Redis, gRPC, RabbitMQ config
-│   │   │   └── proto/       # Protocol Buffer definitions
+│   │   │   ├── java/       # Business logic, Redis Geo, gRPC
+│   │   │   └── proto/      # Protocol Buffer definitions
 │   │   ├── pom.xml
-│   │   └── Dockerfile
+│   │   ├── Dockerfile
+│   │   └── mvnw
 │   └── driver-simulator/   # Mô phỏng vị trí (Port 8084)
-│       ├── src/main/java/com/example/driver_simulator/
-│       │   ├── controller/  # Simulator REST API
-│       │   ├── simulate/    # Path generation logic
-│       │   └── config/      # gRPC client config
+│       ├── src/
 │       ├── pom.xml
-│       └── Dockerfile
+│       ├── Dockerfile
+│       └── mvnw
 ├── infra/
 │   ├── docker-compose.yml  # Orchestration hoàn chỉnh
-│   └── k8s/               # Kubernetes deployment files (optional)
-├── schema/                 # Database initialization scripts
+│   ├── k8s/               # Kubernetes deployment files
+│   └── terraform/         # Infrastructure as Code
+├── schema/                # Database initialization scripts
 │   ├── user-schema.sql
 │   └── trip-schema.sql
-├── linux-run/              # Scripts tự động hóa cho macOS/Linux
-│   ├── start.sh           # Khởi động nhanh tất cả services
-│   └── stop.sh            # Dừng tất cả containers
-├── win-run/                # Scripts tự động hóa cho Windows
+├── linux-run/             # Scripts tự động hóa cho macOS/Linux
+│   ├── start.sh          # Khởi động nhanh tất cả services
+│   └── stop.sh           # Dừng tất cả containers
+├── win-run/               # Scripts tự động hóa cho Windows
 │   ├── rebuild-all.bat
-│   ├── restart-docker.bat
-│   └── demo-service-integration.bat
-└── docs/                   # Tài liệu chi tiết
-    ├── ARCHITECTURE.md     # Kiến trúc hệ thống (Tiếng Việt)
-    ├── ADR/               # Architecture Decision Records
-    │   ├── 001-redis-vs-dynamodb-for-geospatial.md
-    │   ├── 002-grpc-vs-rest-for-location-updates.md
-    │   ├── 003-rest-vs-grpc-for-crud-operations.md
-    │   └── 004-rabbitmq-vs-kafka-for-async-messaging.md
-    └── testing-guide/
-        ├── API_ENDPOINTS.md
-        └── redis-grpc-testing-commands.md
+│   └── restart-docker.bat
+└── docs/                  # Tài liệu chi tiết
+    ├── ARCHITECTURE.md    # Kiến trúc hệ thống
+    ├── ADR/              # Architecture Decision Records
+    └── testing-guide/    # Hướng dẫn kiểm thử
 ```
 
 ## Cài đặt
