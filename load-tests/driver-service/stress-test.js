@@ -186,13 +186,13 @@ export function teardown(data) {
 export function handleSummary(data) {
   return {
     // HTML report
-    "load-tests/driver-stress-report.html": htmlReport(data),
+    "load-tests/driver-service/driver-stress-report.html": htmlReport(data),
 
     // JSON report
-    "load-tests/driver-stress-report.json": JSON.stringify(data, null, 2),
+    "load-tests/driver-service/driver-stress-report.json": JSON.stringify(data, null, 2),
 
     // Text summary
-    "load-tests/driver-stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
+    "load-tests/driver-service/driver-stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
 
     // Console output
     stdout: textSummary(data, { indent: " ", enableColors: true }),

@@ -11,14 +11,17 @@ const tripCreationRate = new Rate('trip_created');
 // Stress Test Configuration for Trip Service
 export const options = {
   stages: [
-    // Ramp up: 0 → 500 VUs trong 30 giây
-    { duration: '30s', target: 500 },
+    // Ramp up từ 0 → 200 VUs trong 1 phút
+    { duration: '1m', target: 200 },
 
-    // Hold: Giữ 500 VUs trong 1 phút
-    { duration: '1m', target: 500 },
+    // Tiếp tục tăng 200 → 400 VUs trong 1 phút
+    { duration: '1m', target: 400 },
 
-    // Ramp down: Giảm xuống 0 trong 30 giây
-    { duration: '30s', target: 0 },
+    // Tiếp tục tăng 400 → 600 VUs trong 1 phút
+    { duration: '1m', target: 600 },
+
+    // Peak: tăng lên 800 VUs trong 1 phút cuối
+    { duration: '1m', target: 800 },
   ],
 
   thresholds: {
@@ -177,13 +180,13 @@ export default function (data) {
 export function handleSummary(data) {
   return {
     // HTML report
-    "stress-report.html": htmlReport(data),
+    "load-tests/trip-service/stress-report.html": htmlReport(data),
 
     // JSON report
-    "stress-report.json": JSON.stringify(data, null, 2),
+    "load-tests/trip-service/stress-report.json": JSON.stringify(data, null, 2),
 
     // Text summary
-    "stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
+    "load-tests/trip-service/stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
 
     // Console output
     stdout: textSummary(data, { indent: " ", enableColors: true }),

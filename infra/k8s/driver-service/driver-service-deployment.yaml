@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: driver-service
 spec:
-  replicas: 1
+  # replicas: 1  # Managed by HPA
   selector:
     matchLabels:
       app: driver-service
@@ -20,6 +20,29 @@ spec:
           imagePullPolicy: Never
           ports:
             - containerPort: 8083
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "dev"

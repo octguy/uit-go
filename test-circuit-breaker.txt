@@ -1,0 +1,133 @@
+========================================
+Circuit Breaker Demo Script
+========================================
+
+Step 1: Check initial state
+----------------------------------------
+Current pods:
+No resources found in default namespace.
+
+Checking Circuit Breaker initial state...
+{"circuitBreakers":{"tripServiceCircuitBreaker":{"failureRate":"-1.0%","slowCallRate":"-1.0%","failureRateThreshold":"50.0%","slowCallRateThreshold":"100.0%","bufferedCalls":0,"failedCalls":0,"slowCalls":0,"slowFailedCalls":0,"notPermittedCalls":0,"state":"HALF_OPEN"}}}
+
+Step 2: Scaling trip-service to 0 pods...
+----------------------------------------
+deployment.apps/trip-service scaled
+Waiting for pods to terminate (15s)...
+
+Waiting for  0 seconds, press CTRL+C to quit ...
+No resources found in default namespace.
+
+
+Step 3: Sending requests to trigger Circuit Breaker...
+----------------------------------------
+(Circuit breaker opens when failure rate exceeds 50% after 5+ calls)
+
+Request 1:
+ [HTTP 500]
+Request 2:
+ [HTTP 500]
+Request 3:
+ [HTTP 500]
+Request 4:
+ [HTTP 503]
+Request 5:
+ [HTTP 503]
+--- Checking Circuit Breaker state ---
+{"circuitBreakers":{"tripServiceCircuitBreaker":{"failureRate":"-1.0%","slowCallRate":"-1.0%","failureRateThreshold":"50.0%","slowCallRateThreshold":"100.0%","bufferedCalls":1,"failedCalls":1,"slowCalls":0,"slowFailedCalls":0,"notPermittedCalls":0,"state":"HALF_OPEN"}}}
+
+Request 6:
+ [HTTP 503]
+Request 7:
+ [HTTP 500]
+Request 8:
+ [HTTP 503]
+Request 9:
+ [HTTP 500]
+Request 10:
+ [HTTP 503]
+--- Checking Circuit Breaker state ---
+{"circuitBreakers":{"tripServiceCircuitBreaker":{"failureRate":"100.0%","slowCallRate":"0.0%","failureRateThreshold":"50.0%","slowCallRateThreshold":"100.0%","bufferedCalls":3,"failedCalls":3,"slowCalls":0,"slowFailedCalls":0,"notPermittedCalls":1,"state":"OPEN"}}}
+
+Request 11:
+ [HTTP 500]
+Request 12:
+ [HTTP 500]
+Request 13:
+ [HTTP 500]
+Request 14:
+ [HTTP 503]
+Request 15:
+ [HTTP 503]
+--- Checking Circuit Breaker state ---
+{"circuitBreakers":{"tripServiceCircuitBreaker":{"failureRate":"100.0%","slowCallRate":"0.0%","failureRateThreshold":"50.0%","slowCallRateThreshold":"100.0%","bufferedCalls":3,"failedCalls":3,"slowCalls":0,"slowFailedCalls":0,"notPermittedCalls":2,"state":"OPEN"}}}
+
+
+Step 4: Check Circuit Breaker state
+----------------------------------------
+Full Circuit Breaker status:
+{"circuitBreakers":{"tripServiceCircuitBreaker":{"failureRate":"100.0%","slowCallRate":"0.0%","failureRateThreshold":"50.0%","slowCallRateThreshold":"100.0%","bufferedCalls":3,"failedCalls":3,"slowCalls":0,"slowFailedCalls":0,"notPermittedCalls":2,"state":"OPEN"}}}
+
+Step 5: Scaling trip-service back to 2 pods...
+----------------------------------------
+deployment.apps/trip-service scaled
+Waiting for pods to be ready...
+pod/trip-service-75ddf9b6d4-7glxb condition met
+pod/trip-service-75ddf9b6d4-8nzgl condition met
+
+NAME                            READY   STATUS            RESTARTS   AGE
+trip-service-75ddf9b6d4-7glxb   2/2     Running           0          57s
+trip-service-75ddf9b6d4-8nzgl   2/2     Running           0          57s
+trip-service-75ddf9b6d4-m2m4g   0/2     PodInitializing   0          7s
+trip-service-75ddf9b6d4-nql4n   0/2     Init:0/1          0          7s
+
+
+Step 6: Wait for Circuit Breaker to transition (10s wait)...
+----------------------------------------
+Circuit breaker will try HALF_OPEN after waitDurationInOpenState (10s)
+
+Waiting for  0 seconds, press CTRL+C to quit ...
+
+Sending recovery requests...
+Request 1:
+ [HTTP 200]
+Request 2:
+ [HTTP 200]
+Request 3:
+ [HTTP 200]
+Request 4:
+ [HTTP 200]
+Request 5:
+ [HTTP 200]
+Request 6:
+ [HTTP 200]
+Request 7:
+ [HTTP 200]
+Request 8:
+ [HTTP 200]
+Request 9:
+ [HTTP 200]
+Request 10:
+ [HTTP 200]
+
+Step 7: Final Circuit Breaker state
+----------------------------------------
+{"circuitBreakers":{"tripServiceCircuitBreaker":{"failureRate":"-1.0%","slowCallRate":"-1.0%","failureRateThreshold":"50.0%","slowCallRateThreshold":"100.0%","bufferedCalls":0,"failedCalls":0,"slowCalls":0,"slowFailedCalls":0,"notPermittedCalls":0,"state":"CLOSED"}}}
+
+========================================
+Circuit Breaker Demo Complete
+========================================
+
+Expected flow:
+  CLOSED --(failures exceed threshold)--> OPEN
+  OPEN --(waitDuration expires)--> HALF_OPEN
+  HALF_OPEN --(success)--> CLOSED
+
+Current pod status:
+NAME                            READY   STATUS    RESTARTS   AGE
+trip-service-75ddf9b6d4-7glxb   2/2     Running   0          79s
+trip-service-75ddf9b6d4-8nzgl   2/2     Running   0          79s
+trip-service-75ddf9b6d4-m2m4g   1/2     Running   0          29s
+trip-service-75ddf9b6d4-nql4n   1/2     Running   0          29s
+
+Press any key to continue . . . 
