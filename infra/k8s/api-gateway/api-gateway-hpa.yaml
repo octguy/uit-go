@@ -8,17 +8,20 @@ spec:
     kind: Deployment
     name: api-gateway
   minReplicas: 1
-  maxReplicas: 1
+  maxReplicas: 4
   metrics:
-    - type: Resource
-      resource:
+    # Use ContainerResource to target specific container (ignore linkerd-proxy)
+    - type: ContainerResource
+      containerResource:
         name: cpu
+        container: api-gateway
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
+    - type: ContainerResource
+      containerResource:
         name: memory
+        container: api-gateway
         target:
           type: Utilization
           averageUtilization: 80

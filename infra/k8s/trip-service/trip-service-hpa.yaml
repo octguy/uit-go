@@ -8,17 +8,20 @@ spec:
     kind: Deployment
     name: trip-service
   minReplicas: 1
-  maxReplicas: 1
+  maxReplicas: 4
   metrics:
-    - type: Resource
-      resource:
+    # Use ContainerResource to target specific container (ignore linkerd-proxy)
+    - type: ContainerResource
+      containerResource:
         name: cpu
+        container: trip-service
         target:
           type: Utilization
-          averageUtilization: 60
-    - type: Resource
-      resource:
+          averageUtilization: 70
+    - type: ContainerResource
+      containerResource:
         name: memory
+        container: trip-service
         target:
           type: Utilization
-          averageUtilization: 75
+          averageUtilization: 80

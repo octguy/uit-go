@@ -38,6 +38,72 @@ export const options = {
 
 const BASE_URL = 'http://localhost:8080';
 
+// Global variable to store auth token
+let authToken = '';
+
+// Setup function - runs once before the test
+export function setup() {
+  console.log('Setting up test user and getting auth token...');
+
+  // Create unique user with timestamp
+  const timestamp = Date.now();
+  const userEmail = `loadtest.user.${timestamp}@example.com`;
+  const userPassword = 'LoadTest123456!';
+
+  // Register new user
+  const registerPayload = JSON.stringify({
+    email: userEmail,
+    password: userPassword,
+  });
+
+  const registerRes = http.post(
+    `${BASE_URL}/api/users/register`,
+    registerPayload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  console.log(`Register response: ${registerRes.status}`);
+
+  if (registerRes.status !== 200 && registerRes.status !== 201) {
+    console.error(`Failed to register user: ${registerRes.body}`);
+    throw new Error('User registration failed');
+  }
+
+  // Login to get token
+  const loginPayload = JSON.stringify({
+    email: userEmail,
+    password: userPassword,
+  });
+
+  const loginRes = http.post(
+    `${BASE_URL}/api/users/login`,
+    loginPayload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  console.log(`Login response: ${loginRes.status}`);
+
+  if (loginRes.status !== 200) {
+    console.error(`Failed to login: ${loginRes.body}`);
+    throw new Error('User login failed');
+  }
+
+  // Extract token from response
+  const loginData = JSON.parse(loginRes.body);
+  const token = loginData.accessToken || loginData.token;
+
+  if (!token) {
+    console.error(`No token in response: ${loginRes.body}`);
+    throw new Error('Failed to get auth token');
+  }
+
+  console.log(`✓ Setup complete! User: ${userEmail}`);
+  console.log(`✓ Token obtained: ${token.substring(0, 20)}...`);
+
+  // Return data to be used by main test function
+  return { token: token };
+}
+
 // Helper function: Random float trong khoảng [min, max]
 function randomFloat(min, max) {
   return Math.random() * (max - min) + min;
@@ -54,7 +120,10 @@ function getRandomCoordinates() {
 }
 
 // Main test function
-export default function () {
+export default function (data) {
+  // Get token from setup
+  const token = data.token;
+
   // Get random coordinates
   const coords = getRandomCoordinates();
 
@@ -69,7 +138,7 @@ export default function () {
   const params = {
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkMzJkOTc3Zi00MGNkLTQ1YjgtYjczMC03NTYzNWIwMmU3MmYiLCJpYXQiOjE3NjQ1MTQ2NzMsImV4cCI6MTc2NDYwMTA3M30.KQzxoqErKA5GhAv3Xw5Q-3s044ciSxpmRJF9VIqS15s',
+      'Authorization': `Bearer ${token}`,
     },
   };
 
@@ -108,13 +177,13 @@ export default function () {
 export function handleSummary(data) {
   return {
     // HTML report
-    "load-tests/stress-report.html": htmlReport(data),
+    "stress-report.html": htmlReport(data),
 
     // JSON report
-    "load-tests/stress-report.json": JSON.stringify(data, null, 2),
+    "stress-report.json": JSON.stringify(data, null, 2),
 
     // Text summary
-    "load-tests/stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
+    "stress-summary.txt": textSummary(data, { indent: " ", enableColors: false }),
 
     // Console output
     stdout: textSummary(data, { indent: " ", enableColors: true }),
