@@ -1,0 +1,139 @@
+========================================
+Testing Redis Write/Read Replica
+========================================
+
+Step 1: Registering new driver...
+Email: driver.test3117431562@gmail.com
+
+{"id":"1b41abd8-7dd6-48e1-a54d-b92addec9448","email":"driver.test3117431562@gmail.com","vehicleModel":"Tesla Model 3","vehicleNumber":"TEST3117431562","createdAt":"2025-12-04T09:18:10.901871139"}       
+
+Step 2: Logging in to get Bearer token...
+
+{"accessToken":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxYjQxYWJkOC03ZGQ2LTQ4ZTEtYTU0ZC1iOTJhZGRlYzk0NDgiLCJpYXQiOjE3NjQ4Mzk4OTEsImV4cCI6MTc2NDkyNjI5MX0.Yh6BUqPoGrO8wfVODinUJgQCZvowFt0a4xrQjTCIM4Q"}
+
+Token obtained: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxYjQxYWJkOC03ZGQ2LTQ4ZTEtYTU0ZC1iOTJhZGRlYzk0NDgiLCJpYXQiOjE3NjQ4Mzk4OTEsImV4cCI6MTc2NDkyNjI5MX0.Yh6BUqPoGrO8wfVODinUJgQCZvowFt0a4xrQjTCIM4Q
+
+Step 3: Setting driver ONLINE (WRITE to Redis Master)...
+
+
+
+Waiting 2 seconds for replication...
+
+Step 4: Checking driver status (READ from Redis Replica)...
+
+{"status":"ONLINE","driverId":"1b41abd8-7dd6-48e1-a54d-b92addec9448"}
+
+Step 5: Verifying data in Redis...
+
+----------------------------------------
+Checking Redis Master (redis-0):
+----------------------------------------
+Defaulted container "redis" out of: redis, config (init)
+1) "driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status"
+2) "driver:c04a9911-229c-4292-85b0-80277a9b1dde:status"
+3) "driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status"
+
+Values in Master:
+Defaulted container "redis" out of: redis, config (init)
+Key: driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+Key: driver:c04a9911-229c-4292-85b0-80277a9b1dde:status
+Defaulted container "redis" out of: redis, config (init)
+OFFLINE
+
+Key: driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+----------------------------------------
+Checking Redis Replica 1 (redis-1):
+----------------------------------------
+Defaulted container "redis" out of: redis, config (init)
+1) "driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status"
+2) "driver:c04a9911-229c-4292-85b0-80277a9b1dde:status"
+3) "driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status"
+
+Values in Replica 1:
+Defaulted container "redis" out of: redis, config (init)
+Key: driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+Key: driver:c04a9911-229c-4292-85b0-80277a9b1dde:status
+Defaulted container "redis" out of: redis, config (init)
+OFFLINE
+
+Key: driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+----------------------------------------
+Checking Redis Replica 2 (redis-2):
+----------------------------------------
+Defaulted container "redis" out of: redis, config (init)
+1) "driver:c04a9911-229c-4292-85b0-80277a9b1dde:status"
+2) "driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status"
+3) "driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status"
+
+Values in Replica 2:
+Defaulted container "redis" out of: redis, config (init)
+Key: driver:c04a9911-229c-4292-85b0-80277a9b1dde:status
+Defaulted container "redis" out of: redis, config (init)
+OFFLINE
+
+Key: driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+Key: driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+Step 6: Setting driver OFFLINE (WRITE to Redis Master)...
+
+
+
+Waiting 2 seconds for replication...
+
+Step 7: Checking driver status again (READ from Redis Replica)...
+
+{"status":"OFFLINE","driverId":"1b41abd8-7dd6-48e1-a54d-b92addec9448"}
+
+Step 8: Final Redis verification...
+
+----------------------------------------
+Keys and Values in Redis Master:
+----------------------------------------
+Defaulted container "redis" out of: redis, config (init)
+Key: driver:1b41abd8-7dd6-48e1-a54d-b92addec9448:status
+Value:
+Defaulted container "redis" out of: redis, config (init)
+OFFLINE
+
+Key: driver:c04a9911-229c-4292-85b0-80277a9b1dde:status
+Value:
+Defaulted container "redis" out of: redis, config (init)
+OFFLINE
+
+Key: driver:77d3b4e6-2d7d-40ab-b261-80ebc5ca99ef:status
+Value:
+Defaulted container "redis" out of: redis, config (init)
+ONLINE
+
+========================================
+Summary:
+========================================
+- Write operations go to Redis Master (redis-0)
+- Read operations come from Redis Replicas (redis-1, redis-2)
+- Data is replicated across all Redis instances
+========================================
+
+========================================
+Cleaning up temporary files...
+========================================
+
+========================================
+Test completed
+========================================
