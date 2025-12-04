@@ -74,8 +74,10 @@ echo All images pushed to ECR successfully!
 echo ==========================================
 echo.
 echo Next steps:
-echo 1. Run 'terraform apply' to update ECS services
-echo 2. Or manually update services with:
-echo    aws ecs update-service --cluster %PROJECT_NAME%-cluster --service [service-name] --force-new-deployment
+echo 1. Configure kubectl: aws eks update-kubeconfig --region %AWS_REGION% --name %PROJECT_NAME%-cluster
+echo 2. Check pods: kubectl get pods -n uit-go
+echo 3. Restart deployments to pull new images:
+echo    kubectl rollout restart deployment -n uit-go
+echo 4. Get API URL: kubectl get ingress -n uit-go
 
 endlocal

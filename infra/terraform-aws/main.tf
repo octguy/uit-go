@@ -1,4 +1,4 @@
-# main.tf - AWS Infrastructure for UIT-GO Ride-Hailing Platform
+# main.tf - AWS EKS Infrastructure for UIT-GO Ride-Hailing Platform
 
 terraform {
   required_version = ">= 1.0"
@@ -6,6 +6,18 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.23"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.11"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
     }
   }
 }

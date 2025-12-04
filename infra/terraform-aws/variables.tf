@@ -1,4 +1,4 @@
-# variables.tf - Input variables for UIT-GO AWS Infrastructure
+# variables.tf - Input variables for UIT-GO AWS EKS Infrastructure
 
 variable "aws_region" {
   description = "AWS region to deploy resources"
@@ -25,21 +25,7 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-# Database Configuration
-variable "db_username" {
-  description = "Master username for RDS"
-  type        = string
-  default     = "postgres"
-  sensitive   = true
-}
-
-variable "db_password" {
-  description = "Master password for RDS"
-  type        = string
-  sensitive   = true
-}
-
-# Service Configuration
+# Service Configuration (for ECR repositories)
 variable "services" {
   description = "Service configurations"
   type = map(object({

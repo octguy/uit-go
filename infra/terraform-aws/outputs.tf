@@ -1,13 +1,19 @@
-# outputs.tf - Output values
+# outputs.tf - Output values for EKS deployment
 
-output "alb_dns_name" {
-  description = "DNS name of the Application Load Balancer"
-  value       = aws_lb.main.dns_name
+output "eks_cluster_name" {
+  description = "EKS cluster name"
+  value       = aws_eks_cluster.main.name
 }
 
-output "api_gateway_url" {
-  description = "URL to access the API Gateway"
-  value       = "http://${aws_lb.main.dns_name}"
+output "eks_cluster_endpoint" {
+  description = "EKS cluster endpoint"
+  value       = aws_eks_cluster.main.endpoint
+}
+
+output "eks_cluster_ca_certificate" {
+  description = "EKS cluster CA certificate (base64 encoded)"
+  value       = aws_eks_cluster.main.certificate_authority[0].data
+  sensitive   = true
 }
 
 output "ecr_repositories" {
@@ -17,37 +23,22 @@ output "ecr_repositories" {
   }
 }
 
-output "user_db_endpoint" {
-  description = "User service database endpoint"
-  value       = aws_db_instance.user_db.endpoint
+output "configure_kubectl" {
+  description = "Command to configure kubectl"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.main.name}"
 }
 
-output "trip_db_vn_endpoint" {
-  description = "Trip service (VN) database endpoint"
-  value       = aws_db_instance.trip_db_vn.endpoint
-}
-
-output "trip_db_th_endpoint" {
-  description = "Trip service (TH) database endpoint"
-  value       = aws_db_instance.trip_db_th.endpoint
-}
-
-output "redis_endpoint" {
-  description = "Redis cluster endpoint"
-  value       = aws_elasticache_cluster.redis.cache_nodes[0].address
-}
-
-output "rabbitmq_endpoint" {
-  description = "RabbitMQ broker endpoint"
-  value       = aws_mq_broker.rabbitmq.instances[0].endpoints[0]
-}
-
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = aws_ecs_cluster.main.name
+output "api_gateway_ingress" {
+  description = "Get the API Gateway URL with this command after deployment"
+  value       = "kubectl get ingress -n uit-go api-gateway-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
 }
 
 output "vpc_id" {
   description = "VPC ID"
   value       = aws_vpc.main.id
+}
+
+output "namespace" {
+  description = "Kubernetes namespace for the application"
+  value       = "uit-go"
 }

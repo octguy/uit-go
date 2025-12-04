@@ -1,168 +1,137 @@
-# UIT-GO AWS Terraform Infrastructure
+# UIT-GO AWS EKS Terraform Infrastructure
 
-This Terraform configuration deploys the UIT-GO ride-hailing platform on AWS.
+This Terraform configuration deploys the UIT-GO ride-hailing platform on **AWS EKS (Kubernetes)**.
 
 ## Architecture
 
 ```
                     ┌─────────────────────┐
-                    │    Internet         │
+                    │     Internet        │
                     └──────────┬──────────┘
                                │
                     ┌──────────▼──────────┐
-                    │  Application Load   │
-                    │     Balancer        │
+                    │   AWS ALB Ingress   │
+                    │   (Load Balancer)   │
                     └──────────┬──────────┘
                                │
-              ┌────────────────┼────────────────┐
-              │                │                │
-    ┌─────────▼─────┐ ┌───────▼───────┐ ┌─────▼─────────┐
-    │  API Gateway  │ │  User Service │ │ Trip Service  │
-    │   (ECS)       │ │    (ECS)      │ │   (ECS)       │
-    └───────────────┘ └───────┬───────┘ └───────┬───────┘
-                              │                 │
-    ┌─────────────────┐       │                 │
-    │ Driver Service  │◄──────┼─────────────────┤
-    │    (ECS)        │       │                 │
-    └────────┬────────┘       │                 │
-             │                │                 │
-    ┌────────▼────────┐ ┌─────▼─────┐   ┌──────▼──────┐
-    │   ElastiCache   │ │    RDS    │   │  Amazon MQ  │
-    │   (Redis)       │ │ PostgreSQL│   │  RabbitMQ   │
-    └─────────────────┘ └───────────┘   └─────────────┘
+┌──────────────────────────────┼──────────────────────────────┐
+│                         EKS Cluster                         │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │                   uit-go namespace                      │ │
+│  │                                                          │ │
+│  │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │ │
+│  │   │ API Gateway │  │User Service │  │Trip Service │    │ │
+│  │   │  (Pod)      │  │   (Pod)     │  │   (Pod)     │    │ │
+│  │   └─────────────┘  └──────┬──────┘  └──────┬──────┘    │ │
+│  │                           │                │            │ │
+│  │   ┌─────────────┐  ┌──────▼──────┐  ┌──────▼──────┐    │ │
+│  │   │Driver Service│ │ User DB     │  │ Trip DB VN  │    │ │
+│  │   │   (Pod)      │ │ (PostgreSQL)│  │ (PostgreSQL)│    │ │
+│  │   └──────┬───────┘ └─────────────┘  └─────────────┘    │ │
+│  │          │                                              │ │
+│  │   ┌──────▼──────┐  ┌─────────────┐  ┌─────────────┐    │ │
+│  │   │   Redis     │  │  RabbitMQ   │  │ Trip DB TH  │    │ │
+│  │   │   (Pod)     │  │   (Pod)     │  │ (PostgreSQL)│    │ │
+│  │   └─────────────┘  └─────────────┘  └─────────────┘    │ │
+│  │                                                          │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌─────────────────┐                                        │
+│  │ Node Group      │ (2x t3.medium instances)               │
+│  └─────────────────┘                                        │
+└──────────────────────────────────────────────────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │        ECR          │
+                    │ (Docker Registry)   │
+                    └─────────────────────┘
 ```
 
-## AWS Services Used
+## What Gets Deployed
 
-| Service | Purpose |
-|---------|---------|
-| ECS Fargate | Container orchestration (serverless) |
-| ECR | Docker image registry |
-| RDS PostgreSQL | User & Trip databases |
-| ElastiCache Redis | Driver location caching (geospatial) |
-| Amazon MQ | RabbitMQ message broker |
-| ALB | Load balancing & routing |
-| VPC | Network isolation |
-| CloudWatch | Logging |
+| Component | Type | Description |
+|-----------|------|-------------|
+| EKS Cluster | Kubernetes 1.29 | Managed Kubernetes control plane |
+| Node Group | 2x t3.medium | Worker nodes for running pods |
+| ECR | Container Registry | Stores Docker images |
+| VPC | Networking | Isolated network with public/private subnets |
+| ALB | Load Balancer | Internet-facing load balancer via Ingress |
+| Pods | Containers | Redis, RabbitMQ, PostgreSQL, all services |
 
 ## Prerequisites
 
 1. **AWS CLI** configured with credentials
-2. **Terraform** >= 1.0 installed
-3. **Docker** for building images
+2. **Terraform** >= 1.0
+3. **kubectl** for Kubernetes management
+4. **Docker** for building images
 
-## Quick Start
+## Quick Start (Demo in 1 Day)
 
-### 1. Initialize Terraform
+### Step 1: Initialize & Deploy Infrastructure
 
 ```bash
 cd infra/terraform-aws
+
+# Initialize Terraform
 terraform init
+
+# Deploy (takes ~15-20 minutes for EKS)
+terraform apply
 ```
 
-### 2. Configure Variables
+### Step 2: Configure kubectl
 
 ```bash
-# Copy example file
-cp terraform.tfvars.example terraform.tfvars
-
-# Edit with your values (set db_password!)
-notepad terraform.tfvars
+# Get the command from terraform output
+aws eks update-kubeconfig --region ap-southeast-1 --name uit-go-cluster
 ```
 
-### 3. Deploy Infrastructure
+### Step 3: Build & Push Docker Images
 
 ```bash
+# Run the push script
+.\push-images-to-ecr.bat
+```
+
+### Step 4: Verify Deployment
+
+```bash
+# Check pods are running
+kubectl get pods -n uit-go
+
+# Get the API Gateway URL
+kubectl get ingress -n uit-go
+
+# Test the API
+curl http://<INGRESS_URL>/actuator/health
+```
+
+## Terraform Commands
+
+```bash
+# Initialize
+terraform init
+
 # Preview changes
 terraform plan
 
 # Apply changes
 terraform apply
-```
 
-### 4. Build & Push Docker Images
-
-After infrastructure is created, push your images to ECR:
-
-```bash
-# Login to ECR
-aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.ap-southeast-1.amazonaws.com
-
-# Build and push each service
-cd backend/api-gateway
-docker build -t uit-go/api-gateway .
-docker tag uit-go/api-gateway:latest <account-id>.dkr.ecr.ap-southeast-1.amazonaws.com/uit-go/api-gateway:latest
-docker push <account-id>.dkr.ecr.ap-southeast-1.amazonaws.com/uit-go/api-gateway:latest
-
-# Repeat for other services...
-```
-
-Or use the provided script:
-
-```bash
-.\push-images-to-ecr.bat
-```
-
-### 5. Access Your Application
-
-After deployment, get the ALB DNS:
-
-```bash
-terraform output api_gateway_url
-```
-
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `api_gateway_url` | Public URL to access the API |
-| `ecr_repositories` | ECR URLs for pushing images |
-| `user_db_endpoint` | User database connection string |
-| `redis_endpoint` | Redis cluster address |
-| `rabbitmq_endpoint` | RabbitMQ broker endpoint |
-
-## Cost Estimation (Dev Environment)
-
-| Resource | Type | Monthly Cost (approx) |
-|----------|------|----------------------|
-| ECS Fargate | 5 tasks (256 CPU, 512 MB) | ~$15 |
-| RDS PostgreSQL | 3x db.t3.micro | ~$45 |
-| ElastiCache Redis | cache.t3.micro | ~$12 |
-| Amazon MQ | mq.t3.micro | ~$20 |
-| NAT Gateway | 1 instance | ~$32 |
-| ALB | 1 instance | ~$16 |
-| **Total** | | **~$140/month** |
-
-> **Tip**: For cost savings, you can:
-> - Use NAT Instance instead of NAT Gateway (~$4/month)
-> - Use smaller RDS instances
-> - Stop services when not in use
-
-## Cleanup
-
-To destroy all resources:
-
-```bash
+# Destroy everything (after demo)
 terraform destroy
 ```
 
-## Troubleshooting
+## Cost Estimate (1 Day Demo)
 
-### Services not starting
-
-Check CloudWatch logs:
-
-```bash
-aws logs tail /ecs/uit-go --follow
-```
-
-### Database connection issues
-
-Verify security groups allow traffic from ECS to RDS.
-
-### Images not found
-
-Ensure images are pushed to ECR with the `latest` tag.
+| Resource | Hourly Cost | 24h Cost |
+|----------|-------------|----------|
+| EKS Control Plane | $0.10 | $2.40 |
+| 2x t3.medium nodes | $0.0416 × 2 | $2.00 |
+| NAT Gateway | $0.045 | $1.08 |
+| ALB | $0.0225 | $0.54 |
+| **Total** | | **~$6-8** |
 
 ## Files Structure
 
@@ -173,12 +142,49 @@ terraform-aws/
 ├── vpc.tf               # VPC, subnets, routing
 ├── security-groups.tf   # Security groups
 ├── ecr.tf               # Container registry
-├── rds.tf               # PostgreSQL databases
-├── elasticache.tf       # Redis cluster
-├── mq.tf                # RabbitMQ broker
-├── ecs.tf               # ECS cluster & task definitions
-├── ecs-services.tf      # ECS services
-├── alb.tf               # Load balancer
+├── eks.tf               # EKS cluster & node group
+├── eks-addons.tf        # EKS add-ons & LB controller
+├── k8s-manifests.tf     # K8s infrastructure (Redis, RabbitMQ, DBs)
+├── k8s-services.tf      # K8s application services
 ├── outputs.tf           # Output values
-└── terraform.tfvars     # Your configuration (create this)
+└── push-images-to-ecr.bat # Script to push images
 ```
+
+## Troubleshooting
+
+### Pods not starting
+
+```bash
+# Check pod status
+kubectl get pods -n uit-go
+
+# Check pod logs
+kubectl logs -n uit-go <pod-name>
+
+# Describe pod for events
+kubectl describe pod -n uit-go <pod-name>
+```
+
+### Images not found
+
+Make sure you've pushed images to ECR:
+```bash
+.\push-images-to-ecr.bat
+```
+
+### ALB not created
+
+Wait a few minutes after deployment. Check AWS Load Balancer Controller:
+```bash
+kubectl get pods -n kube-system | grep aws-load-balancer
+```
+
+## Cleanup (Important!)
+
+After your demo, destroy all resources to avoid charges:
+
+```bash
+terraform destroy
+```
+
+This will delete everything including the EKS cluster, nodes, and all Kubernetes resources.
